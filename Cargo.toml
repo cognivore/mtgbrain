@@ -1,0 +1,45 @@
+[package]
+name = "mtgbrain"
+version = "0.1.0"
+edition = "2021"
+description = "Download MTGJSON into a queryable SQLite DB built for LLM-driven card search"
+license = "MIT"
+
+[lints]
+workspace = true
+
+[workspace]
+members = []
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+too_many_lines = "allow"
+# Numeric domain is bounded (card counts, mana values); these casts are safe here.
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+similar_names = "allow"
+doc_markdown = "allow"
+struct_excessive_bools = "allow"
+must_use_candidate = "allow"
+ref_option = "allow"
+format_push_string = "allow"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+flate2 = "1"
+
+[profile.release]
+opt-level = 2
