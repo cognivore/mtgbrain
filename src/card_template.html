@@ -37,7 +37,8 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:2px 3px 0 #000; }
 .illus { top:%%IY%%%; font-size:44px; }
 .legal { top:%%LY%%%; font-size:34px; letter-spacing:.02em; }
-.ms { vertical-align:middle; }
+/* mana pips are an icon font — NEVER italic (the <i> tag + .rules i would skew them) */
+.ms, .rules .ms, .titlerow .ms { vertical-align:middle; font-style:normal; }
 /* pips: prominent like real old frames (~ title height); generic grey + drop-shadow */
 .ms-cost { width:1.18em; height:1.18em; line-height:1.18em; font-size:1em;
    background-color:#b1aa9f; box-shadow:-0.04em 0.06em 0.03em rgba(0,0,0,.55); }

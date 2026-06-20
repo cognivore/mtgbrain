@@ -70,6 +70,15 @@ render-mpc ID:
     ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
       cargo run --release -- render card {{ID}} --art-backend https://mpcfill.com --foil --force
 
+# Render the fixed regression set (fast, Scryfall art) — see RENDER-REGRESSION.md.
+render-regression:
+    db="data/cube_editor.sqlite"; \
+    for n in "Propaganda" "Spikeshot Elder" "Glint-Horn Buccaneer" "Possessed Aven" "Cabal Pit" "Wild Mongrel"; do \
+      id=$(sqlite3 "$db" "SELECT id FROM cube_cards WHERE name='$n';"); \
+      [ -n "$id" ] && cargo run --release -- render card "$id" --force || echo "skip $n"; \
+    done; \
+    echo "regression set -> render-cache/cards/<Card>/  (check RENDER-REGRESSION.md)"
+
 # Render the WHOLE cube with MPCfill high-DPI art + foil (long; ~hours, ~390 Claude calls).
 render-cube:
     ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
