@@ -1,0 +1,78 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="%%MANA_CSS%%">
+<style>
+@font-face { font-family:'goudy'; src:url('%%GOUDY%%'); }
+@font-face { font-family:'mplantin'; src:url('%%MPLANTIN%%'); }
+%%ITALIC_FACE%%
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
+.face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; }
+.layer { position:absolute; left:0; top:0; width:100%; height:100%; }
+.art { position:absolute; left:%%AX%%%; top:%%AY%%%; width:%%AW%%%; height:%%AH%%%;
+       background-size:cover; background-position:center; }
+.frame { background-size:100% 100%; }
+.box { position:absolute; color:#080808; }
+.titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%;
+   display:flex; align-items:center; justify-content:space-between; gap:.4em; }
+.titlerow .nm { font-family:'goudy'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+.titlerow .mana { flex:none; white-space:nowrap; font-size:%%MSZ%%px; }
+.type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:4.6%;
+   display:flex; align-items:center; font-family:'mplantin'; font-weight:bold;
+   font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+.rules { left:%%RX%%%; top:%%RY%%%; width:%%RW%%%; height:%%RH%%%;
+   display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+   text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; }
+.rules p { margin:0 0 .42em; width:100%; }
+.rules p:last-child { margin-bottom:0; }
+.rules i { font-style:italic; }
+.pt { left:%%PX%%%; top:%%PY%%%; width:13.67%; height:4.6%;
+   display:flex; align-items:center; justify-content:center;
+   font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1; }
+.info { position:absolute; left:10%; width:80%; text-align:center; color:#0a0a0a;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; }
+.illus { top:%%IY%%%; font-size:46px; }
+.wiz { top:%%WY%%%; font-size:32px; }
+.nfs { top:%%NY%%%; font-size:36px; letter-spacing:.03em; }
+.ms { vertical-align:baseline; }
+/* darker generic pip + classic drop-shadow so pips read on the beige nameplate */
+.ms-cost { background-color:#b1aa9f; box-shadow:-0.04em 0.06em 0.03em rgba(0,0,0,.5); }
+.foilstar { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+</style></head>
+<body>
+  <div class="face">
+    <div class="art" style="background-image:url('%%ART%%')"></div>
+    <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
+    <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span><span class="mana">%%MANA%%</span></div>
+    <div class="box type" id="ty">%%TYPE%%</div>
+    <div class="box rules" id="rules">%%RULES%%</div>
+    %%PT%%
+    %%ILLUS%%
+    <div class="info wiz"><span>&#8482; &amp; &#169; %%YEAR%% Wizards of the Coast, Inc.</span></div>
+    <div class="info nfs"><span>NOT FOR SALE</span></div>
+    %%FOIL%%
+  </div>
+<script>
+function fitOneLine(el, span){
+  if(!el) return; const t = span || el;
+  let s = parseFloat(getComputedStyle(t).fontSize);
+  for(let i=0; i<80 && t.scrollWidth > el.clientWidth && s > 8; i++){ s -= 1; t.style.fontSize = s + 'px'; }
+}
+function fitBox(el){
+  if(!el) return; let s = parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0; i<100 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) && s > 10; i++){
+    s -= 1; el.style.fontSize = s + 'px';
+  }
+}
+function fit(){
+  fitOneLine(document.querySelector('.titlerow'), document.getElementById('nm'));
+  fitBox(document.getElementById('ty'));
+  fitBox(document.getElementById('rules'));
+  document.querySelectorAll('.info').forEach(function(el){ fitOneLine(el, el.querySelector('span')); });
+  const pt = document.querySelector('.pt');
+  if(pt) fitOneLine(pt, pt.querySelector('span'));
+  document.documentElement.setAttribute('data-fit','done');
+}
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); } else { window.onload = fit; }
+setTimeout(fit, 1200);
+</script>
+</body></html>
