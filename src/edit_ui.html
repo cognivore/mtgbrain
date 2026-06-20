@@ -132,14 +132,30 @@
   .keys kbd { background:var(--panel2); border:1px solid var(--line); border-radius:4px;
               padding:0 5px; font-family:ui-monospace,monospace; }
   .missing { color:var(--red); font-size:12px; }
+  .modetoggle { margin-left:auto; background:#2a2440; color:#b9a6e8; border:1px solid #463a6b;
+                border-radius:6px; padding:6px 12px; cursor:pointer; }
+  #reviewview { display:flex; height:calc(100vh - 49px); }
+  .rev-list { width:300px; border-right:1px solid var(--line); overflow:auto; background:var(--panel); }
+  .rev-list .rcard { padding:8px 12px; border-bottom:1px solid #241f18; cursor:pointer;
+                     display:flex; align-items:center; gap:6px; }
+  .rev-list .rcard:hover { background:var(--panel2); }
+  .rev-list .rcard.sel { background:#332a1c; }
+  .rev-list .rcard .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .badge2 { font-size:10px; flex:none; }
+  .rev-detail { flex:1; overflow:auto; padding:20px; }
+  .galcard.chosen { border-color:var(--green); }
+  .rev-hist { font-size:12px; color:var(--dim); margin-top:18px; max-width:760px; }
+  .rev-hist .ev { padding:3px 0; border-bottom:1px solid #241f18; }
+  .rev-hist a { color:var(--blue); cursor:pointer; }
 </style>
 </head>
 <body>
 <header>
   <h1>oddysey2026 · cube editor</h1>
   <div class="counts" id="counts"></div>
+  <button id="modetoggle" class="modetoggle">🎨 Review GenAI</button>
 </header>
-<main>
+<main id="editorview">
   <aside>
     <div class="filter">
       <input id="search" placeholder="filter by name / type…">
@@ -172,6 +188,10 @@
     </div>
   </section>
 </main>
+<div id="reviewview" style="display:none">
+  <aside class="rev-list" id="revlist"><p class="pos" style="padding:12px">Loading…</p></aside>
+  <section class="rev-detail" id="revdetail"><p class="pos" style="padding:20px">← pick a card to review its GenAI options.</p></section>
+</div>
 <script>
 let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "";
 let C = null, editMode = false, foilView = false;
@@ -472,6 +492,80 @@ async function genaiGenerate(id){
       body: JSON.stringify({artist: el.dataset.artist, hash: el.dataset.hash})});
     g.style.display = "none";
     selectId(id);
+  });
+}
+
+// ---- Review GenAI mode ----
+let reviewMode = false;
+document.getElementById("modetoggle").onclick = () => {
+  reviewMode = !reviewMode;
+  document.getElementById("editorview").style.display = reviewMode ? "none" : "";
+  document.getElementById("reviewview").style.display = reviewMode ? "flex" : "none";
+  document.getElementById("modetoggle").textContent = reviewMode ? "← Editor" : "🎨 Review GenAI";
+  if (reviewMode) openReview();
+};
+async function openReview(){
+  const el = document.getElementById("revlist");
+  el.innerHTML = `<p class="pos" style="padding:12px">Loading…</p>`;
+  const d = await (await fetch("/api/genai/dashboard")).json();
+  if (d.error){ el.innerHTML = `<p class="pos" style="padding:12px;color:var(--red)">${esc(d.error)}</p>`; return; }
+  el.innerHTML = (d.cards||[]).map(c => {
+    const s = c.status||{}; const gen = s.generated||0;
+    const tag = s.chosen_artist ? `<span class="badge2" style="color:var(--green)">✓ ${esc(s.chosen_artist)}</span>`
+      : gen ? `<span class="badge2" style="color:var(--blue)">${gen}/8</span>`
+      : `<span class="badge2" style="color:var(--dim)">—</span>`;
+    return `<div class="rcard" data-id="${c.id}"><span class="nm">${esc(c.name)}</span>${tag}</div>`;
+  }).join("") || `<p class="pos" style="padding:12px">No genai-flagged cards.</p>`;
+  el.querySelectorAll(".rcard").forEach(x => x.onclick = () => {
+    el.querySelectorAll(".rcard").forEach(y=>y.classList.remove("sel")); x.classList.add("sel");
+    loadReviewCard(+x.dataset.id, x.querySelector(".nm").textContent);
+  });
+}
+async function loadReviewCard(id, name){
+  const det = document.getElementById("revdetail");
+  det.innerHTML = `<div class="galhead">Loading ${esc(name)}…</div>`;
+  const [opt, hist] = await Promise.all([
+    (await fetch(`/api/genai/${id}/options`)).json(),
+    (await fetch(`/api/genai/${id}/history`)).json(),
+  ]);
+  let html = `<h2 style="margin:0 0 10px">${esc(name)}</h2>
+    <div class="galhead">Art direction (edit, then generate):</div>
+    <textarea id="rdir" class="gdir">${esc(opt.direction||"")}</textarea>
+    <div class="actions" style="margin:10px 0">
+      <button class="b-accept" id="rgen">🎨 Generate / regenerate (~$1)</button>
+      <button class="b-reset" id="runchoose">✕ clear choice</button>
+    </div>
+    <div class="galgrid">`;
+  for (const o of (opt.options||[])) {
+    const ch = opt.chosen===o.artist;
+    html += `<figure class="galcard${ch?' chosen':''}" data-artist="${esc(o.artist)}" data-hash="${esc(o.hash)}">
+      <img src="/api/genai/${id}/card/${sani(o.artist)}?t=${Date.now()}" loading="lazy">
+      <figcaption>${esc(o.artist)}${ch?' ✓':''} <span class="pick">pick</span></figcaption></figure>`;
+  }
+  html += `</div>`;
+  if (!(opt.options||[]).length) html += `<div class="galhead">No options yet — edit the direction and Generate.</div>`;
+  html += `<div class="rev-hist"><b>History (event-sourced — full audit + time-travel):</b>`;
+  for (const e of (hist.history||[])) {
+    const rep = e.prompt ? ` <a data-ev="${e.id}" class="reprompt">↺ reprompt this</a>` : "";
+    const pr = e.prompt ? ` · "${esc(e.prompt.slice(0,70))}…"` : "";
+    html += `<div class="ev">${esc(e.ts)} · <b>${esc(e.action)}</b>${e.artist?` · ${esc(e.artist)}`:""}${pr}${rep}</div>`;
+  }
+  html += `</div>`;
+  det.innerHTML = html;
+  document.getElementById("rgen").onclick = async () => {
+    const direction = document.getElementById("rdir").value;
+    det.innerHTML = `<div class="galhead">🎨 generating 8 options for ${esc(name)}… (a couple minutes)</div>`;
+    await fetch(`/api/genai/${id}/generate`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({direction})});
+    loadReviewCard(id, name); openReview();
+  };
+  document.getElementById("runchoose").onclick = async () => { await fetch(`/api/genai/${id}/unchoose`,{method:"POST"}); loadReviewCard(id,name); openReview(); };
+  det.querySelectorAll(".galcard").forEach(el => el.onclick = async () => {
+    await fetch(`/api/genai/${id}/choose`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({artist:el.dataset.artist,hash:el.dataset.hash})});
+    loadReviewCard(id,name); openReview();
+  });
+  det.querySelectorAll(".reprompt").forEach(a => a.onclick = async () => {
+    const r = await (await fetch(`/api/genai/${id}/reprompt`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_id:+a.dataset.ev})})).json();
+    if (r.direction) document.getElementById("rdir").value = r.direction;
   });
 }
 

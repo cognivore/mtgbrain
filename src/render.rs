@@ -862,6 +862,31 @@ pub fn genai_dashboard(editor_db: &Path, cache_dir: &Path) -> Result<Value> {
     Ok(json!({"cards": cards, "artists": ARTISTS.iter().map(|(a, _)| *a).collect::<Vec<_>>()}))
 }
 
+/// Cached options for a card's CURRENT direction (no generation) — for the review
+/// gallery: which artists already have art on disk, plus the current choice.
+pub fn genai_existing(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    let genai_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai");
+    let direction = fs::read_to_string(genai_dir.join("direction.txt")).unwrap_or_default();
+    let mut options = Vec::new();
+    if !direction.is_empty() {
+        for (artist, _) in ARTISTS {
+            let h = short_hash(&format!("{artist}:{direction}"));
+            if genai_dir.join(sanitize_bucket(artist)).join(format!("{h}.png")).exists() {
+                options.push(json!({"artist": artist, "hash": h}));
+            }
+        }
+    }
+    let store = crate::events::open(cache_dir)?;
+    let chosen = crate::events::current_choice(&store, id).ok().flatten();
+    Ok(json!({
+        "direction": direction,
+        "options": options,
+        "chosen": chosen.map(|(a, _)| a),
+    }))
+}
+
 /// Async full pass: generate the GenAI gallery for every genai-flagged card.
 /// Idempotent/resumable (cached arts are skipped); logs every action. Run it in
 /// the background, then review/choose in the editor's "Review GenAI" tab.
@@ -948,7 +973,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // so pip-centre == title-centre. (cardconjurer's literal mana y=0.0539 is offset
         // back up by its textSize*0.34 baseline math, which we don't replicate — using it
         // raw dropped the pips a full box too low.)
-        ("MAX", pc(0.1067)), ("MAY", pc(0.0481)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
+        ("MAX", pc(0.1067)), ("MAY", pc(0.0451)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
         ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
         ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
         ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),

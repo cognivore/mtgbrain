@@ -429,6 +429,13 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
                     }
+                    // Cached options (no generation) for the review gallery.
+                    (Method::Get, [_, "options"], Some(gid)) => {
+                        match crate::render::genai_existing(editor_db, &rc.cache, gid) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
                     // Event history / time-travel for a card.
                     (Method::Get, [_, "history"], Some(gid)) => {
                         match crate::render::genai_history(&rc.cache, gid) {
