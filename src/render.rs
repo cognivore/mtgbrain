@@ -618,8 +618,7 @@ pub fn genai_options(
     let genai_dir = card_dir.join("genai");
     let frame_rel = assets_dir.join(frame_file(&card));
     let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
-        .map(|(_, _, y, _)| y)
-        .unwrap_or_else(|_| "2001".to_string());
+        .map_or_else(|_| "2001".to_string(), |(_, _, y, _)| y);
 
     let Some(ckey) = claude else {
         bail!("ANTHROPIC_API_KEY not set (needed for the art direction)");
@@ -637,17 +636,13 @@ pub fn genai_options(
         let adir = genai_dir.join(sanitize_bucket(artist));
         let art_png = adir.join(format!("{h}.png"));
         if !art_png.exists() {
-            match &openai {
-                Some(k) => {
-                    if let Err(e) = gen_art_openai(&prompt, &art_png, k) {
-                        errors.push(format!("{artist}: {e}"));
-                        continue;
-                    }
-                }
-                None => {
-                    errors.push(format!("{artist}: OPENAI_API_KEY not set"));
-                    continue;
-                }
+            let Some(k) = &openai else {
+                errors.push(format!("{artist}: OPENAI_API_KEY not set"));
+                continue;
+            };
+            if let Err(e) = gen_art_openai(&prompt, &art_png, k) {
+                errors.push(format!("{artist}: {e}"));
+                continue;
             }
         }
         let card_png = adir.join("card.png");
@@ -688,8 +683,7 @@ pub fn genai_choose(
         bail!("genai art not found for {artist}");
     }
     let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
-        .map(|(_, _, y, _)| y)
-        .unwrap_or_else(|_| "2001".to_string());
+        .map_or_else(|_| "2001".to_string(), |(_, _, y, _)| y);
     fs::copy(&art, card_dir.join("art.png"))?;
     fs::write(
         card_dir.join("art.json"),
