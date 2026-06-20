@@ -140,8 +140,7 @@ in a decision-rich way rather than a topdeck war.
 ---
 
 ## Files
-- [`cube360/cube_master.csv`](./cube360/cube_master.csv) — the 360, every column + flags.
-- [`cube360/by-color/`](./cube360/by-color/) — one worksheet per colour (W/U/B/R/G/Multicolor/Colorless/Land).
+- [`cube360/cube_master.csv`](./cube360/cube_master.csv) — the 359, every column + flags.
 - [`cube360/maybeboard.csv`](./cube360/maybeboard.csv) — every card considered but cut, with reasons.
 - [`COLOR-PAIRS.md`](./COLOR-PAIRS.md) · [`COLOR-ROLES.md`](./COLOR-ROLES.md) — the ten guilds and the five colours.
 - [`ERRATA-AND-COLORSHIFTS.md`](./ERRATA-AND-COLORSHIFTS.md) — every change from printed cards.
