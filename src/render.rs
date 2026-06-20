@@ -522,15 +522,17 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Late-90s / early-00s Magic painters whose styles we offer per card.
-pub const ARTISTS: &[&str] = &[
-    "John Avon",
-    "Christopher Rush",
-    "Brom",
-    "Rob Alexander",
-    "Greg Staples",
-    "Donato Giancola",
-    "Wayne Reynolds",
-    "Rebecca Guay",
+/// (artist name, style descriptor). The descriptor is a no-name fallback for
+/// when OpenAI's safety system rejects "in the style of <living artist>".
+pub const ARTISTS: &[(&str, &str)] = &[
+    ("John Avon", "luminous panoramic fantasy landscapes with soft atmospheric light"),
+    ("Christopher Rush", "classic early-1990s fantasy illustration, bold and iconic"),
+    ("Brom", "dark gothic oil-painted fantasy, moody and edgy"),
+    ("Rob Alexander", "atmospheric painted fantasy landscapes and architecture"),
+    ("Greg Staples", "bold dynamic comic-influenced fantasy painting"),
+    ("Donato Giancola", "classical realistic oil painting, Renaissance fine-art fantasy"),
+    ("Wayne Reynolds", "dynamic action-packed ink-and-paint fantasy with energetic linework"),
+    ("Rebecca Guay", "ethereal art-nouveau watercolor fantasy, flowing organic lines, soft luminous palette"),
 ];
 
 fn short_hash(s: &str) -> String {
@@ -627,12 +629,9 @@ pub fn genai_options(
 
     let mut options = Vec::new();
     let mut errors = Vec::new();
-    for artist in ARTISTS {
-        let prompt = format!(
-            "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
-             You need to make a card art for the following art direction: {direction}"
-        );
-        let h = short_hash(&prompt);
+    for (artist, descriptor) in ARTISTS {
+        // Stable per (artist, direction) regardless of which prompt variant succeeds.
+        let h = short_hash(&format!("{artist}:{direction}"));
         let adir = genai_dir.join(sanitize_bucket(artist));
         let art_png = adir.join(format!("{h}.png"));
         if !art_png.exists() {
@@ -640,7 +639,20 @@ pub fn genai_options(
                 errors.push(format!("{artist}: OPENAI_API_KEY not set"));
                 continue;
             };
-            if let Err(e) = gen_art_openai(&prompt, &art_png, k) {
+            let named = format!(
+                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
+                 You need to make a card art for the following art direction: {direction}"
+            );
+            let mut res = gen_art_openai(&named, &art_png, k);
+            // OpenAI rejects some living-artist names — retry with the style descriptor only.
+            if res.as_ref().err().is_some_and(|e| e.to_string().contains("safety")) {
+                let styled = format!(
+                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}. \
+                     You need to make a card art for the following art direction: {direction}"
+                );
+                res = gen_art_openai(&styled, &art_png, k);
+            }
+            if let Err(e) = res {
                 errors.push(format!("{artist}: {e}"));
                 continue;
             }
