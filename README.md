@@ -210,11 +210,12 @@ touch the source data) and applies two **pre-sets** (a starting point — review
 
 - **Pre-approved** (`decision = accepted`): Odyssey-block creatures only — a Creature printed in
   ODY / TOR / JUD. Nothing else.
-- **GenAI-art flag pre-set on**: every card *released after 2000* (no printing in any pre-2001 set).
-  Nothing else.
+- **GenAI-art flag pre-set on**: every *modern-frame* card — one with no printing in any
+  pre-8th-Edition (pre-2003 "old frame") set. Old-frame cards keep their original art. Nothing else.
 
 The UI: filter (all / pending / accepted / errata / genai) + name search in the sidebar; the detail
-pane shows the full card and an errata box. Keys: `a` accept · `e` errata · `g` toggle GenAI art ·
+pane shows the full card, a live **card-image preview** (fetched from the [Scryfall](https://scryfall.com/docs/api)
+open API by name), and an errata box. Keys: `a` accept · `e` errata · `g` toggle GenAI art ·
 `j`/`k` next/prev · `n` next pending. Everything persists immediately to `data/cube_editor.sqlite`
 (table `cube_cards` — query/export it with `sqlite3` like any other DB). Port is deliberately high
 (`49737`) to avoid clashes; change with `--port`.

@@ -15,8 +15,9 @@
 //!
 //! * `approved` (decision = "accepted") for Odyssey-block creatures only: a
 //!   Creature with a printing in ODY / TOR / JUD. Nothing else is pre-approved.
-//! * `genai_art` for every card *released after 2000*, i.e. with no printing in
-//!   any pre-2001 set. Nothing else gets the flag pre-set.
+//! * `genai_art` for every *modern-frame* card, i.e. one with no printing in any
+//!   pre-8th-Edition (pre-2003 "old frame") set. Old-frame cards keep their
+//!   original art; nothing else gets the flag pre-set.
 
 use std::fs;
 use std::net::SocketAddr;
@@ -30,19 +31,24 @@ use tiny_http::{Header, Method, Response, Server};
 /// Odyssey-block set codes: Odyssey, Torment, Judgment.
 const ODYSSEY_BLOCK: &[&str] = &["ODY", "TOR", "JUD"];
 
-/// Set codes released in 2000 or earlier. A card with any of these among its
-/// printings is treated as "released in 2000 or before" and does NOT get the
-/// GenAI-new-art flag pre-set. (Heuristic seed; reviewer can toggle per card.)
-const PRE_2001_SETS: &[&str] = &[
-    // Core
-    "LEA", "LEB", "2ED", "3ED", "4ED", "5ED", "6ED", "CED", "CEI", "SUM", "FBB", "4BB",
-    // Early expansions through 2000
+/// Old-frame set codes: every set released before 8th Edition (the modern card
+/// frame, mid-2003). A card with any of these among its printings keeps its
+/// original art and does NOT get the GenAI-new-art flag pre-set. Everything else
+/// is modern-frame and is pre-flagged. (Heuristic seed; reviewer toggles per card.)
+const OLD_FRAME_SETS: &[&str] = &[
+    // Core editions (7th is the last old-frame core set)
+    "LEA", "LEB", "2ED", "3ED", "4ED", "5ED", "6ED", "7ED", "CED", "CEI", "SUM", "FBB", "4BB",
+    // Reprints / boxed / compilations (pre-2003)
+    "BCHR", "CHR", "REN", "RIN", "ITP", "MGB", "ATH", "BRB", "DKM", "BTD",
+    // Expansions through Scourge (last old-frame expansion, May 2003)
     "ARN", "ATQ", "LEG", "DRK", "FEM", "ICE", "HML", "ALL", "MIR", "VIS", "WTH", "TMP", "STH",
-    "EXO", "USG", "ULG", "UDS", "MMQ", "NEM", "PCY", "INV",
-    // Portal / Starter / supplemental pre-2001
-    "POR", "P02", "PTK", "S99", "BRB", "ATH", "UGL", "ITP", "CHR", "BCHR", "REN", "RIN", "MGB",
-    // Promos / World Championship / Arena league pre-2001
-    "WC97", "WC98", "WC99", "WC00", "PAL99", "PAL00", "PARL", "PRED", "PSUS",
+    "EXO", "USG", "ULG", "UDS", "MMQ", "NEM", "PCY", "INV", "PLS", "APC", "ODY", "TOR", "JUD",
+    "ONS", "LGN", "SCG",
+    // Portal / Starter / Un (pre-2003)
+    "POR", "P02", "PTK", "S99", "UGL",
+    // World Championship / Arena league / gateway promos (pre-2003)
+    "WC97", "WC98", "WC99", "WC00", "WC01", "WC02", "PAL99", "PAL00", "PAL01", "PAL02", "PARL",
+    "PSUS", "PRED", "G00", "G01", "G02", "G03",
 ];
 
 // ---------------------------------------------------------------------------
@@ -81,11 +87,11 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
             let printings: Vec<&str> = c.printings.split(", ").collect();
             let odyssey_creature =
                 is_creature && printings.iter().any(|p| ODYSSEY_BLOCK.contains(p));
-            let post_2000 = !printings.iter().any(|p| PRE_2001_SETS.contains(p));
+            let modern_frame = !printings.iter().any(|p| OLD_FRAME_SETS.contains(p));
             if odyssey_creature {
                 approved += 1;
             }
-            if post_2000 {
+            if modern_frame {
                 genai += 1;
             }
             tx.execute(
@@ -109,7 +115,7 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
                     c.edhrec_rank,
                     i64::from(is_creature),
                     i64::from(odyssey_creature),
-                    i64::from(post_2000), // genai_art (pre-set)
+                    i64::from(modern_frame), // genai_art (pre-set)
                     if odyssey_creature {
                         "accepted"
                     } else {
@@ -136,7 +142,7 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
         println!("  NOT found in DB:  {missing}  (rows created, marked unmatched)");
     }
     println!("  pre-approved (Odyssey-block creatures): {approved}");
-    println!("  GenAI-art pre-set (released after 2000): {genai}");
+    println!("  GenAI-art pre-set (modern frame / pre-8ED has no printing): {genai}");
     println!("\nnext:  mtgbrain edit serve --db {}", out.display());
     Ok(())
 }
