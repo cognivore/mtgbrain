@@ -207,6 +207,7 @@ fn frame_file(c: &Card) -> &'static str {
 // art acquisition (oldest Scryfall printing + artist; MPC-Autofill optional)
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::struct_field_names)]
 struct Art {
     path: PathBuf,
     art_ref: String,

@@ -173,8 +173,8 @@ enum EditCmd {
     /// Serve the review UI on a local port.
     Serve {
         /// Editor DB (default: <data-dir>/cube_editor.sqlite).
-        #[arg(long)]
-        db: Option<PathBuf>,
+        #[arg(long = "editor-db")]
+        editor_db: Option<PathBuf>,
         /// Port (deliberately high to avoid clashes).
         #[arg(long, default_value_t = 49737)]
         port: u16,
@@ -280,14 +280,14 @@ fn main() -> Result<()> {
                 edit::seed(&db, list, &out, *force)
             }
             EditCmd::Serve {
-                db: edb,
+                editor_db,
                 port,
                 assets,
                 cache,
                 chrome,
                 art_backend,
             } => {
-                let edb = edb
+                let edb = editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 let rc = edit::RenderCfg {
@@ -295,6 +295,7 @@ fn main() -> Result<()> {
                     cache: cache.clone(),
                     chrome: chrome.clone(),
                     backend: art_backend.clone(),
+                    source_db: db.clone(),
                 };
                 edit::serve(&edb, *port, &rc)
             }

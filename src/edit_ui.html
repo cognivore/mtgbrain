@@ -32,6 +32,12 @@
   .filter button.on { color:var(--ink); border-color:var(--accent); }
   #search { width:100%; padding:6px 8px; background:var(--panel2); border:1px solid var(--line);
             color:var(--ink); border-radius:5px; }
+  .addrow { display:flex; gap:6px; padding:0 8px 8px; background:var(--panel);
+            position:sticky; top:74px; z-index:4; border-bottom:1px solid var(--line); }
+  .addrow input { flex:1; min-width:0; padding:6px 8px; background:var(--panel2);
+            border:1px solid var(--line); color:var(--ink); border-radius:5px; }
+  .addrow button { background:#2c3c22; color:var(--green); border:1px solid #3c5230;
+            border-radius:5px; padding:6px 12px; cursor:pointer; }
   ul#list { list-style:none; margin:0; padding:0; }
   ul#list li { padding:6px 10px; border-bottom:1px solid #241f18; cursor:pointer;
                display:flex; align-items:center; gap:6px; }
@@ -103,6 +109,9 @@
   .b-accept { background:#2c3c22; color:var(--green); border-color:#3c5230; }
   .b-errata { background:#3a2c16; color:var(--amber); border-color:#5a4222; }
   .b-reset  { background:var(--panel2); color:var(--dim); }
+  .b-remove { background:#3a1f1c; color:var(--red); border-color:#5a2a24; }
+  .b-restore{ background:#1f2c3a; color:var(--blue); border-color:#2a4257; }
+  ul#list li.removed .nm { text-decoration:line-through; color:var(--dim); }
   .saved { color:var(--green); font-size:12px; opacity:0; transition:opacity .2s; }
   .saved.show { opacity:1; }
   .keys { color:var(--dim); font-size:11px; margin-top:18px; }
@@ -125,6 +134,11 @@
       <button data-f="accepted">accepted</button>
       <button data-f="errata">errata</button>
       <button data-f="genai">genai</button>
+      <button data-f="removed">removed</button>
+    </div>
+    <div class="addrow">
+      <input id="addname" placeholder="+ add card by exact name…">
+      <button id="addbtn">add</button>
     </div>
     <ul id="list"></ul>
   </aside>
@@ -161,10 +175,14 @@ function renderCounts() {
      <span>pending <b>${COUNTS.pending}</b></span>
      <span class="pill accepted">accepted ${COUNTS.accepted}</span>
      <span class="pill errata">errata ${COUNTS.errata}</span>
-     <span>genai-art <b>${COUNTS.genai}</b></span>`;
+     <span>genai-art <b>${COUNTS.genai}</b></span>
+     <span>removed <b>${COUNTS.removed}</b></span>`;
 }
 function visible() {
   return CARDS.filter(c => {
+    // removed cards are hidden everywhere except the "removed" filter
+    if (filter === "removed") { if (!c.removed) return false; }
+    else if (c.removed) return false;
     if (filter === "genai" && !c.genai_art) return false;
     if (["pending","accepted","errata"].includes(filter) && c.decision !== filter) return false;
     if (q) { const s = (c.name + " " + (c.type||"")).toLowerCase(); if (!s.includes(q)) return false; }
@@ -176,9 +194,9 @@ function renderList() {
   ul.innerHTML = "";
   for (const c of visible()) {
     const li = document.createElement("li");
-    li.className = c.decision + (c.id === cur ? " sel" : "");
+    li.className = c.decision + (c.id === cur ? " sel" : "") + (c.removed ? " removed" : "");
     li.innerHTML = `<span class="dot"></span><span class="nm">${esc(c.name)}</span>` +
-                   (c.genai_art ? `<span class="art">✦art</span>` : "");
+                   (c.removed ? `<span class="art" style="color:var(--red)">removed</span>` : c.genai_art ? `<span class="art">✦art</span>` : "");
     li.onclick = () => selectId(c.id);
     ul.appendChild(li);
   }
@@ -270,6 +288,9 @@ function viewForm(){
         <button class="b-accept" id="b-accept">✓ Accept as-is (a)</button>
         <button class="b-errata" id="b-edit">✎ Edit fields (e)</button>
         <button class="b-reset" id="b-reset">↺ pending</button>
+        ${C.removed
+          ? `<button class="b-restore" id="b-restore">♻ Restore to cube</button>`
+          : `<button class="b-remove" id="b-remove">🗑 Remove from cube</button>`}
       </div>
     </div>
   </div>${img()}</div>`;
@@ -309,6 +330,10 @@ function wire(){
     if(g) g.onchange = e => save({ genai_art: e.target.checked }, false);
     document.getElementById("b-accept").onclick = () => save({decision:"accepted"}, true);
     document.getElementById("b-edit").onclick = enterEdit;
+    const rm = document.getElementById("b-remove");
+    if (rm) rm.onclick = async () => { await fetch("/api/remove/"+cur, {method:"POST"}); await loadList(); selectId(cur); };
+    const rs = document.getElementById("b-restore");
+    if (rs) rs.onclick = async () => { await fetch("/api/restore/"+cur, {method:"POST"}); await loadList(); selectId(cur); };
     document.getElementById("b-reset").onclick = () => save({decision:"pending"}, false);
   } else {
     document.getElementById("b-save").onclick = saveEdits;
@@ -370,6 +395,22 @@ document.querySelectorAll(".filter button").forEach(b =>
     document.querySelectorAll(".filter button").forEach(x=>x.classList.toggle("on", x===b));
     renderList(); });
 document.getElementById("search").oninput = e => { q = e.target.value.toLowerCase(); renderList(); };
+
+async function addCard(){
+  const inp = document.getElementById("addname");
+  const name = inp.value.trim();
+  if (!name) return;
+  const btn = document.getElementById("addbtn");
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    const r = await fetch("/api/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name}) });
+    const d = await r.json();
+    if (d.error) { alert("Add failed: " + d.error); }
+    else { inp.value = ""; await loadList(); selectId(d.id); }
+  } finally { btn.disabled = false; btn.textContent = "add"; }
+}
+document.getElementById("addbtn").onclick = addCard;
+document.getElementById("addname").addEventListener("keydown", e => { if (e.key === "Enter") addCard(); });
 
 document.addEventListener("keydown", e => {
   // Edit-mode global keys work even while focused in a field.

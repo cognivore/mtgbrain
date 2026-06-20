@@ -20,6 +20,7 @@
 //!   original art; nothing else gets the flag pre-set.
 
 use std::fs;
+use std::io::Write;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
@@ -234,6 +235,7 @@ CREATE TABLE cube_cards (
     notes           TEXT NOT NULL DEFAULT '',
     in_db_found     INTEGER NOT NULL DEFAULT 1,
     overrides       TEXT NOT NULL DEFAULT '{}',  -- JSON: per-field errata {field: new value}
+    removed         INTEGER NOT NULL DEFAULT 0,  -- soft-delete: kept for history, hidden from cube
     updated_at      TEXT
 );
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -261,6 +263,87 @@ pub struct RenderCfg {
     pub cache: PathBuf,
     pub chrome: String,
     pub backend: Option<String>,
+    /// Source card DB (mtg.sqlite) for adding new cards by name.
+    pub source_db: PathBuf,
+}
+
+/// Add a card to the cube by exact name: snapshot its fields from `source_db`,
+/// apply the same pre-sets as seeding, append it to the source list, return it.
+fn add_card(db: &Connection, source_db: &Path, name: &str) -> Result<Value> {
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("empty card name");
+    }
+    let exists: i64 =
+        db.query_row("SELECT COUNT(*) FROM cube_cards WHERE name=?1", params![name], |r| r.get(0))?;
+    if exists > 0 {
+        bail!("'{name}' is already in the cube");
+    }
+    let src = Connection::open_with_flags(source_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening source DB {}", source_db.display()))?;
+    let c = lookup_card(&src, name)?
+        .with_context(|| format!("'{name}' not found in the card DB — check exact spelling"))?;
+    let is_creature = c.type_line.contains("Creature");
+    let printings: Vec<&str> = c.printings.split(", ").collect();
+    let odyssey_creature = is_creature && printings.iter().any(|p| ODYSSEY_BLOCK.contains(p));
+    let modern_frame = !printings.iter().any(|p| OLD_FRAME_SETS.contains(p));
+    let next_id: i64 =
+        db.query_row("SELECT COALESCE(MAX(id),-1)+1 FROM cube_cards", [], |r| r.get(0))?;
+    db.execute(
+        INSERT,
+        params![
+            next_id, name, c.mana_cost, c.mana_value, c.type_line, c.colors, c.color_identity,
+            c.power, c.toughness, c.loyalty, c.oracle_text, c.keywords, c.produced_mana,
+            c.printings, c.cube_elo, c.edhrec_rank, i64::from(is_creature),
+            i64::from(odyssey_creature), i64::from(modern_frame), "pending", 1i64,
+        ],
+    )?;
+    // Keep the source list file in sync so a future re-seed remembers this card.
+    if let Ok(list_path) =
+        db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0))
+    {
+        let _ = append_to_list(&list_path, name);
+    }
+    get_card(db, next_id).context("reading back the added card")
+}
+
+fn append_to_list(path: &str, name: &str) -> Result<()> {
+    let existing = fs::read_to_string(path).unwrap_or_default();
+    if existing.lines().any(|l| l.trim() == name) {
+        return Ok(());
+    }
+    let mut f = fs::OpenOptions::new().create(true).append(true).open(path)?;
+    if !existing.is_empty() && !existing.ends_with('\n') {
+        writeln!(f)?;
+    }
+    writeln!(f, "{name}")?;
+    Ok(())
+}
+
+fn remove_from_list(path: &str, name: &str) -> Result<()> {
+    let existing = fs::read_to_string(path).unwrap_or_default();
+    let kept: Vec<&str> = existing.lines().filter(|l| l.trim() != name).collect();
+    fs::write(path, format!("{}\n", kept.join("\n")))?;
+    Ok(())
+}
+
+/// Mark a card removed (1) or restored (0), keeping the row, and sync the list file.
+fn set_removed(db: &Connection, id: i64, removed: bool) -> Result<Option<Value>> {
+    db.execute(
+        "UPDATE cube_cards SET removed=?2, updated_at=datetime('now') WHERE id=?1",
+        params![id, i64::from(removed)],
+    )?;
+    if let (Ok(list_path), Ok(name)) = (
+        db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0)),
+        db.query_row("SELECT name FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0)),
+    ) {
+        let _ = if removed {
+            remove_from_list(&list_path, &name)
+        } else {
+            append_to_list(&list_path, &name)
+        };
+    }
+    Ok(get_card(db, id))
 }
 
 /// Serve the editor UI on `127.0.0.1:port`.
@@ -273,6 +356,8 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     }
     let db =
         Connection::open(editor_db).with_context(|| format!("opening {}", editor_db.display()))?;
+    // Non-destructive migration for older editor DBs: add `removed` if missing.
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN removed INTEGER NOT NULL DEFAULT 0", []);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let server = Server::http(addr).map_err(|e| anyhow::anyhow!("starting server: {e}"))?;
@@ -309,6 +394,28 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     None => not_found(),
                 }
             }
+            // Add a card to the cube by exact name.
+            (Method::Post, "/api/add") => {
+                let mut body = String::new();
+                req.as_reader().read_to_string(&mut body).ok();
+                let name = serde_json::from_str::<Value>(&body)
+                    .ok()
+                    .and_then(|v| v.get("name").and_then(Value::as_str).map(ToString::to_string))
+                    .unwrap_or_default();
+                match add_card(&db, &rc.source_db, &name) {
+                    Ok(v) => json_response(&v),
+                    Err(e) => json_response(&json!({"error": e.to_string()})),
+                }
+            }
+            // Soft-remove / restore a card (kept in DB; removed from the cube list).
+            (Method::Post, p) if p.starts_with("/api/remove/") => match id_from(p, "/api/remove/") {
+                Some(id) => set_removed(&db, id, true).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
+                None => not_found(),
+            },
+            (Method::Post, p) if p.starts_with("/api/restore/") => match id_from(p, "/api/restore/") {
+                Some(id) => set_removed(&db, id, false).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
+                None => not_found(),
+            },
             // On-demand old-frame render (cached by content hash). ?foil=1, &force=1.
             (Method::Get, p) if p.starts_with("/api/render/") => {
                 let foil = url.contains("foil=1");
@@ -343,7 +450,7 @@ fn list_cards(db: &Connection) -> Value {
     let mut stmt = db
         .prepare(
             "SELECT id,name,type,mana_cost,cube_elo,decision,genai_art,
-                    is_odysseyblock_creature,in_db_found
+                    is_odysseyblock_creature,in_db_found,removed
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
@@ -359,6 +466,7 @@ fn list_cards(db: &Connection) -> Value {
                 "genai_art": r.get::<_, i64>(6)? != 0,
                 "odyssey_creature": r.get::<_, i64>(7)? != 0,
                 "found": r.get::<_, i64>(8)? != 0,
+                "removed": r.get::<_, i64>(9)? != 0,
             }))
         })
         .expect("query list")
@@ -368,20 +476,22 @@ fn list_cards(db: &Connection) -> Value {
     let counts = db
         .query_row(
             "SELECT
-                COUNT(*),
-                SUM(decision='accepted'),
-                SUM(decision='errata'),
-                SUM(decision='pending'),
-                SUM(genai_art)
+                SUM(removed=0),
+                SUM(decision='accepted' AND removed=0),
+                SUM(decision='errata' AND removed=0),
+                SUM(decision='pending' AND removed=0),
+                SUM(genai_art AND removed=0),
+                SUM(removed)
              FROM cube_cards",
             [],
             |r| {
                 Ok(json!({
-                    "total":   r.get::<_, i64>(0)?,
+                    "total":   r.get::<_, Option<i64>>(0)?.unwrap_or(0),
                     "accepted":r.get::<_, Option<i64>>(1)?.unwrap_or(0),
                     "errata":  r.get::<_, Option<i64>>(2)?.unwrap_or(0),
                     "pending": r.get::<_, Option<i64>>(3)?.unwrap_or(0),
                     "genai":   r.get::<_, Option<i64>>(4)?.unwrap_or(0),
+                    "removed": r.get::<_, Option<i64>>(5)?.unwrap_or(0),
                 }))
             },
         )
@@ -395,7 +505,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
         "SELECT id,name,mana_cost,mana_value,type,colors,color_identity,power,toughness,
                 loyalty,oracle_text,keywords,produced_mana,printings,cube_elo,edhrec_rank,
                 is_creature,is_odysseyblock_creature,genai_art,decision,errata_text,notes,
-                in_db_found,updated_at,overrides
+                in_db_found,updated_at,overrides,removed
            FROM cube_cards WHERE id=?1",
         params![id],
         |r| {
@@ -426,6 +536,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
                 "updated_at": r.get::<_, Option<String>>(23)?,
                 "overrides": serde_json::from_str::<Value>(&r.get::<_, String>(24)?)
                     .unwrap_or_else(|_| json!({})),
+                "removed": r.get::<_, i64>(25)? != 0,
             }))
         },
     )
