@@ -62,6 +62,19 @@ render-card ID:
 render-all:
     cargo run --release -- render all
 
+# Claude key (artwork match + crop) pulled from rageveil at run time.
+mpc_key := "rageveil show geosurge.ai/api.anthropic.com/onehr-cellvm/pool"
+
+# Render ONE card with MPCfill high-DPI art + foil, e.g. just render-mpc 2
+render-mpc ID:
+    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
+      cargo run --release -- render card {{ID}} --art-backend https://mpcfill.com --foil --force
+
+# Render the WHOLE cube with MPCfill high-DPI art + foil (long; ~hours, ~390 Claude calls).
+render-cube:
+    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
+      cargo run --release -- render all --art-backend https://mpcfill.com --foil
+
 fmt:
     cargo fmt
 
