@@ -152,7 +152,11 @@ fn curl_post_json(url: &str, body: &str) -> Result<String> {
 // ---------------------------------------------------------------------------
 
 struct Card {
+    /// ORIGINAL card name (DB row) — used for ALL addressing: Scryfall/MPCfill lookup,
+    /// art cache dir, render output path, flavor/set/rarity. NEVER the override.
     name: String,
+    /// Printed title — the `name` override if set, else the original. Display only.
+    display_name: String,
     mana_cost: String,
     type_line: String,
     oracle_text: String,
@@ -222,8 +226,10 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
     let auto_errata = o.as_object().is_some_and(|m| m.keys().any(|k| k != "errata_scroll"))
         || !errata_text.trim().is_empty();
     let is_errata = scroll_override.unwrap_or(auto_errata);
+    let display_name = pick("name", Some(name.clone()));
     Ok(Card {
-        name: pick("name", Some(name)),
+        name, // ORIGINAL — addressing/lookup; the "name" override only affects the title
+        display_name,
         mana_cost: pick("mana_cost", mc),
         type_line: pick("type", tl),
         oracle_text: pick("oracle_text", ot),
@@ -247,7 +253,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         .colors.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
     colors.sort();
     let canon = json!({
-        "name": c.name, "mana_cost": c.mana_cost, "type": c.type_line,
+        "name": c.name, "display_name": c.display_name, "mana_cost": c.mana_cost, "type": c.type_line,
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "colors": colors, "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
@@ -1484,7 +1490,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     let content: [(&str, String); 10] = [
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("NAME", esc(&c.name)),
+        ("NAME", esc(&c.display_name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
         ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
