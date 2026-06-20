@@ -537,6 +537,12 @@ fn mpcfill_pick(
         pa.cmp(&pb).then(b.dpi.cmp(&a.dpi))
     });
 
+    if std::env::var("MTGBRAIN_DEBUG_PICK").is_ok() {
+        for (i, c) in cands.iter().enumerate() {
+            eprintln!("  cand[{i}] dpi={} bucket={} label={:?}", c.dpi, c.bucket, c.label);
+        }
+    }
+
     let out = card_dir.join("art.png");
     // TRUE art aspect from Scryfall's canonical art_crop — drives crop height so the
     // proxy's type line can't leak into our art window.
@@ -550,7 +556,7 @@ fn mpcfill_pick(
     // threshold; crop exactly where the art was located. No LLM, no cost.
     const CV_OK: f64 = 0.42;
     let mut best_cv: Option<(usize, [f64; 4], f64)> = None;
-    for (i, c) in cands.iter().take(6).enumerate() {
+    for (i, c) in cands.iter().take(12).enumerate() {
         let file = path_of(c);
         if !file.exists() {
             continue;
@@ -567,23 +573,37 @@ fn mpcfill_pick(
     }
 
     // FALLBACK: Claude vision (art match + box) when CV is unsure (e.g. recropped /
-    // alt art that doesn't pixel-match the reference).
+    // alt art that doesn't pixel-match the reference). Evaluate ALL top candidates and,
+    // among those Claude confirms as the same artwork, prefer the MOST-BORDERED one: a
+    // normal-frame proxy insets the painting from the card edge (left inset x well > 0,
+    // narrower width), whereas an extended/borderless print runs the art to the edges
+    // (x ≈ 0, w ≈ 0.92) and bakes the title bar into our crop. Rank by left inset x, then
+    // by tighter width — this reliably skips full-art proxies for the clean original print.
+    let bordered = |b: &[f64; 4]| b[0] - b[2] * 0.15; // reward left inset, lightly penalise width
     let mut best_box: Option<(usize, [f64; 4])> = None;
-    for (i, c) in cands.iter().take(3).enumerate() {
+    let mut best_match: Option<(usize, [f64; 4])> = None;
+    for (i, c) in cands.iter().take(8).enumerate() {
         let file = path_of(c);
         if !file.exists() {
             continue;
         }
         match claude_match_and_box(key, ref_path, &file) {
             Ok((same, bx)) => {
-                if same {
-                    crop_to(&file, bx, &out, art_aspect)?;
-                    return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
+                if std::env::var("MTGBRAIN_DEBUG_PICK").is_ok() {
+                    eprintln!("  claude cand[{i}] {} same={same} box={bx:?}", c.bucket);
+                }
+                if same && best_match.map_or(true, |(_, b)| bordered(&bx) > bordered(&b)) {
+                    best_match = Some((i, bx));
                 }
                 best_box.get_or_insert((i, bx));
             }
             Err(e) => eprintln!("    (vision error) {e}"),
         }
+    }
+    if let Some((i, bx)) = best_match {
+        let c = &cands[i];
+        crop_to(&path_of(c), bx, &out, art_aspect)?;
+        return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
     }
     // Last resort: the best CV box (even if below threshold) beats an unverified guess.
     if let Some((i, bx, score)) = best_cv {
@@ -673,13 +693,16 @@ fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()>
     // type bar sit. The art window is `cover`, so this slight zoom is invisible.
     const SIDE: f64 = 0.022;
     const TOP: f64 = 0.03;
-    const BOT: f64 = 0.055;
+    const BOT: f64 = 0.04;
 
     let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
     let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
 
     let bw_full = bx[2] * iw;
-    let ah = bw_full / art_aspect.max(0.1); // full art height from the true aspect
+    // Height = the SMALLER of (a) the true-art-aspect estimate and (b) the box's own
+    // height. Capping by both stops EITHER a too-small aspect (proxy framed wider than
+    // the reference printing) OR a too-tall box from spilling into the type line.
+    let ah = (bw_full / art_aspect.max(0.1)).min(bx[3] * ih);
 
     let bx0 = bx[0] * iw + bw_full * SIDE;
     let by0 = bx[1] * ih + ah * TOP;
@@ -1475,7 +1498,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
         // Type width stops short of the set symbol (~0.858) so a long type line
         // auto-fits/shrinks instead of overlapping the symbol.
-        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.74)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
+        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.70)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
         ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
         ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PW", pc(0.1367)), ("PSZ", px(0.0429)),
         ("IY", pc(1908.0 / 2100.0)), ("ISZ", px(0.0172)),
@@ -1483,7 +1506,14 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // Set symbol: square box at the right end of the type line, vertically centred
         // (centre ≈ 0.576). A touch smaller than the type height so big modern symbols
         // don't crowd the frame borders. Monocolour mask + dark inner border + white key.
-        ("SSR", pc(0.088)), ("SSY", pc(0.5575)), ("SSW", pc(0.0535)), ("SSH", pc(0.0382)),
+        // Wide box, right-anchored: symbols share a constant height and grow LEFT when
+        // wide (Nemesis etc.) instead of being squashed into a square. Square symbols
+        // keep their size and right-edge position.
+        // NEAR-SQUARE box → contain gives the real "two placement modes": a SQUARE
+        // symbol binds on HEIGHT (fills the type bar); a WIDE symbol (Nemesis) binds
+        // on WIDTH and so comes out SHORTER, right-aligned & vertically centred —
+        // exactly like the printed card, instead of ballooning to full height.
+        ("SSR", pc(0.088)), ("SSY", pc(0.5566)), ("SSW", pc(0.062)), ("SSH", pc(0.0382)),
         // Errata scroll: a HORIZONTAL parchment banner wrapping around the LEFT edge of
         // the frame (left fold off the card edge, rolled end resting on the art). Left-
         // anchored (ESX=0); vertically centred at the GOLDEN-RATIO point of the art

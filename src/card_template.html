@@ -60,10 +60,13 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
      drop-shadow(1.9px -1.9px 0 #fbfaf3) drop-shadow(-1.9px -1.9px 0 #fbfaf3); }
 .setsym-edge, .setsym-i { position:absolute; inset:0;
    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-   -webkit-mask-position:center; mask-position:center;
+   /* RIGHT-anchored in a NEAR-SQUARE box: contain yields two placement modes —
+      a SQUARE symbol binds on height (fills the type bar); a WIDE one (Nemesis)
+      binds on width and so comes out shorter, right-aligned & vertically centred. */
+   -webkit-mask-position:right center; mask-position:right center;
    -webkit-mask-size:contain; mask-size:contain; }
-.setsym-edge { background:#15110d; }                          /* dark inner border (full shape) */
-.setsym-i { transform:scale(0.90); transform-origin:center; } /* monocolour body, shrunk */
+.setsym-edge { background:#15110d; }                              /* dark inner border */
+.setsym-i { transform:scale(0.90); transform-origin:right center; } /* monocolour body */
 /* errata scroll: parchment overlay on the LEFT frame strip, golden-ratio-low */
 .errata-scroll { position:absolute; left:%%ESX%%%; top:%%ESY%%%; width:%%ESW%%%; height:%%ESH%%%;
    background-repeat:no-repeat; background-position:left center; background-size:contain;
