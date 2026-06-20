@@ -67,6 +67,19 @@
   .badges { display:flex; gap:8px; margin:10px 0; flex-wrap:wrap; }
   .badge { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--dim); }
   .badge.on { color:var(--green); border-color:#3c5230; }
+  .badge.er { color:var(--amber); border-color:#5a4222; }
+  .ov { color:var(--amber); font-size:12px; }
+  /* edit mode */
+  .editing { color:var(--amber); font-size:12px; margin-bottom:14px; padding:7px 11px;
+             background:#3a2c16; border:1px solid #5a4222; border-radius:7px; }
+  .editing kbd { background:#241c0e; border:1px solid #5a4222; border-radius:4px; padding:0 5px; }
+  .frow { display:grid; grid-template-columns:104px 1fr; gap:12px; align-items:start; margin-bottom:8px; }
+  .frow .flab { color:var(--dim); font-size:12px; padding-top:8px; text-align:right; }
+  .frow input, .frow textarea { width:100%; background:var(--panel2); color:var(--ink);
+              border:1px solid var(--line); border-radius:6px; padding:7px 9px;
+              font:13px/1.45 ui-monospace,monospace; resize:vertical; }
+  .frow input:focus, .frow textarea:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+  #f_name { font-size:17px; font-weight:600; font-family:ui-sans-serif,system-ui,sans-serif; }
   .editbox { margin-top:18px; }
   label.chk { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
               padding:10px 12px; background:var(--panel2); border:1px solid var(--line);
@@ -122,6 +135,7 @@
 </main>
 <script>
 let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "";
+let C = null, editMode = false;
 
 async function loadList() {
   const r = await fetch("/api/cards");
@@ -162,65 +176,139 @@ function renderList() {
 function esc(s){ return (s??"").replace(/[&<>"]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
 
 async function selectId(id) {
-  cur = id;
+  cur = id; editMode = false;
   renderList();
   const r = await fetch("/api/card/" + id);
-  const c = await r.json();
-  renderCard(c);
+  C = await r.json();
+  renderCard();
   const idx = CARDS.findIndex(x => x.id === id);
   document.getElementById("pos").textContent = `${idx+1} / ${CARDS.length}`;
 }
-function renderCard(c) {
-  const stats = c.is_creature && (c.power!=null)
-    ? `<div><b>P/T</b> ${esc(c.power)}/${esc(c.toughness)}</div>` : "";
-  const loy = c.loyalty!=null ? `<div><b>loyalty</b> ${esc(c.loyalty)}</div>` : "";
-  document.getElementById("card").innerHTML = `
-    <div class="cardwrap"><div class="cardmain">
-    <h2>${esc(c.name)}</h2>
-    <div class="mc">${esc(c.mana_cost||"")} ${c.mana_value!=null?`· mv ${c.mana_value}`:""}
-        ${c.cube_elo!=null?`· elo ${Math.round(c.cube_elo)}`:""}
-        ${c.edhrec_rank!=null?`· edhrec #${c.edhrec_rank}`:""}</div>
-    <div class="tl">${esc(c.type||"")}</div>
-    ${c.found ? "" : `<div class="missing">⚠ not found in card DB — fields unavailable</div>`}
-    <div class="otext">${esc(c.oracle_text||"—")}</div>
+
+// Independently-erratable fields, in Tab order. Name is first so `e` lands there.
+const FIELDS = [
+  {k:"name",          label:"name",        ta:false},
+  {k:"mana_cost",     label:"mana cost",   ta:false},
+  {k:"type",          label:"type line",   ta:false},
+  {k:"power",         label:"power",       ta:false},
+  {k:"toughness",     label:"toughness",   ta:false},
+  {k:"loyalty",       label:"loyalty",     ta:false},
+  {k:"colors",        label:"colors",      ta:false},
+  {k:"keywords",      label:"keywords",    ta:false},
+  {k:"produced_mana", label:"produces",    ta:false},
+  {k:"oracle_text",   label:"oracle text", ta:true},
+];
+// effective value = per-field override if present, else the printed value
+function fval(k){ return (C.overrides && C.overrides[k]!=null) ? C.overrides[k] : (C[k]??""); }
+function isOv(k){ return !!(C.overrides && C.overrides[k]!=null); }
+function ovmark(k){ return isOv(k) ? ` <span class="ov" title="errata">✎</span>` : ""; }
+function img(){
+  return `<img class="cardimg" alt="card image (Scryfall)" referrerpolicy="no-referrer"
+     src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(C.name)}"
+     onerror="this.style.visibility='hidden'">`;
+}
+
+function renderCard(){
+  if (!C) return;
+  document.getElementById("card").innerHTML = editMode ? editForm() : viewForm();
+  wire();
+  if (editMode) { const n=document.getElementById("f_name"); if(n){ n.focus(); n.select(); } }
+}
+
+function viewForm(){
+  const stats = C.is_creature && (fval("power")!=="")
+    ? `<div><b>P/T</b> ${esc(fval("power"))}/${esc(fval("toughness"))}${ovmark("power")}${ovmark("toughness")}</div>` : "";
+  const loy = (fval("loyalty")!=="") ? `<div><b>loyalty</b> ${esc(fval("loyalty"))}${ovmark("loyalty")}</div>` : "";
+  const nOv = C.overrides ? Object.keys(C.overrides).length : 0;
+  return `
+  <div class="cardwrap"><div class="cardmain">
+    <h2>${esc(fval("name"))}${ovmark("name")}</h2>
+    <div class="mc">${esc(fval("mana_cost"))}${ovmark("mana_cost")} ${C.mana_value!=null?`· mv ${C.mana_value}`:""}
+        ${C.cube_elo!=null?`· elo ${Math.round(C.cube_elo)}`:""}
+        ${C.edhrec_rank!=null?`· edhrec #${C.edhrec_rank}`:""}</div>
+    <div class="tl">${esc(fval("type"))}${ovmark("type")}</div>
+    ${C.found ? "" : `<div class="missing">⚠ not found in card DB — fields unavailable</div>`}
+    <div class="otext">${esc(fval("oracle_text")||"—")}${ovmark("oracle_text")}</div>
     <div class="grid">
       ${stats}${loy}
-      ${c.colors?`<div><b>colors</b> ${esc(c.colors)}</div>`:""}
-      ${c.keywords?`<div><b>keywords</b> ${esc(c.keywords)}</div>`:""}
-      ${c.produced_mana?`<div><b>produces</b> ${esc(c.produced_mana)}</div>`:""}
-      ${c.printings?`<div><b>printings</b> ${esc(c.printings)}</div>`:""}
+      ${fval("colors")?`<div><b>colors</b> ${esc(fval("colors"))}${ovmark("colors")}</div>`:""}
+      ${fval("keywords")?`<div><b>keywords</b> ${esc(fval("keywords"))}${ovmark("keywords")}</div>`:""}
+      ${fval("produced_mana")?`<div><b>produces</b> ${esc(fval("produced_mana"))}${ovmark("produced_mana")}</div>`:""}
+      ${C.printings?`<div><b>printings</b> ${esc(C.printings)}</div>`:""}
     </div>
     <div class="badges">
-      <span class="badge ${c.decision==='accepted'?'on':''}">decision: ${c.decision}</span>
-      ${c.odyssey_creature?`<span class="badge on">Odyssey-block creature</span>`:""}
-      ${c.updated_at?`<span class="badge">edited ${esc(c.updated_at)}</span>`:""}
+      <span class="badge ${C.decision==='accepted'?'on':''} ${C.decision==='errata'?'er':''}">decision: ${C.decision}</span>
+      ${nOv?`<span class="badge er">${nOv} field errata</span>`:""}
+      ${C.notes?`<span class="badge">has notes</span>`:""}
+      ${C.odyssey_creature?`<span class="badge on">Odyssey-block creature</span>`:""}
+      ${C.updated_at?`<span class="badge">edited ${esc(C.updated_at)}</span>`:""}
     </div>
     <div class="editbox">
-      <label class="chk"><input type="checkbox" id="genai" ${c.genai_art?"checked":""}>
+      <label class="chk"><input type="checkbox" id="genai" ${C.genai_art?"checked":""}>
         GenAI new art in the style of Odyssey-block <i>Magic: the Gathering</i> artists?</label>
-      <p style="margin:14px 0 4px;color:var(--dim);font-size:12px">Errata (leave blank to keep card as printed):</p>
-      <textarea id="errata" rows="4" placeholder="e.g. ETB mill 3 instead of 1; add: '{T}: …'">${esc(c.errata_text||"")}</textarea>
       <div class="actions">
         <button class="b-accept" id="b-accept">✓ Accept as-is (a)</button>
-        <button class="b-errata" id="b-errata">✎ Save errata (e)</button>
+        <button class="b-errata" id="b-edit">✎ Edit fields (e)</button>
         <button class="b-reset" id="b-reset">↺ pending</button>
       </div>
     </div>
-    </div>
-    <img class="cardimg" alt="card image (Scryfall)" referrerpolicy="no-referrer"
-         src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(c.name)}"
-         onerror="this.style.visibility='hidden'">
-    </div>`;
-  document.getElementById("genai").onchange = e =>
-    save({ genai_art: e.target.checked }, false);
-  document.getElementById("b-accept").onclick = () =>
-    save({ decision:"accepted", errata_text: errataVal() }, true);
-  document.getElementById("b-errata").onclick = () =>
-    save({ decision:"errata", errata_text: errataVal() }, true);
-  document.getElementById("b-reset").onclick = () =>
-    save({ decision:"pending" }, false);
+  </div>${img()}</div>`;
 }
-function errataVal(){ return document.getElementById("errata")?.value ?? ""; }
+
+function editForm(){
+  const row = f => {
+    const v = esc(fval(f.k));
+    const inp = f.ta
+      ? `<textarea id="f_${f.k}" rows="5">${v}</textarea>`
+      : `<input id="f_${f.k}" type="text" value="${v}">`;
+    return `<label class="frow"><span class="flab">${f.label}${ovmark(f.k)}</span>${inp}</label>`;
+  };
+  return `
+  <div class="cardwrap"><div class="cardmain">
+    <div class="editing">editing every field independently · <kbd>Tab</kbd> next field · <kbd>Ctrl/⌘+Enter</kbd> save · <kbd>Esc</kbd> cancel</div>
+    ${FIELDS.map(row).join("")}
+    <label class="frow"><span class="flab">notes</span><textarea id="f_notes" rows="2">${esc(C.notes||"")}</textarea></label>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="genai" ${C.genai_art?"checked":""}>
+      GenAI new art in the style of Odyssey-block <i>Magic: the Gathering</i> artists?</label>
+    <div class="actions">
+      <button class="b-accept" id="b-save">✓ Save errata</button>
+      <button class="b-reset" id="b-cancel">✕ Cancel (Esc)</button>
+      <button class="b-reset" id="b-clear">↺ Clear all errata</button>
+    </div>
+  </div>${img()}</div>`;
+}
+
+function wire(){
+  if (!editMode) {
+    const g=document.getElementById("genai");
+    if(g) g.onchange = e => save({ genai_art: e.target.checked }, false);
+    document.getElementById("b-accept").onclick = () => save({decision:"accepted"}, true);
+    document.getElementById("b-edit").onclick = enterEdit;
+    document.getElementById("b-reset").onclick = () => save({decision:"pending"}, false);
+  } else {
+    document.getElementById("b-save").onclick = saveEdits;
+    document.getElementById("b-cancel").onclick = () => { editMode=false; renderCard(); };
+    document.getElementById("b-clear").onclick = () =>
+      save({decision:"accepted", overrides:{}, notes:""}, false);
+  }
+}
+function enterEdit(){ editMode = true; renderCard(); }
+
+function collectOverrides(){
+  const ov = {};
+  for (const f of FIELDS){
+    const el = document.getElementById("f_"+f.k); if(!el) continue;
+    if (String(el.value) !== String(C[f.k] ?? "")) ov[f.k] = el.value;
+  }
+  return ov;
+}
+async function saveEdits(){
+  const ov = collectOverrides();
+  const notes = document.getElementById("f_notes")?.value ?? "";
+  const genai = document.getElementById("genai")?.checked ?? C.genai_art;
+  const hasEdits = Object.keys(ov).length>0 || notes.trim()!=="";
+  await save({ decision: hasEdits ? "errata" : C.decision, overrides: ov, notes, genai_art: genai }, false);
+}
 
 async function save(patch, advance) {
   if (cur === null) return;
@@ -259,9 +347,15 @@ document.querySelectorAll(".filter button").forEach(b =>
 document.getElementById("search").oninput = e => { q = e.target.value.toLowerCase(); renderList(); };
 
 document.addEventListener("keydown", e => {
+  // Edit-mode global keys work even while focused in a field.
+  if (editMode) {
+    if (e.key==="Escape") { editMode=false; renderCard(); e.preventDefault(); }
+    else if (e.key==="Enter" && (e.ctrlKey||e.metaKey)) { saveEdits(); e.preventDefault(); }
+    return;                       // otherwise let typing + native Tab cycling happen
+  }
   if (["INPUT","TEXTAREA"].includes(e.target.tagName)) return;
-  if (e.key==="a") { save({decision:"accepted", errata_text:errataVal()}, true); }
-  else if (e.key==="e") { document.getElementById("errata")?.focus(); }
+  if (e.key==="a") save({decision:"accepted"}, true);
+  else if (e.key==="e") { enterEdit(); e.preventDefault(); }   // prevent 'e' typing into name
   else if (e.key==="g") { const g=document.getElementById("genai"); if(g){ g.checked=!g.checked; save({genai_art:g.checked}, false);} }
   else if (e.key==="j") step(1);
   else if (e.key==="k") step(-1);

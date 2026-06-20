@@ -233,6 +233,7 @@ CREATE TABLE cube_cards (
     errata_text     TEXT NOT NULL DEFAULT '',
     notes           TEXT NOT NULL DEFAULT '',
     in_db_found     INTEGER NOT NULL DEFAULT 1,
+    overrides       TEXT NOT NULL DEFAULT '{}',  -- JSON: per-field errata {field: new value}
     updated_at      TEXT
 );
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -367,7 +368,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
         "SELECT id,name,mana_cost,mana_value,type,colors,color_identity,power,toughness,
                 loyalty,oracle_text,keywords,produced_mana,printings,cube_elo,edhrec_rank,
                 is_creature,is_odysseyblock_creature,genai_art,decision,errata_text,notes,
-                in_db_found,updated_at
+                in_db_found,updated_at,overrides
            FROM cube_cards WHERE id=?1",
         params![id],
         |r| {
@@ -396,6 +397,8 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
                 "notes": r.get::<_, String>(21)?,
                 "found": r.get::<_, i64>(22)? != 0,
                 "updated_at": r.get::<_, Option<String>>(23)?,
+                "overrides": serde_json::from_str::<Value>(&r.get::<_, String>(24)?)
+                    .unwrap_or_else(|_| json!({})),
             }))
         },
     )
@@ -429,6 +432,15 @@ fn save_card(db: &Connection, id: i64, body: &str) -> Result<Option<Value>> {
         db.execute(
             "UPDATE cube_cards SET notes=?2, updated_at=datetime('now') WHERE id=?1",
             params![id, n],
+        )?;
+    }
+    if let Some(o) = v.get("overrides") {
+        if !o.is_object() {
+            bail!("overrides must be a JSON object");
+        }
+        db.execute(
+            "UPDATE cube_cards SET overrides=?2, updated_at=datetime('now') WHERE id=?1",
+            params![id, o.to_string()],
         )?;
     }
     Ok(get_card(db, id))

@@ -214,9 +214,16 @@ touch the source data) and applies two **pre-sets** (a starting point — review
   pre-8th-Edition (pre-2003 "old frame") set. Old-frame cards keep their original art. Nothing else.
 
 The UI: filter (all / pending / accepted / errata / genai) + name search in the sidebar; the detail
-pane shows the full card, a live **card-image preview** (fetched from the [Scryfall](https://scryfall.com/docs/api)
-open API by name), and an errata box. Keys: `a` accept · `e` errata · `g` toggle GenAI art ·
-`j`/`k` next/prev · `n` next pending. Everything persists immediately to `data/cube_editor.sqlite`
+pane shows the full card and a live **card-image preview** (fetched from the
+[Scryfall](https://scryfall.com/docs/api) open API by name).
+
+**Every field is independently erratable.** Press `e` to enter edit mode: each field (name, mana
+cost, type, P/T, loyalty, oracle text, …) becomes an input with the cursor on the name; `Tab`
+cycles fields; `Ctrl/⌘+Enter` saves, `Esc` cancels. Only the fields you change are stored (as a
+per-field override JSON), the card's decision flips to `errata`, and the read-only view then renders
+your edited values with a ✎ marker. The image preview always shows the original printed card.
+
+Keys: `a` accept · `e` edit fields · `g` toggle GenAI art · `j`/`k` next/prev · `n` next pending. Everything persists immediately to `data/cube_editor.sqlite`
 (table `cube_cards` — query/export it with `sqlite3` like any other DB). Port is deliberately high
 (`49737`) to avoid clashes; change with `--port`.
 
