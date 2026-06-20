@@ -249,13 +249,11 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
 }
 
 fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
-    let mut colors: Vec<String> = c
-        .colors.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-    colors.sort();
+    // Use the FRAME file in the hash so a corrected frame colour forces a re-render.
     let canon = json!({
         "name": c.name, "display_name": c.display_name, "mana_cost": c.mana_cost, "type": c.type_line,
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
-        "loyalty": c.loyalty, "colors": colors, "is_creature": c.is_creature,
+        "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
         "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 3,
     });
@@ -264,11 +262,40 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
     format!("{:x}", h.finalize())
 }
 
+/// The card's WUBRG colours for frame selection. Derived from the mana cost's
+/// coloured pips (authoritative — the DB `colors` field is sometimes wrong, e.g.
+/// "W" on a {2}{G} card). Falls back to `colors` only when the cost has no coloured
+/// mana (colour-indicator cards). Hybrids count every colour; {2/W}/{W/P} count W.
+fn card_colors(c: &Card) -> Vec<char> {
+    let mut set: Vec<char> = Vec::new();
+    let mut chars = c.mana_cost.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '{' {
+            let mut sym = String::new();
+            for c2 in chars.by_ref() {
+                if c2 == '}' {
+                    break;
+                }
+                sym.push(c2);
+            }
+            for k in sym.chars().filter(|k| "WUBRG".contains(*k)) {
+                if !set.contains(&k) {
+                    set.push(k);
+                }
+            }
+        }
+    }
+    if set.is_empty() {
+        set = c.colors.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+    }
+    set
+}
+
 fn frame_file(c: &Card) -> &'static str {
     let t = c.type_line.to_lowercase();
     let is_land = t.contains("land");
     let is_artifact = t.contains("artifact");
-    let cols: Vec<char> = c.colors.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+    let cols: Vec<char> = card_colors(c);
     if is_land {
         // Lands have no `colors`; the single-colour 7ED land frame is chosen from the
         // colour identity (the {U} in "Add {U}"). Only a MONO identity gets a tinted
