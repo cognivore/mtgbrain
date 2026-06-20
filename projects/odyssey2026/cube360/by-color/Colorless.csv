@@ -1,48 +1,49 @@
 Name,Cost,MV,Type,Color,Archetype,Role,Source,cube_elo,does_nothing_alone,colorshift,too_strong,errata_needed,oob_exception,errata_proposal,comment
-"Winter Orb",{2},2,Artifact,C,prison,"Mana-denial stax: one land untaps/turn",any-era,1397,"","","","","","","Core colorless mana-denial; glues slow shells"
-"Static Orb",{3},3,Artifact,C,prison,"Harder Winter Orb; only two untaps total",any-era,1242,"","","","","","","Stronger stasis; rewards low-permanent prison"
-"Storage Matrix",{3},3,Artifact,C,prison,"Untap-type restriction lock; decision-rich",any-era,1155,"","","","","","","Decision-intensive untap lock; very on-philosophy"
-"Sphere of Resistance",{2},2,Artifact,C,prison,"Symmetric spell tax; slows whole table",any-era,1389,"","","","","","","Cheap symmetric tax; prison glue, low power"
-Crawlspace,{3},3,Artifact,C,prison,"Caps attackers to two; buys time",any-era,1323,"","","","","","","Pure defense for slow lock/alt-win shells"
-"Tsabo's Web",{2},2,Artifact,C,prison,"Cantrip soft-lock on utility/man-lands",any-era,1243,"","","","","","","Replaces itself; never a dead draw"
-"Cursed Totem",{2},2,Artifact,C,prison,"Shuts off creature activated abilities",any-era,1174,"","","","","","","Sideways prison; stops Opposition-style tappers"
-"Damping Sphere",{2},2,Artifact,C,prison,"Anti-ramp/anti-storm tax speed-bump",any-era,1207,"","","","","","","Caps big-mana lands and storm; honest"
-"Defense Grid",{2},2,Artifact,C,honest-combo,"Taxes opp interaction; shields combo turn",any-era,1287,"","","","","","","Asymmetric tax protecting honest-combo turns"
-"Possessed Portal",{8},8,Artifact,C,prison,"Top-end hard lock: stops draws, grinds board",any-era,1140,"","","","","","","Fragile 8-mana payoff lock; expensive = fair"
-"Darksteel Reactor",{4},4,Artifact,C,counter-altwin,"Counter alt-win: 20 charge = win; proliferate payoff",any-era,1166,Y,"","",Y,"","Enters with 3 charge counters; whenever you proliferate, put an extra charge counter on it","Errata to tie to proliferate; cleanest count-to-20"
-"Contagion Clasp",{2},2,Artifact,C,counter-altwin,"Proliferate + repeatable counter accelerant",any-era,1195,"","","","","","","ETB shrink, then repeatable proliferate; cheap"
-"Contagion Engine",{6},6,Artifact,C,counter-altwin,"Double-proliferate engine; counter top-end",any-era,1254,"","","","","","","Jumps alt-win counters and Tangle Wire fades fast"
-"Throne of Geth",{2},2,Artifact,C,counter-altwin,"One-shot proliferate via artifact sac",any-era,1201,"","","","","","","Cheap proliferate burst for alt-win/fade counters"
-"Spawning Pit",{2},2,Artifact,C,counter-altwin,"Charge-counter sac engine; proliferate target",any-era,1268,"","","","","","","Banks sacs as counters; proliferate doubles tokens"
-"Astral Cornucopia",{X}{X}{X},0,Artifact,C,counter-altwin,"Charge-counter mana rock; big-red X sink",any-era,1289,"","","","","","","Proliferate grows the rock; slow ramp + sink"
-"Empowered Autogenerator",{4},4,Artifact,C,counter-altwin,"Charge-counter ramp battery; proliferate target",any-era,1292,"","","","","","","Self-growing mana; honest slow build-around"
-"Teferi's Puzzle Box",{4},4,Artifact,C,wheel-lock,"Wheel-lock keystone (#14): forced redraw each draw step",any-era,1230,"","","","","","","LOCK not free win; pair with hand-punishers"
-"Anvil of Bogardan",{2},2,Artifact,C,wheel-lock,"Symmetric loot + no max hand; feeds punishers",any-era,1312,"","","","","","","Discard feeds graveyard; draw feeds hand-size punishers"
-"Memory Jar",{5},5,Artifact,C,wheel-lock,"Sac for fresh 7s; one-shot storm/draw burst",any-era,1378,"","","","","","","One-shot wheel; floods hands for punishers on demand"
-"Howling Mine",{2},2,Artifact,C,wheel-lock,"Symmetric extra-draw; untap clause = real choice",any-era,1264,"","","","","","","Core wheel enabler; tap-to-deny is a decision"
-"Temple Bell",{3},3,Artifact,C,wheel-lock,"On-demand symmetric draw; you control timing",any-era,1232,"","","","","","","Fills hands on YOUR turn so punishers fire first"
-"Font of Mythos",{4},4,Artifact,C,wheel-lock,"Each player draws two extra per draw step",any-era,1251,"","","","","","","Hardest enabler; rockets hands past 7 for Owl"
-"Otherworld Atlas",{4},4,"Artifact — Book",C,wheel-lock,"Charge-counter scaling symmetric draw",any-era,1242,"","","","","","","Ties draw to counters theme + proliferate; slow"
-"Mind's Eye",{5},5,Artifact,C,wheel-lock,"Draw-matters wheel payoff: pay {1} per opp draw to draw",any-era,"","","","","","","","DB pull; punishes the symmetric wheels you run"
-"Codex Shredder",{1},1,Artifact,C,lantern-mill,"Lantern win: repeatable mill + late card return",any-era,1251,"","","","","","","Mills 1/turn solo; lantern-deck primary clock"
-"Ghoulcaller's Bell",{1},1,Artifact,C,lantern-mill,"Lantern win: cheap symmetric mill",any-era,1208,"","","","","","","Mills each player 1/turn; lantern + self-mill enabler"
-"Lantern of Insight",{1},1,Artifact,C,lantern-mill,"Lantern-control core: see tops, selective mill lock",any-era,1270,Y,"","",Y,"","At the beginning of your upkeep, mill 1","Errata to mill 1/upkeep so it's a real clock alone"
-Mindcrank,{2},2,Artifact,C,lantern-mill,"Lantern/mill payoff: life loss snowballs into deck-out",any-era,1293,Y,"","",Y,"","Gains: {T}: target player mills 1","Errata to self-mill so it acts alone"
-"Pyxis of Pandemonium",{1},1,Artifact,C,lantern-mill,"Lantern-style exile clock; face-down library strip",any-era,1191,Y,"","",Y,"","Its {T} ability also mills each player 1","Errata so its tap ability also mills each player 1"
-"Mirror Universe",{6},6,Artifact,C,life-swap,"Headline finisher: get low, swap life totals away",any-era,1195,"","","","","","","Named anchor; honest one-shot, sacrifices itself"
-"Soul Conduit",{6},6,Artifact,C,life-swap,"Repeatable Mirror Universe: {6} swap two totals",any-era,1137,"","","","","","","{6}/use = honest slow backup to Mirror Universe"
-"Sundial of the Infinite",{2},2,Artifact,C,deck-out-combo,"End turn before empty-library draw = Stifle for Leveler (#13)",any-era,1321,"","","","","","","Spec #13; alt to Ad Nauseam/Angel's Grace lines"
-Leveler,{5},5,"Artifact Creature — Juggernaut",C,deck-out-combo,"Empties own library on ETB; deck-out + Sundial line",exception,1200,"","","","",Y,"","Artifact-creature exception; structural deck-out, not a beater"
-"Krark's Thumb",{2},2,"Legendary Artifact",C,coin-flip,"Coin-flip linchpin: flip two, ignore one",any-era,1200,Y,"","",Y,"","Gains: {2}, {T}: flip a coin","Errata to add a flip source so it isn't dead"
-"Cursed Scroll",{1},1,Artifact,C,hellbent,"Hellbent win-con: repeatable 2 burn on empty hand",any-era,1437,"","","","","","","Classic hellbent finisher; empty/1-card hand"
-"Lion's Eye Diamond",{0},0,Artifact,C,hellbent,"Ritual + discard enabler for hellbent/tutor combo",any-era,1610,"","","","","","","Discard hand for 3; enables Infernal Tutor hellbent"
-"Trading Post",{4},4,Artifact,C,big-red-sink,"Grindy modal mana-sink (goats/life/draw)",any-era,1256,"","","","","","","User-named big-red sink; honest grind, no fast value"
-"Crucible of Worlds",{3},3,Artifact,C,big-red-sink,"Land-recursion engine for fetch/sac-land grind",any-era,1383,"","","","","","","Supports Glacial-Chasm/sac-land prison loops"
-"Worn Powerstone",{3},3,Artifact,C,big-red-sink,"Tapped two-mana ramp for big-mana sinks",any-era,1377,"","","","","","","Powers Braids/mana-sink decks without fast-mana jump"
-"Mind Stone",{2},2,Artifact,C,fixing,"Fixing rock that cashes for a card late",any-era,1358,"","","","","","","Low-power rock; sacs for card so never floods"
-"Fellwar Stone",{2},2,Artifact,C,fixing,"Untapped fixing rock keyed to opp lands",any-era,1447,"","","","","","","Mild, period-appropriate, no fast-mana jump"
-"Prismatic Lens",{2},2,Artifact,C,fixing,"Filtering rock: colorless or filtered any-color",any-era,1363,"","","","","","","Cheap filter rock; smooths build-around colors"
-"Coldsteel Heart",{2},2,"Snow Artifact",C,fixing,"Tapped two-mana fixed-color rock",any-era,1445,"","","","","","","Tapped fixing rock; supports multicolor lock decks"
-"Star Compass",{2},2,Artifact,C,fixing,"Tapland-style fixing keyed to your basics",any-era,1320,"","","","","","","Slow color fixing; enters tapped, low power"
-"Pristine Talisman",{3},3,Artifact,C,fixing,"Lifegain rock; buffers life for grind/Ad Nauseam",any-era,1243,"","","","","","","Slow rock + lifegain; buffers Ad Nauseam life"
-"Expedition Map",{1},1,Artifact,C,fixing,"Utility-land tutor for the prison toolbox",any-era,1381,"","","","","","","Fetches Glacial Chasm/Tabernacle; enables toolbox"
+Leveler,{5},5,Artifact Creature — Juggernaut,C,deck-out-combo,Empties own library on ETB; deck-out + Sundial line,exception,1200,,,,,Y,,"Artifact-creature exception; structural deck-out, not a beater"
+Astral Cornucopia,{X}{X}{X},0,Artifact,C,counter-altwin,Charge-counter mana rock; big-red X sink,any-era,1289,,,,,,,Proliferate grows the rock; slow ramp + sink
+Lion's Eye Diamond,{0},0,Artifact,C,hellbent,Ritual + discard enabler for hellbent/tutor combo,any-era,1610,,,,,,,Discard hand for 3; enables Infernal Tutor hellbent
+Codex Shredder,{1},1,Artifact,C,lantern-mill,Lantern win: repeatable mill + late card return,any-era,1251,,,,,,,Mills 1/turn solo; lantern-deck primary clock
+Cursed Scroll,{1},1,Artifact,C,hellbent,Hellbent win-con: repeatable 2 burn on empty hand,any-era,1437,,,,,,,Classic hellbent finisher; empty/1-card hand
+Expedition Map,{1},1,Artifact,C,fixing,Utility-land tutor for the prison toolbox,any-era,1381,,,,,,,Fetches Glacial Chasm/Tabernacle; enables toolbox
+Ghoulcaller's Bell,{1},1,Artifact,C,lantern-mill,Lantern win: cheap symmetric mill,any-era,1208,,,,,,,Mills each player 1/turn; lantern + self-mill enabler
+Lantern of Insight,{1},1,Artifact,C,lantern-mill,"Lantern-control core: see tops, selective mill lock",any-era,1270,Y,,,Y,,"At the beginning of your upkeep, mill 1",Errata to mill 1/upkeep so it's a real clock alone
+Pyxis of Pandemonium,{1},1,Artifact,C,lantern-mill,Lantern-style exile clock; face-down library strip,any-era,1191,Y,,,Y,,Its {T} ability also mills each player 1,Errata so its tap ability also mills each player 1
+Anvil of Bogardan,{2},2,Artifact,C,wheel-lock,Symmetric loot + no max hand; feeds punishers,any-era,1312,,,,,,,Discard feeds graveyard; draw feeds hand-size punishers
+Coldsteel Heart,{2},2,Snow Artifact,C,fixing,Tapped two-mana fixed-color rock,any-era,1445,,,,,,,Tapped fixing rock; supports multicolor lock decks
+Contagion Clasp,{2},2,Artifact,C,counter-altwin,Proliferate + repeatable counter accelerant,any-era,1195,,,,,,,"ETB shrink, then repeatable proliferate; cheap"
+Cursed Totem,{2},2,Artifact,C,prison,Shuts off creature activated abilities,any-era,1174,,,,,,,Sideways prison; stops Opposition-style tappers
+Damping Sphere,{2},2,Artifact,C,prison,Anti-ramp/anti-storm tax speed-bump,any-era,1207,,,,,,,Caps big-mana lands and storm; honest
+Defense Grid,{2},2,Artifact,C,honest-combo,Taxes opp interaction; shields combo turn,any-era,1287,,,,,,,Asymmetric tax protecting honest-combo turns
+Fellwar Stone,{2},2,Artifact,C,fixing,Untapped fixing rock keyed to opp lands,any-era,1447,,,,,,,"Mild, period-appropriate, no fast-mana jump"
+Howling Mine,{2},2,Artifact,C,wheel-lock,Symmetric extra-draw; untap clause = real choice,any-era,1264,,,,,,,Core wheel enabler; tap-to-deny is a decision
+Krark's Thumb,{2},2,Legendary Artifact,C,coin-flip,"Coin-flip linchpin: flip two, ignore one",any-era,1200,Y,,,Y,,"Gains: {2}, {T}: flip a coin",Errata to add a flip source so it isn't dead
+Mind Stone,{2},2,Artifact,C,fixing,Fixing rock that cashes for a card late,any-era,1358,,,,,,,Low-power rock; sacs for card so never floods
+Mindcrank,{2},2,Artifact,C,lantern-mill,Lantern/mill payoff: life loss snowballs into deck-out,any-era,1293,Y,,,Y,,Gains: {T}: target player mills 1,Errata to self-mill so it acts alone
+Prismatic Lens,{2},2,Artifact,C,fixing,Filtering rock: colorless or filtered any-color,any-era,1363,,,,,,,Cheap filter rock; smooths build-around colors
+Spawning Pit,{2},2,Artifact,C,counter-altwin,Charge-counter sac engine; proliferate target,any-era,1268,,,,,,,Banks sacs as counters; proliferate doubles tokens
+Sphere of Resistance,{2},2,Artifact,C,prison,Symmetric spell tax; slows whole table,any-era,1389,,,,,,,"Cheap symmetric tax; prison glue, low power"
+Star Compass,{2},2,Artifact,C,fixing,Tapland-style fixing keyed to your basics,any-era,1320,,,,,,,"Slow color fixing; enters tapped, low power"
+Sundial of the Infinite,{2},2,Artifact,C,deck-out-combo,End turn before empty-library draw = Stifle for Leveler (#13),any-era,1321,,,,,,,Spec #13; alt to Ad Nauseam/Angel's Grace lines
+Throne of Geth,{2},2,Artifact,C,counter-altwin,One-shot proliferate via artifact sac,any-era,1201,,,,,,,Cheap proliferate burst for alt-win/fade counters
+Tsabo's Web,{2},2,Artifact,C,prison,Cantrip soft-lock on utility/man-lands,any-era,1243,,,,,,,Replaces itself; never a dead draw
+Winter Orb,{2},2,Artifact,C,prison,Mana-denial stax: one land untaps/turn,any-era,1397,,,,,,,Core colorless mana-denial; glues slow shells
+Crawlspace,{3},3,Artifact,C,prison,Caps attackers to two; buys time,any-era,1323,,,,,,,Pure defense for slow lock/alt-win shells
+Crucible of Worlds,{3},3,Artifact,C,big-red-sink,Land-recursion engine for fetch/sac-land grind,any-era,1383,,,,,,,Supports Glacial-Chasm/sac-land prison loops
+Pristine Talisman,{3},3,Artifact,C,fixing,Lifegain rock; buffers life for grind/Ad Nauseam,any-era,1243,,,,,,,Slow rock + lifegain; buffers Ad Nauseam life
+Static Orb,{3},3,Artifact,C,prison,Harder Winter Orb; only two untaps total,any-era,1242,,,,,,,Stronger stasis; rewards low-permanent prison
+Storage Matrix,{3},3,Artifact,C,prison,Untap-type restriction lock; decision-rich,any-era,1155,,,,,,,Decision-intensive untap lock; very on-philosophy
+Temple Bell,{3},3,Artifact,C,wheel-lock,On-demand symmetric draw; you control timing,any-era,1232,,,,,,,Fills hands on YOUR turn so punishers fire first
+Worn Powerstone,{3},3,Artifact,C,big-red-sink,Tapped two-mana ramp for big-mana sinks,any-era,1377,,,,,,,Powers Braids/mana-sink decks without fast-mana jump
+Darksteel Reactor,{4},4,Artifact,C,counter-altwin,Counter alt-win: 20 charge = win; proliferate payoff,any-era,1166,Y,,,Y,,"Enters with 3 charge counters; whenever you proliferate, put an extra charge counter on it",Errata to tie to proliferate; cleanest count-to-20
+Empowered Autogenerator,{4},4,Artifact,C,counter-altwin,Charge-counter ramp battery; proliferate target,any-era,1292,,,,,,,Self-growing mana; honest slow build-around
+Font of Mythos,{4},4,Artifact,C,wheel-lock,Each player draws two extra per draw step,any-era,1251,,,,,,,Hardest enabler; rockets hands past 7 for Owl
+Giant Fan,{4},4,Artifact,C,UR Izzet,coin-flip,any-era,1119,,,,,,,Coin-flip combat trick; connective coin-flip tissue
+Otherworld Atlas,{4},4,Artifact — Book,C,wheel-lock,Charge-counter scaling symmetric draw,any-era,1242,,,,,,,Ties draw to counters theme + proliferate; slow
+Teferi's Puzzle Box,{4},4,Artifact,C,wheel-lock,Wheel-lock keystone (#14): forced redraw each draw step,any-era,1230,,,,,,,LOCK not free win; pair with hand-punishers
+Trading Post,{4},4,Artifact,C,big-red-sink,Grindy modal mana-sink (goats/life/draw),any-era,1256,,,,,,,"User-named big-red sink; honest grind, no fast value"
+Memory Jar,{5},5,Artifact,C,wheel-lock,Sac for fresh 7s; one-shot storm/draw burst,any-era,1378,,,,,,,One-shot wheel; floods hands for punishers on demand
+Mind's Eye,{5},5,Artifact,C,wheel-lock,Draw-matters wheel payoff: pay {1} per opp draw to draw,any-era,,,,,,,,DB pull; punishes the symmetric wheels you run
+Contagion Engine,{6},6,Artifact,C,counter-altwin,Double-proliferate engine; counter top-end,any-era,1254,,,,,,,Jumps alt-win counters and Tangle Wire fades fast
+Mirror Universe,{6},6,Artifact,C,life-swap,"Headline finisher: get low, swap life totals away",any-era,1195,,,,,,,"Named anchor; honest one-shot, sacrifices itself"
+Soul Conduit,{6},6,Artifact,C,life-swap,Repeatable Mirror Universe: {6} swap two totals,any-era,1137,,,,,,,{6}/use = honest slow backup to Mirror Universe
+Possessed Portal,{8},8,Artifact,C,prison,"Top-end hard lock: stops draws, grinds board",any-era,1140,,,,,,,Fragile 8-mana payoff lock; expensive = fair

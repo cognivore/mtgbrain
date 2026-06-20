@@ -1,56 +1,56 @@
 Name,Cost,MV,Type,Color,Archetype,Role,Source,cube_elo,does_nothing_alone,colorshift,too_strong,errata_needed,oob_exception,errata_proposal,comment
-"Cabal Trainee",{B},1,"Creature — Human Minion",B,"BG sac","1-drop sac fodder + free self-sac -2/-0 trick",odysseyblock,1201,"","","","","","","Fodder and outlet in one body"
-"Carrion Rats",{B},1,"Creature — Rat",B,"BR storm","cheap 2/1 GY-hate attacker",odysseyblock,1115,"","","","","","","Cheap body, soft graveyard disruption"
-"Boneshard Slasher",{1}{B},2,"Creature — Horror",B,"BR storm","threshold evasive beater (flyer)",odysseyblock,1170,"","","","","","","3/3 flyer once graveyard online"
-"Crypt Creeper",{1}{B},2,"Creature — Zombie",B,"BG sac","sac-fodder Zombie with GY-exile",odysseyblock,1131,"","","","","","","Fodder body, graveyard-hate on demand"
-"Mesmeric Fiend",{1}{B},2,"Creature — Nightmare Horror",B,"BR storm","ETB hand-exile disruption body",odysseyblock,1326,"","","","","","","Strips a card; flicker/sac synergy"
-"Nantuko Shade",{B}{B},2,"Creature — Insect Shade",B,"WB life","mana-sink threat",odysseyblock,1189,"","","","","","","Flood sink, classic black clock"
-"Organ Grinder",{2}{B},3,"Creature — Zombie",B,"BR storm","GY-storm drain finisher",odysseyblock,1190,"","","","","","","Exile three, drain three; mill payoff"
-"Treacherous Werewolf",{2}{B},3,"Creature — Werewolf Minion",B,"BR storm","threshold 4/4 with death drawback",odysseyblock,1143,"","","","","","","Cheap beater once graveyard fills"
-"Braids, Cabal Minion",{2}{B}{B},4,"Legendary Creature — Human Minion",B,"BG sac","symmetric stax sac body",odysseyblock,1257,"","","","","","","Edicts everyone; feeds Smokestack lock"
-"Cabal Surgeon",{2}{B}{B},4,"Creature — Human Minion",B,"BG sac","GY-fueled creature recursion to hand",odysseyblock,1083,"","","","","","","Rebuys sac fodder, threshold tension"
-"Childhood Horror",{3}{B},4,"Creature — Horror",B,"BR storm","threshold evasive beater",odysseyblock,1110,"","","","","","","4/4 flyer when graveyard online"
-"Faceless Butcher",{2}{B}{B},4,"Creature — Nightmare Horror",B,"BG sac","ETB creature-exile removal body",odysseyblock,1267,"","","","","","","Removal on a stick, sac-loop trick"
-Gloomdrifter,{3}{B},4,"Creature — Zombie Minion",B,"BG sac","threshold -2/-2 sweep flyer",odysseyblock,1164,"","","","","","","Board sweep when graveyard online"
-Gravedigger,{3}{B},4,"Creature — Zombie",B,"BG sac","creature recursion ETB",odysseyblock,1279,"","","","","","","Rebuys best creature; grindy value"
-Mortivore,{2}{B}{B},4,"Creature — Lhurgoyf",B,"BR storm","graveyard-scaling regenerator",odysseyblock,1292,"","","","","","","Grows with all graveyards; regenerates"
-Painbringer,{2}{B}{B},4,"Creature — Human Minion",B,"BG sac","GY-fueled -X/-X removal body",odysseyblock,1167,"","","","","","","Sacrifice graveyard for scalable removal"
-"Carrion Wurm",{3}{B}{B},5,"Creature — Zombie Wurm",B,"BR storm","big GY-hate attacker",odysseyblock,1161,"","","","","","","6/5 that punishes graveyard reliance"
-"Masked Gorgon",{4}{B},5,"Creature — Gorgon",B,"BG sac","threshold protection beater",odysseyblock,1167,"","","","","","","5/5 hoses green/white once threshold"
-"Repentant Vampire",{3}{B}{B},5,"Creature — Vampire",B,"BR storm","threshold flyer + black-removal",odysseyblock,1196,"","","","","","","Grows, flips white removal at threshold"
-"Treacherous Vampire",{4}{B},5,"Creature — Vampire",B,"BR storm","threshold flyer with death drawback",odysseyblock,1133,"","","","","","","6/6 flyer; bleeds you on death"
-"Cabal Patriarch",{3}{B}{B}{B},6,"Legendary Creature — Human Wizard",B,"BG sac","sac-fueled repeatable -2/-2 removal",odysseyblock,1158,"","","","","","","Eats fodder or graveyard for removal"
-"Laquatus's Champion",{4}{B}{B},6,"Creature — Nightmare Horror",B,"WB life","honest 6-life drain stapled to body",odysseyblock,1217,"","","","","","","Reach finisher; gives life back if removed"
-"Sutured Ghoul",{4}{B}{B}{B},7,"Creature — Zombie",B,"BG sac","graveyard-eating top-end trampler",odysseyblock,1181,"","","","","","","Exiles creatures from yard for stats"
-"Dark Ritual",{B},1,Instant,B,"BR storm","ritual fuel + storm count",any-era,1459,"","","","","","","+2 mana, +1 storm, combo turn"
-"Cabal Ritual",{1}{B},2,Instant,B,"BR storm","threshold ritual fuel",any-era,1322,"","","","","","","Big mana late; storm enabler"
-"Songs of the Damned",{B},1,Instant,B,"BR storm","graveyard ritual",any-era,1203,"","","","","","","Explosive mana off a full yard"
-"Culling the Weak",{B},1,Instant,B,"BG sac","sac ritual",any-era,1353,"","","","","","","Sacrifice a creature for four black"
-"Raven's Crime",{B},1,Sorcery,B,"BR storm","recurring discard (retrace)",any-era,1193,"","","","","","","Repeatable discard fed by lands"
-"Chain of Smog",{1}{B},2,Sorcery,B,"BR storm","copyable discard 2",any-era,1405,"","","","","","","Discard two; copies itself politically"
-"Collective Brutality",{1}{B},2,Sorcery,B,"BR storm","modal escalate discard",any-era,1368,"","","","","","","Flexible discard/removal/drain; fuels graveyard"
-"Sickening Dreams",{1}{B},2,Sorcery,B,"BR storm","discard-X sweeper + drain",any-era,1249,"","","","","","","Pitch hand for symmetric burn sweep"
-"Nihilistic Glee",{2}{B}{B},4,Enchantment,B,"BR storm","hellbent draw + drain",any-era,1093,"","","","","","","Empty-hand engine: bleed them, draw cards"
-"Shrieking Affliction",{B},1,Enchantment,B,"BR storm","empty-opp-hand payoff",any-era,1164,"","","","","","","Drains opponents stuck at one card"
-"Quest for the Nihil Stone",{B},1,Enchantment,B,"BR storm","empty-opp-hand payoff",any-era,1195,"","","","","","","Discard-fed; five-life hit when empty"
-"Ill-Gotten Gains",{2}{B}{B},4,Sorcery,B,"BR storm","wheel + graveyard recursion",any-era,1181,"","","","","","","Refills hand from yard, storm enabler"
-"Tendrils of Agony",{2}{B}{B},4,Sorcery,B,"BR storm","storm kill",any-era,1263,"","","","","","","Drain two per prior spell; finisher"
-"Infernal Tutor",{1}{B},2,Sorcery,B,"BR storm","hellbent tutor",any-era,1237,"","","","","","","Finds the kill when hand empty"
-"Tainted Pact",{1}{B},2,Instant,B,"UB Ad Nauseam","library-thinning tutor",any-era,1386,"","","","","","","Digs deep, thins for combo"
-"Demonic Consultation",{B},1,Instant,B,"UB Ad Nauseam","dig tutor + self-mill",any-era,1536,"","","","","","","Cheap dig; self-exiles toward deck-out"
-"Spoils of the Vault",{B},1,Instant,B,"UB Ad Nauseam","life-cost dig",any-era,1192,"","","","","","","Finds a piece, paying life"
-Doomsday,{B}{B}{B},3,Sorcery,B,"UB Ad Nauseam","combo build-around (alt-win deck-stack)",any-era,1278,"","","","","","","Honest one-shot; stacks a winning pile"
-Greed,{3}{B},4,Enchantment,B,"WB life","pay-life draw engine",any-era,1205,"","","","","","","Low-power life-as-resource card draw"
-"Dark Tutelage",{2}{B},3,Enchantment,B,"WB life","pay-life passive draw",any-era,1191,"","","","","","","Reveal top, draw, lose its cost"
-"Bond of Agony",{X}{B},1,Sorcery,B,"WB life","life-as-resource burn",any-era,1189,"","","","","","","Pay X life, each opponent loses X"
-"Font of Agonies",{B},1,Enchantment,B,"WB life","pay-life removal payoff",any-era,1187,"","","","","","","Life payments fuel repeatable creature removal"
-"One with Nothing",{B},1,Instant,B,"BR storm","empty-hand enabler / storm loop",any-era,1055,Y,"","",Y,"","Add: each opponent loses 1 life for each card you discarded this way.","Blank as printed; errata adds drain"
-"Shadow of the Grave",{1}{B},2,Instant,B,"BR storm","storm refill engine",any-era,1232,"","","","","","","Returns discarded/cycled hand; pairs One With Nothing"
-"Black Vise",{1},1,Artifact,B,"BR prison","flooded-hand punisher clock",any-era,1370,"",B,"","","","","Colorshift B: damage per card over four"
-"Iron Maiden",{3},3,Artifact,B,"BR prison","flooded-hand punisher (all opponents)",any-era,1129,"",B,"","","","","Colorshift B: Black Vise hitting everyone"
-"The Rack",{1},1,Artifact,B,"BR prison","empty-hand punisher clock",any-era,1169,"",B,"","","","","Colorshift B: punishes empty hand behind Bridge"
-"Ebony Owl Netsuke",{2},2,Artifact,B,"BR prison","flooded-hand punisher",any-era,1164,"",B,"","","","","Colorshift B: 4 damage at seven cards"
-"Misers' Cage",{3},3,Artifact,B,"BR prison","softer flooded-hand punisher",any-era,1093,"",B,"","","","","Colorshift B: 2 damage at five cards"
-"Cursed Rack",{4},4,Artifact,B,"BR prison","hand-size lock piece",any-era,1204,"",B,"","","","","Colorshift B: caps opponent hand at four"
-"Ad Nauseam",{3}{B}{B},5,Instant,B,adnauseam-modern-draw-out;adnauseam-storm;combo;storm,"Centerpiece — draw a chunk (or whole library) at life cost",any-era,1349,"","","","","","","Package centerpiece; honest spell, cast-and-spent (#4/#16)"
-"Death's Shadow",{B},1,"Creature — Avatar",B,aggro;combo,"life-loss payoff beater (spec #11)",exception,1204,"","","","",Y,"","Out-exc: spec #11 names it; huge when life low (Bridge/rituals)"
+Cabal Trainee,{B},1,Creature — Human Minion,B,BG sac,1-drop sac fodder + free self-sac -2/-0 trick,odysseyblock,1201,,,,,,,Fodder and outlet in one body
+Carrion Rats,{B},1,Creature — Rat,B,BR storm,cheap 2/1 GY-hate attacker,odysseyblock,1115,,,,,,,"Cheap body, soft graveyard disruption"
+Death's Shadow,{B},1,Creature — Avatar,B,aggro;combo,life-loss payoff beater (spec #11),exception,1204,,,,,Y,,Out-exc: spec #11 names it; huge when life low (Bridge/rituals)
+Boneshard Slasher,{1}{B},2,Creature — Horror,B,BR storm,threshold evasive beater (flyer),odysseyblock,1170,,,,,,,3/3 flyer once graveyard online
+Crypt Creeper,{1}{B},2,Creature — Zombie,B,BG sac,sac-fodder Zombie with GY-exile,odysseyblock,1131,,,,,,,"Fodder body, graveyard-hate on demand"
+Mesmeric Fiend,{1}{B},2,Creature — Nightmare Horror,B,BR storm,ETB hand-exile disruption body,odysseyblock,1326,,,,,,,Strips a card; flicker/sac synergy
+Nantuko Shade,{B}{B},2,Creature — Insect Shade,B,WB life,mana-sink threat,odysseyblock,1189,,,,,,,"Flood sink, classic black clock"
+Organ Grinder,{2}{B},3,Creature — Zombie,B,BR storm,GY-storm drain finisher,odysseyblock,1190,,,,,,,"Exile three, drain three; mill payoff"
+Treacherous Werewolf,{2}{B},3,Creature — Werewolf Minion,B,BR storm,threshold 4/4 with death drawback,odysseyblock,1143,,,,,,,Cheap beater once graveyard fills
+"Braids, Cabal Minion",{2}{B}{B},4,Legendary Creature — Human Minion,B,BG sac,symmetric stax sac body,odysseyblock,1257,,,,,,,Edicts everyone; feeds Smokestack lock
+Cabal Surgeon,{2}{B}{B},4,Creature — Human Minion,B,BG sac,GY-fueled creature recursion to hand,odysseyblock,1083,,,,,,,"Rebuys sac fodder, threshold tension"
+Childhood Horror,{3}{B},4,Creature — Horror,B,BR storm,threshold evasive beater,odysseyblock,1110,,,,,,,4/4 flyer when graveyard online
+Faceless Butcher,{2}{B}{B},4,Creature — Nightmare Horror,B,BG sac,ETB creature-exile removal body,odysseyblock,1267,,,,,,,"Removal on a stick, sac-loop trick"
+Gloomdrifter,{3}{B},4,Creature — Zombie Minion,B,BG sac,threshold -2/-2 sweep flyer,odysseyblock,1164,,,,,,,Board sweep when graveyard online
+Gravedigger,{3}{B},4,Creature — Zombie,B,BG sac,creature recursion ETB,odysseyblock,1279,,,,,,,Rebuys best creature; grindy value
+Mortivore,{2}{B}{B},4,Creature — Lhurgoyf,B,BR storm,graveyard-scaling regenerator,odysseyblock,1292,,,,,,,Grows with all graveyards; regenerates
+Painbringer,{2}{B}{B},4,Creature — Human Minion,B,BG sac,GY-fueled -X/-X removal body,odysseyblock,1167,,,,,,,Sacrifice graveyard for scalable removal
+Carrion Wurm,{3}{B}{B},5,Creature — Zombie Wurm,B,BR storm,big GY-hate attacker,odysseyblock,1161,,,,,,,6/5 that punishes graveyard reliance
+Masked Gorgon,{4}{B},5,Creature — Gorgon,B,BG sac,threshold protection beater,odysseyblock,1167,,,,,,,5/5 hoses green/white once threshold
+Repentant Vampire,{3}{B}{B},5,Creature — Vampire,B,BR storm,threshold flyer + black-removal,odysseyblock,1196,,,,,,,"Grows, flips white removal at threshold"
+Treacherous Vampire,{4}{B},5,Creature — Vampire,B,BR storm,threshold flyer with death drawback,odysseyblock,1133,,,,,,,6/6 flyer; bleeds you on death
+Cabal Patriarch,{3}{B}{B}{B},6,Legendary Creature — Human Wizard,B,BG sac,sac-fueled repeatable -2/-2 removal,odysseyblock,1158,,,,,,,Eats fodder or graveyard for removal
+Laquatus's Champion,{4}{B}{B},6,Creature — Nightmare Horror,B,WB life,honest 6-life drain stapled to body,odysseyblock,1217,,,,,,,Reach finisher; gives life back if removed
+Sutured Ghoul,{4}{B}{B}{B},7,Creature — Zombie,B,BG sac,graveyard-eating top-end trampler,odysseyblock,1181,,,,,,,Exiles creatures from yard for stats
+Culling the Weak,{B},1,Instant,B,BG sac,sac ritual,any-era,1353,,,,,,,Sacrifice a creature for four black
+Dark Ritual,{B},1,Instant,B,BR storm,ritual fuel + storm count,any-era,1459,,,,,,,"+2 mana, +1 storm, combo turn"
+Demonic Consultation,{B},1,Instant,B,UB Ad Nauseam,dig tutor + self-mill,any-era,1536,,,,,,,Cheap dig; self-exiles toward deck-out
+One with Nothing,{B},1,Instant,B,BR storm,empty-hand enabler / storm loop,any-era,1055,Y,,,Y,,Add: each opponent loses 1 life for each card you discarded this way.,Blank as printed; errata adds drain
+Songs of the Damned,{B},1,Instant,B,BR storm,graveyard ritual,any-era,1203,,,,,,,Explosive mana off a full yard
+Spoils of the Vault,{B},1,Instant,B,UB Ad Nauseam,life-cost dig,any-era,1192,,,,,,,"Finds a piece, paying life"
+Cabal Ritual,{1}{B},2,Instant,B,BR storm,threshold ritual fuel,any-era,1322,,,,,,,Big mana late; storm enabler
+Shadow of the Grave,{1}{B},2,Instant,B,BR storm,storm refill engine,any-era,1232,,,,,,,Returns discarded/cycled hand; pairs One With Nothing
+Tainted Pact,{1}{B},2,Instant,B,UB Ad Nauseam,library-thinning tutor,any-era,1386,,,,,,,"Digs deep, thins for combo"
+Ad Nauseam,{3}{B}{B},5,Instant,B,adnauseam-modern-draw-out;adnauseam-storm;combo;storm,Centerpiece — draw a chunk (or whole library) at life cost,any-era,1349,,,,,,,"Package centerpiece; honest spell, cast-and-spent (#4/#16)"
+Bond of Agony,{X}{B},1,Sorcery,B,WB life,life-as-resource burn,any-era,1189,,,,,,,"Pay X life, each opponent loses X"
+Raven's Crime,{B},1,Sorcery,B,BR storm,recurring discard (retrace),any-era,1193,,,,,,,Repeatable discard fed by lands
+Chain of Smog,{1}{B},2,Sorcery,B,BR storm,copyable discard 2,any-era,1405,,,,,,,Discard two; copies itself politically
+Collective Brutality,{1}{B},2,Sorcery,B,BR storm,modal escalate discard,any-era,1368,,,,,,,Flexible discard/removal/drain; fuels graveyard
+Infernal Tutor,{1}{B},2,Sorcery,B,BR storm,hellbent tutor,any-era,1237,,,,,,,Finds the kill when hand empty
+Sickening Dreams,{1}{B},2,Sorcery,B,BR storm,discard-X sweeper + drain,any-era,1249,,,,,,,Pitch hand for symmetric burn sweep
+Doomsday,{B}{B}{B},3,Sorcery,B,UB Ad Nauseam,combo build-around (alt-win deck-stack),any-era,1278,,,,,,,Honest one-shot; stacks a winning pile
+Ill-Gotten Gains,{2}{B}{B},4,Sorcery,B,BR storm,wheel + graveyard recursion,any-era,1181,,,,,,,"Refills hand from yard, storm enabler"
+Tendrils of Agony,{2}{B}{B},4,Sorcery,B,BR storm,storm kill,any-era,1263,,,,,,,Drain two per prior spell; finisher
+Font of Agonies,{B},1,Enchantment,B,WB life,pay-life removal payoff,any-era,1187,,,,,,,Life payments fuel repeatable creature removal
+Quest for the Nihil Stone,{B},1,Enchantment,B,BR storm,empty-opp-hand payoff,any-era,1195,,,,,,,Discard-fed; five-life hit when empty
+Shrieking Affliction,{B},1,Enchantment,B,BR storm,empty-opp-hand payoff,any-era,1164,,,,,,,Drains opponents stuck at one card
+Seal of Doom,{2}{B},3,Enchantment,B,BG Golgari,removal,any-era,1296,,,,,,,Sealed destroy target nonblack creature
+Greed,{3}{B},4,Enchantment,B,WB life,pay-life draw engine,any-era,1205,,,,,,,Low-power life-as-resource card draw
+Nihilistic Glee,{2}{B}{B},4,Enchantment,B,BR storm,hellbent draw + drain,any-era,1093,,,,,,,"Empty-hand engine: bleed them, draw cards"
+Black Vise,{1},1,Artifact,B,BR prison,flooded-hand punisher clock,any-era,1370,,B,,,,,Colorshift B: damage per card over four
+The Rack,{1},1,Artifact,B,BR prison,empty-hand punisher clock,any-era,1169,,B,,,,,Colorshift B: punishes empty hand behind Bridge
+Ebony Owl Netsuke,{2},2,Artifact,B,BR prison,flooded-hand punisher,any-era,1164,,B,,,,,Colorshift B: 4 damage at seven cards
+Iron Maiden,{3},3,Artifact,B,BR prison,flooded-hand punisher (all opponents),any-era,1129,,B,,,,,Colorshift B: Black Vise hitting everyone
+Misers' Cage,{3},3,Artifact,B,BR prison,softer flooded-hand punisher,any-era,1093,,B,,,,,Colorshift B: 2 damage at five cards
+Cursed Rack,{4},4,Artifact,B,BR prison,hand-size lock piece,any-era,1204,,B,,,,,Colorshift B: caps opponent hand at four

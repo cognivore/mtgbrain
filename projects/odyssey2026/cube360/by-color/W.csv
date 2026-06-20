@@ -1,48 +1,45 @@
 Name,Cost,MV,Type,Color,Archetype,Role,Source,cube_elo,does_nothing_alone,colorshift,too_strong,errata_needed,oob_exception,errata_proposal,comment
-"Suntail Hawk",{W},1,"Creature — Bird",W,WX-birds,flier,odysseyblock,1159,"","","","","","","1-drop flier; cheapest Aerie/flier enabler"
-"Mystic Penitent",{W},1,"Creature — Human Nomad Mystic",W,threshold;aggro,threshold-flier,odysseyblock,1130,"","","","","","","1-drop; becomes 2/2 vig flier at threshold"
-Soulcatcher,{1}{W},2,"Creature — Bird Soldier",W,WX-birds,payoff,odysseyblock,1152,"","","","","","","Grows on any flier death; Aerie partner"
-"Phantom Nomad",{1}{W},2,"Creature — Spirit Nomad",W,W-shields;counters,shield-blocker,odysseyblock,1171,"","","","","","","2/2 damage-shield; soaks two hits, counter synergy"
-"Mystic Familiar",{1}{W},2,"Creature — Bird",W,WX-birds;threshold,flier,odysseyblock,1066,"","","","","","","Flier; threshold to 2/3 pro-black"
-"Mystic Visionary",{1}{W},2,"Creature — Human Nomad Mystic",W,threshold,threshold-flier,odysseyblock,1121,"","","","","","","2/1 that flies at threshold; stall-breaker"
-"Beloved Chaplain",{1}{W},2,"Creature — Human Cleric",W,auras;clerics;evasion,tax-evasion,odysseyblock,1237,"","","","","","","Unblockable-by-creatures aura/equipment carrier"
-"Patrol Hound",{1}{W},2,"Creature — Dog",W,discard;graveyard,discard-outlet,odysseyblock,1170,"","","","","","","Free discard outlet; feeds threshold/madness"
-"Master Apothecary",{W}{W}{W},3,"Creature — Human Cleric",W,clerics;lifegain,prevention,odysseyblock,1085,"","","","","","","Tap-Cleric prevention engine; anchors WB shell"
-"Militant Monk",{1}{W}{W},3,"Creature — Human Monk Cleric",W,clerics,prevention,odysseyblock,1137,"","","","","","","Vigilant Cleric; repeatable 1-damage prevention"
-"Nomad Decoy",{2}{W},3,"Creature — Human Nomad",W,control;tappers,tapper,odysseyblock,1111,"","","","","","","Budget tapper; threshold taps two; Opposition-feel"
-"Pianna, Nomad Captain",{1}{W}{W},3,"Legendary Creature — Human Nomad",W,go-wide,go-wide-anthem,odysseyblock,1203,"","","","","","","Attack anthem; +1/+1 to attackers each swing"
-"Lieutenant Kirtar",{1}{W}{W},3,"Legendary Creature — Bird Soldier",W,WX-birds;control,flier-removal,odysseyblock,1192,"","","","","","","Flier; sac to exile an attacker"
-"Vigilant Sentry",{1}{W}{W},3,"Creature — Human Nomad",W,threshold;combat,threshold-pump,odysseyblock,1046,"","","","","","","Threshold combat-trick engine; breaks stalls"
-Auramancer,{2}{W},3,"Creature — Human Wizard",W,enchantress;recursion,recursion,odysseyblock,1182,"","","","","","","Returns enchantment from GY; feeds Replenish/WU"
-"Battlewise Aven",{3}{W},4,"Creature — Bird Soldier",W,WX-birds;threshold,threshold-flier,odysseyblock,1077,"","","","","","","Flier; threshold to 3/3 first strike"
-"Mystic Zealot",{3}{W},4,"Creature — Human Nomad Mystic",W,threshold;stall,threshold-flier,odysseyblock,1083,"","","","","","","2/4 that flies at threshold; durable wall then clock"
-"Blessed Orator",{3}{W},4,"Creature — Human Cleric",W,clerics;stall,anthem-wall,odysseyblock,1170,"","","","","","","1/4 team +0/+1 toughness; anti-aggro glue"
-"Commander Eesha",{2}{W}{W},4,"Legendary Creature — Bird Soldier",W,WX-birds;stall,evasive-blocker,odysseyblock,1270,"","","","","","","Untouchable 2/4 flier; durable stall clock"
-Valor,{3}{W},4,"Creature — Incarnation",W,graveyard;go-wide,graveyard-anthem,odysseyblock,1172,"","","","","","","GY grants team first strike with a Plains"
-"Possessed Nomad",{2}{W}{W},4,"Creature — Human Nomad Horror",W,threshold;control,stall-breaker,odysseyblock,1166,"","","","","","","Vigilant 3/3; threshold turns black removal-body"
-"Phantom Flock",{3}{W}{W},5,"Creature — Bird Soldier Spirit",W,W-shields;WX-birds;counters,shield-flier,odysseyblock,1099,"","","","","","","Flying 3/3 damage-shield; Bird for tribal"
-"Wayward Angel",{4}{W}{W},6,"Creature — Angel Horror",W,threshold,threshold-finisher,odysseyblock,1132,"","","","","","","Flying vig 4/4; threshold 7/7 with sac upkeep"
-"Ancestor's Chosen",{5}{W}{W},7,"Creature — Human Cleric",W,clerics;lifegain,lifegain-payoff,odysseyblock,1167,"","","","","","","FS body; ETB gain life per GY card"
-Replenish,{3}{W},3,Sorcery,W,enchantress;reanimator,combo-payoff,any-era,1226,"","","","","","","Honest combo: mass-reanimate enchantments, one-shot"
-Humility,{2}{W}{W},4,Enchantment,W,enchantress;control,lock-half,any-era,1215,"","","","","","","All creatures 1/1 no abilities; Opalescence partner"
-"Parallax Wave",{2}{W}{W},4,Enchantment,W,fading;control,fading-removal,any-era,1513,"","","","","","","Fading creature exile; blink-Replenish = permanent"
-"Sphere of Safety",{4}{W},5,Enchantment,W,enchantress;prison,pillowfort-payoff,any-era,1196,"","","","","","","Tax scales with enchantment density; soft combat-lock"
-"Ghostly Prison",{2}{W},3,Enchantment,W,prison,pillowfort,any-era,1294,"","","","","","","Attack tax; chosen over blue Propaganda"
-"Rule of Law",{2}{W},3,Enchantment,W,prison;anti-combo,spell-lock,any-era,1210,"","","","","","","One spell per turn; chosen over blue Arcane Lab"
-"Suppression Field",{1}{W},2,Enchantment,W,stax;prison,ability-tax,any-era,1124,"","","","","","","Taxes activated abilities; hoses Smokestack/sac engines"
-"Seal of Cleansing",{1}{W},2,Enchantment,W,enchantress;hate,removal,any-era,1189,"","","","","","","Pre-placed Disenchant; Replenish fodder, recurs"
-"Aura of Silence",{1}{W}{W},3,Enchantment,W,hate;recursion,removal-tax,any-era,1193,"","","","","","","Artifact/enchant tax + sac; Replenish loop"
-"Karmic Justice",{2}{W},3,Enchantment,W,control,lock-protection,any-era,1186,"","","","","","","Punishes breaking your noncreature lock"
-"Enlightened Tutor",{W},1,Instant,W,enchantress;combo,tutor,any-era,1313,"","","","","","","Finds lock piece; chosen over slower Idyllic Tutor"
-"Mesa Enchantress",{1}{W}{W},3,Enchantment,W,enchantress,draw-engine,any-era,1218,"","","","","","","Enchantress draw engine; no in-block equivalent"
-"Sigil of the Empty Throne",{3}{W}{W},5,Enchantment,W,enchantress,enchantress-payoff,any-era,1278,"","","","","","","Enchantment spells make 4/4 fliers; slow wincon"
-"Soulcatchers' Aerie",{1}{W},2,Enchantment,W,WX-birds,tribal-payoff,any-era,1150,"","","","","","","Birds anthem; grows when your Birds die"
-"Cage of Hands",{2}{W},3,"Enchantment — Aura",W,control;auras,tax-attack-lockdown,any-era,1254,"","","","","","","Reusable creature lockdown; tax-attack tool (#15)"
-"Story Circle",{1}{W}{W},3,Enchantment,W,prison;control,damage-lock,any-era,1188,"","","","","","","Color damage-prevention lock; mana-sink decisions"
-"Solitary Confinement",{2}{W},3,Enchantment,W,prison;control,fog-lock,any-era,1269,"","","","","","","Near-hexproof fog-lock; needs card engine to feed"
-"Earnest Fellowship",{1}{W},2,Enchantment,W,control,build-around,any-era,1182,"","","","","","","Quasi-Humility; symmetric combat/aura hoser"
-"Starfield of Nyx",{4}{W},5,Enchantment,W,enchantress,recursion-engine,any-era,1258,"","","","","","","Replenish-on-a-stick + animation at five enchantments"
-"Test of Endurance",{2}{W}{W},4,Enchantment,W,lifegain;alt-win,alt-win,any-era,1095,"","","","","","","Honest alt-win: 50+ life on upkeep"
-"Near-Death Experience",{2}{W}{W}{W},5,Enchantment,W,life-as-resource;alt-win,alt-win,any-era,1036,"","","","","","","Honest alt-win: be at exactly 1 life"
-Transcendence,{3}{W}{W}{W},6,Enchantment,W,life-as-resource,build-around,any-era,1044,"","","","","","","Survive at 0/lose at 20; lifeloss flips to lifegain"
-Oblation,{2}{W},3,Instant,W,control,removal,any-era,"","","","","","","","Symmetric removal; shuffles nonland, gives 2 cards"
+Mystic Penitent,{W},1,Creature — Human Nomad Mystic,W,threshold;aggro,threshold-flier,odysseyblock,1130,,,,,,,1-drop; becomes 2/2 vig flier at threshold
+Suntail Hawk,{W},1,Creature — Bird,W,WX-birds,flier,odysseyblock,1159,,,,,,,1-drop flier; cheapest Aerie/flier enabler
+Beloved Chaplain,{1}{W},2,Creature — Human Cleric,W,auras;clerics;evasion,tax-evasion,odysseyblock,1237,,,,,,,Unblockable-by-creatures aura/equipment carrier
+Mystic Familiar,{1}{W},2,Creature — Bird,W,WX-birds;threshold,flier,odysseyblock,1066,,,,,,,Flier; threshold to 2/3 pro-black
+Mystic Visionary,{1}{W},2,Creature — Human Nomad Mystic,W,threshold,threshold-flier,odysseyblock,1121,,,,,,,2/1 that flies at threshold; stall-breaker
+Patrol Hound,{1}{W},2,Creature — Dog,W,discard;graveyard,discard-outlet,odysseyblock,1170,,,,,,,Free discard outlet; feeds threshold/madness
+Phantom Nomad,{1}{W},2,Creature — Spirit Nomad,W,W-shields;counters,shield-blocker,odysseyblock,1171,,,,,,,"2/2 damage-shield; soaks two hits, counter synergy"
+Soulcatcher,{1}{W},2,Creature — Bird Soldier,W,WX-birds,payoff,odysseyblock,1152,,,,,,,Grows on any flier death; Aerie partner
+Auramancer,{2}{W},3,Creature — Human Wizard,W,enchantress;recursion,recursion,odysseyblock,1182,,,,,,,Returns enchantment from GY; feeds Replenish/WU
+Lieutenant Kirtar,{1}{W}{W},3,Legendary Creature — Bird Soldier,W,WX-birds;control,flier-removal,odysseyblock,1192,,,,,,,Flier; sac to exile an attacker
+Master Apothecary,{W}{W}{W},3,Creature — Human Cleric,W,clerics;lifegain,prevention,odysseyblock,1085,,,,,,,Tap-Cleric prevention engine; anchors WB shell
+Mesa Enchantress,{1}{W}{W},3,Enchantment,W,enchantress,draw-engine,any-era,1218,,,,,,,Enchantress draw engine; no in-block equivalent
+Militant Monk,{1}{W}{W},3,Creature — Human Monk Cleric,W,clerics,prevention,odysseyblock,1137,,,,,,,Vigilant Cleric; repeatable 1-damage prevention
+Nomad Decoy,{2}{W},3,Creature — Human Nomad,W,control;tappers,tapper,odysseyblock,1111,,,,,,,Budget tapper; threshold taps two; Opposition-feel
+"Pianna, Nomad Captain",{1}{W}{W},3,Legendary Creature — Human Nomad,W,go-wide,go-wide-anthem,odysseyblock,1203,,,,,,,Attack anthem; +1/+1 to attackers each swing
+Vigilant Sentry,{1}{W}{W},3,Creature — Human Nomad,W,threshold;combat,threshold-pump,odysseyblock,1046,,,,,,,Threshold combat-trick engine; breaks stalls
+Battlewise Aven,{3}{W},4,Creature — Bird Soldier,W,WX-birds;threshold,threshold-flier,odysseyblock,1077,,,,,,,Flier; threshold to 3/3 first strike
+Blessed Orator,{3}{W},4,Creature — Human Cleric,W,clerics;stall,anthem-wall,odysseyblock,1170,,,,,,,1/4 team +0/+1 toughness; anti-aggro glue
+Commander Eesha,{2}{W}{W},4,Legendary Creature — Bird Soldier,W,WX-birds;stall,evasive-blocker,odysseyblock,1270,,,,,,,Untouchable 2/4 flier; durable stall clock
+Mystic Zealot,{3}{W},4,Creature — Human Nomad Mystic,W,threshold;stall,threshold-flier,odysseyblock,1083,,,,,,,2/4 that flies at threshold; durable wall then clock
+Valor,{3}{W},4,Creature — Incarnation,W,graveyard;go-wide,graveyard-anthem,odysseyblock,1172,,,,,,,GY grants team first strike with a Plains
+Phantom Flock,{3}{W}{W},5,Creature — Bird Soldier Spirit,W,W-shields;WX-birds;counters,shield-flier,odysseyblock,1099,,,,,,,Flying 3/3 damage-shield; Bird for tribal
+Wayward Angel,{4}{W}{W},6,Creature — Angel Horror,W,threshold,threshold-finisher,odysseyblock,1132,,,,,,,Flying vig 4/4; threshold 7/7 with sac upkeep
+Ancestor's Chosen,{5}{W}{W},7,Creature — Human Cleric,W,clerics;lifegain,lifegain-payoff,odysseyblock,1167,,,,,,,FS body; ETB gain life per GY card
+Enlightened Tutor,{W},1,Instant,W,enchantress;combo,tutor,any-era,1313,,,,,,,Finds lock piece; chosen over slower Idyllic Tutor
+Oblation,{2}{W},3,Instant,W,control,removal,any-era,,,,,,,,"Symmetric removal; shuffles nonland, gives 2 cards"
+Replenish,{3}{W},3,Sorcery,W,enchantress;reanimator,combo-payoff,any-era,1226,,,,,,,"Honest combo: mass-reanimate enchantments, one-shot"
+Earnest Fellowship,{1}{W},2,Enchantment,W,control,build-around,any-era,1182,,,,,,,Quasi-Humility; symmetric combat/aura hoser
+Seal of Cleansing,{1}{W},2,Enchantment,W,enchantress;hate,removal,any-era,1189,,,,,,,"Pre-placed Disenchant; Replenish fodder, recurs"
+Soulcatchers' Aerie,{1}{W},2,Enchantment,W,WX-birds,tribal-payoff,any-era,1150,,,,,,,Birds anthem; grows when your Birds die
+Suppression Field,{1}{W},2,Enchantment,W,stax;prison,ability-tax,any-era,1124,,,,,,,Taxes activated abilities; hoses Smokestack/sac engines
+Aura of Silence,{1}{W}{W},3,Enchantment,W,hate;recursion,removal-tax,any-era,1193,,,,,,,Artifact/enchant tax + sac; Replenish loop
+Cage of Hands,{2}{W},3,Enchantment — Aura,W,control;auras,tax-attack-lockdown,any-era,1254,,,,,,,Reusable creature lockdown; tax-attack tool (#15)
+Ghostly Prison,{2}{W},3,Enchantment,W,prison,pillowfort,any-era,1294,,,,,,,Attack tax; chosen over blue Propaganda
+Karmic Justice,{2}{W},3,Enchantment,W,control,lock-protection,any-era,1186,,,,,,,Punishes breaking your noncreature lock
+Rule of Law,{2}{W},3,Enchantment,W,prison;anti-combo,spell-lock,any-era,1210,,,,,,,One spell per turn; chosen over blue Arcane Lab
+Solitary Confinement,{2}{W},3,Enchantment,W,prison;control,fog-lock,any-era,1269,,,,,,,Near-hexproof fog-lock; needs card engine to feed
+Story Circle,{1}{W}{W},3,Enchantment,W,prison;control,damage-lock,any-era,1188,,,,,,,Color damage-prevention lock; mana-sink decisions
+Humility,{2}{W}{W},4,Enchantment,W,enchantress;control,lock-half,any-era,1215,,,,,,,All creatures 1/1 no abilities; Opalescence partner
+Test of Endurance,{2}{W}{W},4,Enchantment,W,lifegain;alt-win,alt-win,any-era,1095,,,,,,,Honest alt-win: 50+ life on upkeep
+Sphere of Safety,{4}{W},5,Enchantment,W,enchantress;prison,pillowfort-payoff,any-era,1196,,,,,,,Tax scales with enchantment density; soft combat-lock
+Starfield of Nyx,{4}{W},5,Enchantment,W,enchantress,recursion-engine,any-era,1258,,,,,,,Replenish-on-a-stick + animation at five enchantments
+By Gnome Means,{2}{W},3,Enchantment,W,WR Boros,coin-flip token,any-era,1237,,,,,,,Coin-flip each upkeep -> Gnome token; connective coin-flip tissue
+Possessed Nomad,{2}{W}{W},4,Creature — Human Nomad Horror,W,threshold;control,stall-breaker,odysseyblock,1166,,,,,,,Vigilant 3/3; threshold turns black removal-body

@@ -1,42 +1,42 @@
 Name,Cost,MV,Type,Color,Archetype,Role,Source,cube_elo,does_nothing_alone,colorshift,too_strong,errata_needed,oob_exception,errata_proposal,comment
-"Skycloud Expanse","",0,Land,Land,"WU fixing","allied W/U filter, pay {1} no life loss",any-era,1231,"","","","","","","Low-power allied W/U fix"
-"Darkwater Catacombs","",0,Land,Land,"UB fixing","allied U/B filter",any-era,1271,"","","","","","","Low-power allied U/B fix"
-"Shadowblood Ridge","",0,Land,Land,"BR fixing","allied B/R filter",any-era,1213,"","","","","","","Low-power allied B/R fix"
-"Mossfire Valley","",0,Land,Land,"RG fixing","allied R/G filter",any-era,1188,"","","","","","","Low-power allied R/G fix"
-"Sungrass Prairie","",0,Land,Land,"GW fixing","allied G/W filter",any-era,1206,"","","","","","","Low-power allied G/W fix"
-"Mystic Gate","",0,Land,Land,"WU fixing","W/U filter land, {C} or hybrid->two",any-era,1257,"","","","","","","Filter land, slow WU fix"
-"Sunken Ruins","",0,Land,Land,"UB fixing","U/B filter land",any-era,1341,"","","","","","","Filter land, slow UB fix"
-"Graven Cairns","",0,Land,Land,"BR fixing","B/R filter land",any-era,1219,"","","","","","","Filter land, slow BR fix"
-"Fire-Lit Thicket","",0,Land,Land,"RG fixing","R/G filter land",any-era,1249,"","","","","","","Filter land, slow RG fix"
-"Wooded Bastion","",0,Land,Land,"GW fixing","G/W filter land",any-era,1207,"","","","","","","Filter land, slow GW fix"
-"Abandoned Outpost","",0,Land,Land,"5c splash glue","ETB-tapped W or sac for any-1",any-era,1161,"","","","","","","Block sac-tapland, W base"
-"Bog Wreckage","",0,Land,Land,"5c splash glue","ETB-tapped B or sac for any-1",any-era,1219,"","","","","","","Block sac-tapland, B base"
-"Seafloor Debris","",0,Land,Land,"5c splash glue","ETB-tapped U or sac for any-1",any-era,1172,"","","","","","","Block sac-tapland, U base"
-"Ravaged Highlands","",0,Land,Land,"5c splash glue","ETB-tapped R or sac for any-1",any-era,1140,"","","","","","","Block sac-tapland, R base"
-"Timberland Ruins","",0,Land,Land,"5c splash glue","ETB-tapped G or sac for any-1",any-era,1184,"","","","","","","Block sac-tapland, G base"
-"Cabal Pit","",0,Land,Land,"GY-storm / threshold","B painland; threshold sac -2/-2",any-era,1129,"","","","","","","Threshold removal; de-dup vs B sheet"
-"Barbarian Ring","",0,Land,Land,"GY-storm / threshold","R painland; threshold sac 2 dmg",any-era,1219,"","","","","","","Threshold burn; de-dup vs R sheet"
-"Cephalid Coliseum","",0,Land,Land,"self-mill / GY-storm","U painland; threshold loot-3, self-mill",any-era,1164,"","","","","","","Self-mill enabler + threshold"
-"Centaur Garden","",0,Land,Land,"GY-storm / threshold","G painland; threshold sac +3/+3",any-era,1172,"","","","","","","Threshold combat trick land"
-"Nomad Stadium","",0,Land,Land,"GY-storm / threshold","W painland; threshold sac +4 life",any-era,1079,"","","","","","","Threshold lifegain land"
-"Nantuko Monastery","",0,Land,Land,"threshold beatdown","threshold 4/4 GW manland",any-era,1138,"","","","","","","Threshold-gated manland; stall-breaker"
-"Calciform Pools","",0,Land,Land,"counters / proliferate","W/U storage-counter battery",any-era,1161,"","","","","","","Storage battery, proliferate target"
-"Dreadship Reef","",0,Land,Land,"counters / proliferate","U/B storage-counter battery",any-era,1151,"","","","","","","Storage battery, proliferate target"
-"Molten Slagheap","",0,Land,Land,"counters / proliferate","B/R storage-counter battery",any-era,1127,"","","","","","","Storage battery, proliferate target"
-"Fungal Reaches","",0,Land,Land,"counters / proliferate","R/G storage-counter battery",any-era,1148,"","","","","","","Storage battery, proliferate target"
-"Saltcrusted Steppe","",0,Land,Land,"counters / proliferate","G/W storage-counter battery",any-era,1088,"","","","","","","Storage battery, proliferate target"
-"Mage-Ring Network","",0,Land,Land,"big-red sink / counters","colorless storage battery / mana sink",any-era,1130,"","","","","","","Braid-of-Fire sink, proliferate target"
-"Karn's Bastion","",0,Land,Land,"counters spine","repeatable proliferate land",any-era,1170,"","","","","","","Proliferate engine for counter package"
-"Nesting Grounds","",0,Land,Land,"counter relocation","move a counter, sorcery speed",any-era,1095,"","","","","","","Shifts counters; Smokestack/storage glue"
-"Geier Reach Sanitarium","",0,"Legendary Land",Land,"wheels / hand-punisher","symmetric loot wheel",any-era,1196,"","","","","","","Uncounterable wheel; feeds Vise/Rack"
-"Mikokoro, Center of the Sea","",0,"Legendary Land",Land,"wheels / hand-punisher","symmetric draw wheel",any-era,1162,"","","","","","","Floods hands for punisher suite"
-"Glacial Chasm","",0,Land,Land,"age-counter / alt-win stall","cumulative-upkeep age-counter pillowfort",any-era,1291,"","","","","","","Buys turns for honest combo"
-"Sea Gate Wreckage","",0,Land,Land,"hellbent / Ensnaring Bridge","hellbent draw engine",any-era,1151,"","","","","","","Empty-hand card engine"
-"Riptide Laboratory","",0,Land,Land,"wizards / ETB loops","bounce/protect a Wizard",any-era,1130,"","","","","","","Recurs Wizards at low power"
-"Petrified Field","",0,Land,Land,"land recursion","regrow a land from GY",any-era,1153,"","","","","","","Rebuys utility/sac lands"
-"Thespian's Stage","",0,Land,Land,"utility redundancy","copy target land",any-era,1286,"","","","","","","Copies storage/threshold/utility land"
-"Barren Moor","",0,Land,Land,"discard / GY-storm","ETB-tapped B; cycling {B}",any-era,1224,"","","","","","","ONS cycler, B"
-"Forgotten Cave","",0,Land,Land,"discard / GY-storm","ETB-tapped R; cycling {R}",any-era,1185,"","","","","","","ONS cycler, R; de-dup vs R sheet"
-"Lonely Sandbar","",0,Land,Land,"discard / GY-storm","ETB-tapped U; cycling {U}",any-era,1173,"","","","","","","ONS cycler, U"
-"Secluded Steppe","",0,Land,Land,"discard / GY-storm","ETB-tapped W; cycling {W}",any-era,1136,"","","","","","","ONS cycler, W"
-"Tranquil Thicket","",0,Land,Land,"discard / GY-storm","ETB-tapped G; cycling {G}",any-era,1171,"","","","","","","ONS cycler, G"
+Serra's Sanctum,,0,Legendary Land,W,WU Azorius,mana-engine,any-era,1390,,,,,,,Add W for each enchantment you control; enchantress mana fuel
+Calciform Pools,,0,Land,Land,counters / proliferate,W/U storage-counter battery,any-era,1161,,,,,,,"Storage battery, proliferate target"
+Mystic Gate,,0,Land,Land,WU fixing,"W/U filter land, {C} or hybrid->two",any-era,1257,,,,,,,"Filter land, slow WU fix"
+Skycloud Expanse,,0,Land,Land,WU fixing,"allied W/U filter, pay {1} no life loss",any-era,1231,,,,,,,Low-power allied W/U fix
+Darkwater Catacombs,,0,Land,Land,UB fixing,allied U/B filter,any-era,1271,,,,,,,Low-power allied U/B fix
+Dreadship Reef,,0,Land,Land,counters / proliferate,U/B storage-counter battery,any-era,1151,,,,,,,"Storage battery, proliferate target"
+Sunken Ruins,,0,Land,Land,UB fixing,U/B filter land,any-era,1341,,,,,,,"Filter land, slow UB fix"
+Graven Cairns,,0,Land,Land,BR fixing,B/R filter land,any-era,1219,,,,,,,"Filter land, slow BR fix"
+Molten Slagheap,,0,Land,Land,counters / proliferate,B/R storage-counter battery,any-era,1127,,,,,,,"Storage battery, proliferate target"
+Shadowblood Ridge,,0,Land,Land,BR fixing,allied B/R filter,any-era,1213,,,,,,,Low-power allied B/R fix
+Fire-Lit Thicket,,0,Land,Land,RG fixing,R/G filter land,any-era,1249,,,,,,,"Filter land, slow RG fix"
+Fungal Reaches,,0,Land,Land,counters / proliferate,R/G storage-counter battery,any-era,1148,,,,,,,"Storage battery, proliferate target"
+Mossfire Valley,,0,Land,Land,RG fixing,allied R/G filter,any-era,1188,,,,,,,Low-power allied R/G fix
+Nantuko Monastery,,0,Land,Land,threshold beatdown,threshold 4/4 GW manland,any-era,1138,,,,,,,Threshold-gated manland; stall-breaker
+Saltcrusted Steppe,,0,Land,Land,counters / proliferate,G/W storage-counter battery,any-era,1088,,,,,,,"Storage battery, proliferate target"
+Sungrass Prairie,,0,Land,Land,GW fixing,allied G/W filter,any-era,1206,,,,,,,Low-power allied G/W fix
+Wooded Bastion,,0,Land,Land,GW fixing,G/W filter land,any-era,1207,,,,,,,"Filter land, slow GW fix"
+Abandoned Outpost,,0,Land,Land,5c splash glue,ETB-tapped W or sac for any-1,any-era,1161,,,,,,,"Block sac-tapland, W base"
+Barbarian Ring,,0,Land,Land,GY-storm / threshold,R painland; threshold sac 2 dmg,any-era,1219,,,,,,,Threshold burn; de-dup vs R sheet
+Barren Moor,,0,Land,Land,discard / GY-storm,ETB-tapped B; cycling {B},any-era,1224,,,,,,,"ONS cycler, B"
+Bog Wreckage,,0,Land,Land,5c splash glue,ETB-tapped B or sac for any-1,any-era,1219,,,,,,,"Block sac-tapland, B base"
+Cabal Pit,,0,Land,Land,GY-storm / threshold,B painland; threshold sac -2/-2,any-era,1129,,,,,,,Threshold removal; de-dup vs B sheet
+Centaur Garden,,0,Land,Land,GY-storm / threshold,G painland; threshold sac +3/+3,any-era,1172,,,,,,,Threshold combat trick land
+Cephalid Coliseum,,0,Land,Land,self-mill / GY-storm,"U painland; threshold loot-3, self-mill",any-era,1164,,,,,,,Self-mill enabler + threshold
+Forgotten Cave,,0,Land,Land,discard / GY-storm,ETB-tapped R; cycling {R},any-era,1185,,,,,,,"ONS cycler, R; de-dup vs R sheet"
+Geier Reach Sanitarium,,0,Legendary Land,Land,wheels / hand-punisher,symmetric loot wheel,any-era,1196,,,,,,,Uncounterable wheel; feeds Vise/Rack
+Glacial Chasm,,0,Land,Land,age-counter / alt-win stall,cumulative-upkeep age-counter pillowfort,any-era,1291,,,,,,,Buys turns for honest combo
+Karn's Bastion,,0,Land,Land,counters spine,repeatable proliferate land,any-era,1170,,,,,,,Proliferate engine for counter package
+Lonely Sandbar,,0,Land,Land,discard / GY-storm,ETB-tapped U; cycling {U},any-era,1173,,,,,,,"ONS cycler, U"
+Mage-Ring Network,,0,Land,Land,big-red sink / counters,colorless storage battery / mana sink,any-era,1130,,,,,,,"Braid-of-Fire sink, proliferate target"
+"Mikokoro, Center of the Sea",,0,Legendary Land,Land,wheels / hand-punisher,symmetric draw wheel,any-era,1162,,,,,,,Floods hands for punisher suite
+Nesting Grounds,,0,Land,Land,counter relocation,"move a counter, sorcery speed",any-era,1095,,,,,,,Shifts counters; Smokestack/storage glue
+Nomad Stadium,,0,Land,Land,GY-storm / threshold,W painland; threshold sac +4 life,any-era,1079,,,,,,,Threshold lifegain land
+Petrified Field,,0,Land,Land,land recursion,regrow a land from GY,any-era,1153,,,,,,,Rebuys utility/sac lands
+Ravaged Highlands,,0,Land,Land,5c splash glue,ETB-tapped R or sac for any-1,any-era,1140,,,,,,,"Block sac-tapland, R base"
+Riptide Laboratory,,0,Land,Land,wizards / ETB loops,bounce/protect a Wizard,any-era,1130,,,,,,,Recurs Wizards at low power
+Sea Gate Wreckage,,0,Land,Land,hellbent / Ensnaring Bridge,hellbent draw engine,any-era,1151,,,,,,,Empty-hand card engine
+Seafloor Debris,,0,Land,Land,5c splash glue,ETB-tapped U or sac for any-1,any-era,1172,,,,,,,"Block sac-tapland, U base"
+Secluded Steppe,,0,Land,Land,discard / GY-storm,ETB-tapped W; cycling {W},any-era,1136,,,,,,,"ONS cycler, W"
+Timberland Ruins,,0,Land,Land,5c splash glue,ETB-tapped G or sac for any-1,any-era,1184,,,,,,,"Block sac-tapland, G base"
+Tranquil Thicket,,0,Land,Land,discard / GY-storm,ETB-tapped G; cycling {G},any-era,1171,,,,,,,"ONS cycler, G"
