@@ -563,23 +563,72 @@ fn claude_text(key: &str, prompt: &str) -> Result<String> {
         .with_context(|| format!("claude returned no text: {}", String::from_utf8_lossy(&out.stdout)))
 }
 
-/// Claude's ART_DIRECTION_CARD_DESCRIPTION for a card (cached per card).
-fn art_direction(card: &Card, genai_dir: &Path, key: &str) -> Result<String> {
+/// Flavor text of the oldest printing (from the cached Scryfall metadata).
+fn card_flavor(name: &str, art_dir: &Path) -> String {
+    let meta = art_dir.join(format!("{}.json", sanitize(name)));
+    let Ok(txt) = fs::read_to_string(&meta) else { return String::new() };
+    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return String::new() };
+    v["data"][0]["flavor_text"]
+        .as_str()
+        .or_else(|| v["data"][0]["card_faces"][0]["flavor_text"].as_str())
+        .unwrap_or("")
+        .to_string()
+}
+
+/// Ask Claude for the ART_DIRECTION_CARD_DESCRIPTION, reading the card's name,
+/// rules AND flavor so the scene reflects what the card is *about* (e.g. Beloved
+/// Chaplain is loved by beasts, not repelling them), not just the mechanics.
+fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
+    let flavor_line = if flavor.is_empty() {
+        "Flavor: (none)".to_string()
+    } else {
+        format!("Flavor text: \"{flavor}\"")
+    };
+    let prompt = format!(
+        "Magic: the Gathering card.\nName: {}\nType: {}\nRules: {}\n{}\n\n\
+         Write the ART DIRECTION for this card's illustration in 1-2 vivid sentences. \
+         FIRST (internally) work out what the card is THEMATICALLY about by reading its NAME and \
+         FLAVOR TEXT (and the feeling of its rules) — connect the picture to the card's meaning, \
+         NOT just the literal mechanics. (For example, a card called 'Beloved' whose flavor says \
+         beasts are charmed by her should show animals lovingly drawn to her, not menacing her.) \
+         Then OUTPUT ONLY the final art direction: 1-2 vivid sentences describing one late-1990s \
+         traditional-fantasy oil-painting scene (subject, setting, action, mood). No headers, \
+         labels, or preamble; describe ONLY the painted scene — no card frame, border, title, or text.",
+        card.name, card.type_line, card.oracle_text, flavor_line
+    );
+    claude_text(key, &prompt)
+}
+
+/// Get (cached) or (re)generate the art direction for a card.
+pub fn genai_direction(
+    editor_db: &Path, cache_dir: &Path, id: i64, regenerate: bool,
+) -> Result<String> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    let genai_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai");
     let f = genai_dir.join("direction.txt");
-    if f.exists() {
+    if f.exists() && !regenerate {
         return Ok(fs::read_to_string(&f)?);
     }
-    let prompt = format!(
-        "Magic: the Gathering card '{}' — {}. Rules text: {}.\n\nIn 1-2 vivid sentences write the \
-         ART DIRECTION for this card's illustration: the scene, subject, setting, action and mood. \
-         Describe ONLY the painted scene (no card frame, border, title, or text). Make it suitable \
-         for a late-1990s traditional-fantasy oil painting.",
-        card.name, card.type_line, card.oracle_text
-    );
-    let d = claude_text(key, &prompt)?;
-    fs::create_dir_all(genai_dir)?;
+    let key = std::env::var("ANTHROPIC_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty())
+        .context("ANTHROPIC_API_KEY not set")?;
+    let art_dir = cache_dir.join("art");
+    let _ = scryfall_oldest(&card.name, &art_dir); // ensure flavor metadata is cached
+    let flavor = card_flavor(&card.name, &art_dir);
+    let d = make_direction(&card, &flavor, &key)?;
+    fs::create_dir_all(&genai_dir)?;
     fs::write(&f, &d)?;
     Ok(d)
+}
+
+/// Persist a (possibly user-edited) art direction for a card.
+fn save_direction(cache_dir: &Path, name: &str, direction: &str) -> Result<()> {
+    let genai_dir = cache_dir.join("cards").join(sanitize(name)).join("genai");
+    fs::create_dir_all(&genai_dir)?;
+    fs::write(genai_dir.join("direction.txt"), direction)?;
+    Ok(())
 }
 
 /// Generate one artist's art via OpenAI gpt-image-1 (cached at `out`).
@@ -611,10 +660,10 @@ fn gen_art_openai(prompt: &str, out: &Path, key: &str) -> Result<()> {
 /// Reads ANTHROPIC_API_KEY (art direction) and OPENAI_API_KEY (image gen) from env.
 pub fn genai_options(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64,
+    direction_override: Option<&str>,
 ) -> Result<Value> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
-    let claude = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
     let openai = std::env::var("OPENAI_API_KEY").ok().filter(|k| !k.is_empty());
     let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
     let genai_dir = card_dir.join("genai");
@@ -622,10 +671,14 @@ pub fn genai_options(
     let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
         .map_or_else(|_| "2001".to_string(), |(_, _, y, _)| y);
 
-    let Some(ckey) = claude else {
-        bail!("ANTHROPIC_API_KEY not set (needed for the art direction)");
+    // Use the user-edited direction if supplied (and persist it); else cached/Claude.
+    let direction = match direction_override {
+        Some(d) if !d.trim().is_empty() => {
+            save_direction(cache_dir, &card.name, d.trim())?;
+            d.trim().to_string()
+        }
+        _ => genai_direction(editor_db, cache_dir, id, false)?,
     };
-    let direction = art_direction(&card, &genai_dir, &ckey)?;
 
     let mut options = Vec::new();
     let mut errors = Vec::new();

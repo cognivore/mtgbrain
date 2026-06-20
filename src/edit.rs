@@ -422,12 +422,32 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 let segs: Vec<&str> = rest.split('/').collect();
                 let gid = segs.first().and_then(|s| s.parse::<i64>().ok());
                 match (&method, segs.as_slice(), gid) {
-                    (Method::Post, [_, "generate"], Some(gid)) => match crate::render::genai_options(
-                        editor_db, &rc.assets, &rc.cache, &rc.chrome, gid,
-                    ) {
-                        Ok(v) => json_response(&v),
-                        Err(e) => json_response(&json!({"error": e.to_string()})),
-                    },
+                    // Art direction: fetch (cached/Claude) or regenerate; user edits before generating.
+                    (Method::Post, [_, "direction"], Some(gid)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let regen = serde_json::from_str::<Value>(&body)
+                            .ok()
+                            .and_then(|v| v["regenerate"].as_bool())
+                            .unwrap_or(false);
+                        match crate::render::genai_direction(editor_db, &rc.cache, gid, regen) {
+                            Ok(d) => json_response(&json!({"direction": d})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    (Method::Post, [_, "generate"], Some(gid)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let dir = serde_json::from_str::<Value>(&body)
+                            .ok()
+                            .and_then(|v| v["direction"].as_str().map(ToString::to_string));
+                        match crate::render::genai_options(
+                            editor_db, &rc.assets, &rc.cache, &rc.chrome, gid, dir.as_deref(),
+                        ) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
                     (Method::Get, [_, "card", bucket], Some(gid)) => {
                         let nm = db
                             .query_row("SELECT name FROM cube_cards WHERE id=?1", params![gid], |r| {
