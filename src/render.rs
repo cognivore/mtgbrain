@@ -349,10 +349,8 @@ fn mpcfill_pick(
         let dir = card_dir.join("mpcfill").join(sanitize_bucket(&c.bucket));
         fs::create_dir_all(&dir)?;
         let dst = dir.join(format!("{}.{}", c.identifier, c.ext));
-        if !dst.exists() && !c.link.is_empty() {
-            if curl_to_file(&c.link, &dst).is_err() {
-                eprintln!("    (download failed) {}", c.identifier);
-            }
+        if !dst.exists() && !c.link.is_empty() && curl_to_file(&c.link, &dst).is_err() {
+            eprintln!("    (download failed) {}", c.identifier);
         }
         record_bucket(&c.bucket, &c.ext_link)?;
     }
@@ -520,7 +518,8 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
         ("AX", pc(0.12)), ("AY", pc(0.0991)), ("AW", pc(0.7667)), ("AH", pc(0.4429)),
-        ("TX", pc(0.1067)), ("TY", pc(0.0481)), ("TW", pc(0.824)), ("TH", pc(0.05)),
+        ("TX", pc(0.1067)), ("TY", pc(0.0481)), ("TW", pc(0.70)), ("TH", pc(0.05)),
+        ("MAR", pc(0.045)), ("MAY", pc(0.044)), ("MAH", pc(0.046)),
         ("TSZ", px(0.041)), ("MSZ", px(72.0 / 2100.0)),
         ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYSZ", px(0.032)),
         ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
