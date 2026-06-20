@@ -4,6 +4,7 @@
 mod build;
 mod download;
 mod edit;
+mod events;
 mod model;
 mod query;
 mod render;
@@ -151,6 +152,13 @@ enum RenderCmd {
     },
     /// Render every card in the editor DB.
     All {
+        #[command(flatten)]
+        common: RenderCommon,
+    },
+    /// Async full pass: generate the GenAI art gallery for every genai-flagged card
+    /// (idempotent/resumable; logs every action to the event store). Run in the
+    /// background, then review/choose in the editor's "Review GenAI" tab.
+    GenaiPass {
         #[command(flatten)]
         common: RenderCommon,
     },
@@ -323,6 +331,13 @@ fn main() -> Result<()> {
                     &edb, &common.assets, &common.cache, &common.chrome, common.foil,
                     common.force, common.art_backend.as_deref(),
                 )
+            }
+            RenderCmd::GenaiPass { common } => {
+                let edb = common
+                    .editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                render::genai_pass(&edb, &common.assets, &common.cache, &common.chrome)
             }
         },
     }

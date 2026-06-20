@@ -12,37 +12,39 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
 .box { position:absolute; color:#080808; }
+/* ===== cardconjurer packSeventh.js exact bounds; SHARP black shadow (no blur) ===== */
 .titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%; display:flex; align-items:center; }
-/* Seventh: white fill + GENTLE soft drop-shadow down-right (real 7ED look, ~1/3 kerning) */
 .titlerow .nm { font-family:'goudy'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap;
-   overflow:hidden; color:#f9f7ef; text-shadow:1px 2px 2px rgba(0,0,0,0.32); }
-/* mana cost: its OWN box anchored to the real 7ED mana well (so pips don't overhang the title band) */
-.manacost { right:%%MAR%%%; top:%%MAY%%%; height:%%MAH%%%; font-size:%%MSZ%%px;
+   overflow:hidden; color:#f9f7ef; text-shadow:%%SHX%%px %%SHY%%px 0 rgba(0,0,0,0.95); }
+/* mana: wide right-aligned box (cc x:0.1067 width:0.8174); pips sit at the title height */
+.manacost { left:%%MAX%%%; top:%%MAY%%%; width:%%MAW%%%; height:%%MAH%%px; font-size:%%MSZ%%px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
-.type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:4.6%;
+.type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:%%TYH%%%;
    display:flex; align-items:center; font-family:'mplantin'; font-weight:bold;
    font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f9f7ef;
-   text-shadow:2px 3px 2px rgba(0,0,0,0.5); }
+   text-shadow:%%SHX%%px %%SHY%%px 0 rgba(0,0,0,0.95); }
 .rules { left:%%RX%%%; top:%%RY%%%; width:%%RW%%%; height:%%RH%%%;
-   display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+   display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; color:#0a0a0a; }
 .rules p { margin:0 0 .42em; width:100%; }
 .rules p:last-child { margin-bottom:0; }
 .rules i { font-style:italic; }
-.pt { left:%%PX%%%; top:%%PY%%%; width:13.67%; height:4.6%;
+.pt { left:%%PX%%%; top:%%PY%%%; width:%%PW%%%; height:4.29%;
    display:flex; align-items:center; justify-content:center;
    font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1;
-   color:#f9f7ef; text-shadow:3px 4px 3px rgba(0,0,0,0.55); }
+   color:#f9f7ef; text-shadow:%%SHX%%px %%SHY%%px 0 rgba(0,0,0,0.95); }
 .info { position:absolute; left:8%; width:84%; text-align:center; color:#f9f7ef;
-   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:1px 2px 2px rgba(0,0,0,0.55); }
-.illus { top:%%IY%%%; font-size:44px; }
-.legal { top:%%LY%%%; font-size:34px; letter-spacing:.02em; }
-/* mana pips are an icon font — NEVER italic (the <i> tag + .rules i would skew them) */
-.ms, .rules .ms, .titlerow .ms { vertical-align:middle; font-style:normal; }
-/* pips: prominent like real old frames (~ title height); generic grey + drop-shadow */
-.ms-cost { width:1.18em; height:1.18em; line-height:1.18em; font-size:1em;
-   background-color:#b1aa9f; box-shadow:-0.02em 0.03em 0.02em rgba(0,0,0,.30); }
-.manacost .ms-cost { margin-left:0.05em; }
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:3px 3px 0 rgba(0,0,0,0.9); }
+.illus { top:%%IY%%%; font-size:%%ISZ%%px; }
+.legal { top:%%LY%%%; font-size:%%LSZ%%px; letter-spacing:.02em; }
+/* Pips are cardconjurer's own mana SVGs (disk + glyph baked in) → exact match.
+   Each is drawn at 0.78 of the surrounding font size (cardconjurer's manaSymbol
+   width = textSize*0.78), square. Works in the cost row (font MSZ) and inline
+   in rules (font RSZ) alike. A faint drop-shadow matches the printed look. */
+.ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em;
+   filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+.manacost .ms-img { margin-left:0.07em; }
+.rules .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .foilstar { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 </style></head>
 <body>

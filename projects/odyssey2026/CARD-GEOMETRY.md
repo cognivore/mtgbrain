@@ -42,6 +42,31 @@ transparent *real* Odyssey frame PNGs (the real scans have art/text baked in). T
 recreation is the faithful approximation; the deltas are sub-3% and not visually objectionable
 (see the blue Propaganda render).
 
+## Ported verbatim from cardconjurer `packSeventh.js`
+
+The renderer's bounds, font sizes, shadows and **mana symbols** are now taken
+directly from cardconjurer's Seventh pack (`~/Github/cardconjurer`, the source
+the frame PNGs/fonts already come from). All values are fractions of the FACE;
+font px = fraction × FACE_H (2800); the FACE sits inside the 2176×2960 bleed.
+
+| Element | cardconjurer value |
+|---|---|
+| Title | x 0.1134, y 0.0481, w 0.7734, h 0.041, size 0.041, goudy, white |
+| Mana | x 0.1067, y 0.0539, w 0.8174, **size 72/1638**, right-aligned |
+| Type | x 0.1074, y 0.5486, w 0.7852, h 0.0543, size 0.032 |
+| Rules | x 0.128, y 0.6067, w 0.744, h 0.2724, size 0.0358, **top-aligned** |
+| P/T | x 0.8074, y 0.9043, w 0.1367, size 0.0429 |
+| Illus / Wizards | y 1908/2100 size 0.0172 / y 1940/2100 size 0.0143 |
+
+- **Shadow** (title/type/PT): sharp black, **no blur**, offset (0.002·W, 0.0015·H)
+  — cardconjurer applies `shadowOffsetX/Y` with `shadowBlur` unset.
+- **Pips are cardconjurer's own SVGs** (`img/manaSymbols/*.svg`, copied to
+  `assets/mana/`): each is a complete pip (coloured disk + glyph baked in, e.g.
+  `w.svg` pale-yellow circle + sun, `3.svg` grey-tan circle + numeral). Rendered
+  as `<img class=ms-img>` at **0.78em** of the surrounding font (cardconjurer
+  draws each at `textSize·0.78`). This makes pips match cardconjurer pixel-for-pixel
+  (the andrewgioia mana font's sun is fatter and was the prior mismatch).
+
 ## Typography rules (locked in)
 
 - Title / type / P/T: **Goudy/MPlantin, white fill + tight black outline** (the engraved old
@@ -50,6 +75,14 @@ recreation is the faithful approximation; the deltas are sub-3% and not visually
 - **Mana pips are an icon font and must never be italic** — the `<i class="ms">` tag and the
   `.rules i { italic }` rule would skew them (the Propaganda `{2}` bug). Pinned with
   `.ms, .rules .ms, .titlerow .ms { font-style: normal }`. See RENDER-REGRESSION.md.
-- Pips sized ~**title height** (`ms-cost` ≈ 1.18em of the mana text), generic pips grey with the
-  classic drop-shadow.
+- **Title shadow is faint** (`text-shadow:1px 2px 2px rgba(0,0,0,0.32)`). A heavy shadow
+  (the old `3px 4px 3px / 0.55`) drags the title's optical centre down ("text too low") and
+  reads as doubled — verified with `tools/cardgeom` against the real 7ED Serra Angel scan.
+- **Cost-row generic/colourless mana is a BARE numeral — no disk** (real old-frame look). The
+  disk is stripped only under `.manacost` (`.manacost .ms-0…ms-x { background:none; … }`), so
+  inline `{2}` in *rules* text keeps its disk (correct for body text).
+- Coloured cost pips: a **pale grey-green disk** (`#c1c3b1`) ~title height (`ms-cost` 1.12em)
+  with the symbol scaled to **0.82** inside it → a pale ring around the glyph (the andrewgioia
+  sun is fatter than the real 7ED sun; the ring + faint `0.22` shadow tames the "too heavy"
+  look). Tune these against a real scan with `tools/cardgeom/card-compare`.
 - Bottom: `Illus. <artist>` then `NOT FOR SALE · ™ & © <year> Wizards of the Coast, Inc.`

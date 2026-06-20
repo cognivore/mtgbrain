@@ -1,0 +1,1 @@
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/card-preview: /Users/sweater/Github/mtgbrain/tools/cardgeom/src/bin/card_preview.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/src/lib.rs

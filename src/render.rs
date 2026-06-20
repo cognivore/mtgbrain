@@ -62,9 +62,26 @@ fn asset_list() -> Vec<(String, &'static str)> {
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
     v.push((format!("{CC}/fonts/mplantin-italic.ttf"), "fonts/mplantin-italic.ttf"));
     v.push((format!("{CC}/fonts/matrix.ttf"), "fonts/matrix.ttf"));
-    // mana font (OFL)
+    // mana font (OFL) — kept for any legacy use
     v.push((format!("{MANA}/fonts/mana.ttf"), "fonts/mana.ttf"));
     v.push((format!("{MANA}/css/mana.css"), "fonts/mana.css"));
+    // cardconjurer's own mana-symbol SVGs (disk + glyph baked in) → pixel-match pips.
+    let mut syms: Vec<String> =
+        (0..=20).map(|n| n.to_string()).collect();
+    for s in [
+        "w", "u", "b", "r", "g", "c", "x", "s", "t", "untap", "e", "p",
+        "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu",
+        "2w", "2u", "2b", "2r", "2g", "wp", "up", "bp", "rp", "gp",
+        "hw", "hr",
+    ] {
+        syms.push(s.to_string());
+    }
+    for s in syms {
+        v.push((
+            format!("{CC}/img/manaSymbols/{s}.svg"),
+            Box::leak(format!("mana/{s}.svg").into_boxed_str()),
+        ));
+    }
     v
 }
 
@@ -605,6 +622,17 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
     claude_text(key, &prompt)
 }
 
+/// Best-effort append to the GenAI event log (never fails a render).
+#[allow(clippy::too_many_arguments)]
+fn log_event(
+    cache_dir: &Path, card_id: i64, card_name: &str, action: &str,
+    artist: Option<&str>, art_hash: Option<&str>, prompt: Option<&str>, detail: Option<&str>,
+) {
+    if let Ok(db) = crate::events::open(cache_dir) {
+        let _ = crate::events::log(&db, card_id, card_name, action, artist, art_hash, prompt, detail);
+    }
+}
+
 /// Get (cached) or (re)generate the art direction for a card.
 pub fn genai_direction(
     editor_db: &Path, cache_dir: &Path, id: i64, regenerate: bool,
@@ -626,6 +654,7 @@ pub fn genai_direction(
     let d = make_direction(&card, &flavor, &key)?;
     fs::create_dir_all(&genai_dir)?;
     fs::write(&f, &d)?;
+    log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(&d), None);
     Ok(d)
 }
 
@@ -681,6 +710,7 @@ pub fn genai_options(
     let direction = match direction_override {
         Some(d) if !d.trim().is_empty() => {
             save_direction(cache_dir, &card.name, d.trim())?;
+            log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(d.trim()), Some("edited"));
             d.trim().to_string()
         }
         _ => genai_direction(editor_db, cache_dir, id, false)?,
@@ -699,26 +729,31 @@ pub fn genai_options(
                 continue;
             };
             let named = format!(
-                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}, \
-                 as a FINAL, HIGHLY DETAILED SKETCH (a finished concept/illustration sketch — \
-                 confident graphite-and-ink linework with tonal shading), NOT a polished, glossy or \
-                 fully-rendered painting. You need to make a card art for the following art direction:\n{direction}"
+                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
+                 Paint it ALLA PRIMA as a loose painterly oil study (an ébauche / working lay-in): \
+                 confident economical brushwork, broad masses and suggested forms, FEWER details — \
+                 a final draft in real paint, NOT a tight, glossy, fully-rendered gallery piece. \
+                 You need to make a card art for the following art direction:\n{direction}"
             );
             let mut res = gen_art_openai(&named, &art_png, k);
             // OpenAI rejects some living-artist names — retry with the style descriptor only.
             if res.as_ref().err().is_some_and(|e| e.to_string().contains("safety")) {
                 let styled = format!(
-                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}, \
-                     as a FINAL, HIGHLY DETAILED SKETCH (a finished concept/illustration sketch — \
-                     confident graphite-and-ink linework with tonal shading), NOT a polished, glossy \
-                     or fully-rendered painting. You need to make a card art for the following art direction:\n{direction}"
+                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}. \
+                     Paint it ALLA PRIMA as a loose painterly oil study (an ébauche / working lay-in): \
+                     confident economical brushwork, broad masses and suggested forms, FEWER details — \
+                     a final draft in real paint, NOT a tight, glossy, fully-rendered gallery piece. \
+                     You need to make a card art for the following art direction:\n{direction}"
                 );
                 res = gen_art_openai(&styled, &art_png, k);
             }
             if let Err(e) = res {
-                errors.push(format!("{artist}: {e}"));
+                let msg = e.to_string();
+                log_event(cache_dir, id, &card.name, crate::events::ART_FAILED, Some(artist), None, Some(&direction), Some(&msg));
+                errors.push(format!("{artist}: {msg}"));
                 continue;
             }
+            log_event(cache_dir, id, &card.name, crate::events::ART_GENERATED, Some(artist), Some(&h), Some(&direction), None);
         }
         let card_png = adir.join("card.png");
         if let Err(e) = compose(
@@ -764,6 +799,98 @@ pub fn genai_choose(
         card_dir.join("art.json"),
         json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": artist, "year": year}).to_string(),
     )?;
+    log_event(cache_dir, id, &card.name, crate::events::CHOSEN, Some(artist), Some(hash), None, None);
+    Ok(())
+}
+
+/// Clear the chosen GenAI art for a card (logged; art.json removed so the render
+/// falls back to MPCfill/Scryfall on next render).
+pub fn genai_unchoose(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
+    let _ = fs::remove_file(card_dir.join("art.json"));
+    let _ = fs::remove_file(card_dir.join("art.png"));
+    log_event(cache_dir, id, &card.name, crate::events::UNCHOSEN, None, None, None, None);
+    Ok(())
+}
+
+/// History of GenAI events for a card (for the review UI / time-travel).
+pub fn genai_history(cache_dir: &Path, id: i64) -> Result<Value> {
+    let db = crate::events::open(cache_dir)?;
+    Ok(json!({
+        "history": crate::events::history(&db, id)?,
+        "current_direction": crate::events::current_direction(&db, id)?,
+        "current_choice": crate::events::current_choice(&db, id).ok().flatten().map(|(a, _)| a),
+    }))
+}
+
+/// Set an old event's prompt as the current direction (time-travel / reprompt),
+/// logged as a fresh direction edit.
+pub fn genai_reprompt(editor_db: &Path, cache_dir: &Path, id: i64, event_id: i64) -> Result<String> {
+    let store = crate::events::open(cache_dir)?;
+    let prompt = crate::events::prompt_of(&store, event_id)?
+        .context("that event has no prompt to restore")?;
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    save_direction(cache_dir, &card.name, &prompt)?;
+    log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(&prompt),
+        Some(&format!("reprompt from event {event_id}")));
+    Ok(prompt)
+}
+
+/// Cube-wide GenAI review dashboard: every genai-flagged card with its status.
+pub fn genai_dashboard(editor_db: &Path, cache_dir: &Path) -> Result<Value> {
+    let store = crate::events::open(cache_dir)?;
+    let stat = crate::events::status(&store)?;
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let mut stmt = db.prepare(
+        "SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 ORDER BY id",
+    )?;
+    let cards: Vec<Value> = stmt
+        .query_map([], |r| {
+            let id: i64 = r.get(0)?;
+            let name: String = r.get(1)?;
+            Ok((id, name))
+        })?
+        .filter_map(std::result::Result::ok)
+        .map(|(id, name)| {
+            let s = stat.get(&id).cloned().unwrap_or_else(|| json!({}));
+            json!({"id": id, "name": name, "status": s})
+        })
+        .collect();
+    Ok(json!({"cards": cards, "artists": ARTISTS.iter().map(|(a, _)| *a).collect::<Vec<_>>()}))
+}
+
+/// Async full pass: generate the GenAI gallery for every genai-flagged card.
+/// Idempotent/resumable (cached arts are skipped); logs every action. Run it in
+/// the background, then review/choose in the editor's "Review GenAI" tab.
+pub fn genai_pass(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str) -> Result<()> {
+    let ids: Vec<(i64, String)> = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        let mut stmt = db.prepare(
+            "SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 AND in_db_found=1 ORDER BY id",
+        )?;
+        let mut v = Vec::new();
+        let mut rows = stmt.query([])?;
+        while let Some(r) = rows.next()? {
+            v.push((r.get::<_, i64>(0)?, r.get::<_, String>(1)?));
+        }
+        v
+    };
+    let total = ids.len();
+    println!("GenAI full pass: {total} flagged cards");
+    for (i, (id, name)) in ids.iter().enumerate() {
+        match genai_options(editor_db, assets_dir, cache_dir, chrome, *id, None) {
+            Ok(v) => {
+                let ok = v["options"].as_array().map_or(0, Vec::len);
+                let err = v["errors"].as_array().map_or(0, Vec::len);
+                println!("[{}/{total}] {name}: {ok} ok, {err} failed", i + 1);
+            }
+            Err(e) => eprintln!("[{}/{total}] {name}: {e}", i + 1),
+        }
+    }
+    println!("done — review in the editor's Review GenAI tab");
     Ok(())
 }
 
@@ -779,6 +906,7 @@ const TEMPLATE: &str = include_str!("card_template.html");
 fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, foil: bool) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
         format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
     } else {
@@ -816,7 +944,11 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // offset (0.002*FACE_W, 0.0015*FACE_H).
         ("AX", pc(0.12)), ("AY", pc(0.0991)), ("AW", pc(0.7667)), ("AH", pc(0.4429)),
         ("TX", pc(0.1134)), ("TY", pc(0.0481)), ("TW", pc(0.7734)), ("TH", pc(0.041)),
-        ("MAX", pc(0.1067)), ("MAY", pc(0.0539)), ("MAW", pc(0.8174)), ("MAH", px(72.0 / 2100.0)),
+        // Pips share the TITLE's vertical band (MAY=TY, MAH=TH) and are centred in it,
+        // so pip-centre == title-centre. (cardconjurer's literal mana y=0.0539 is offset
+        // back up by its textSize*0.34 baseline math, which we don't replicate — using it
+        // raw dropped the pips a full box too low.)
+        ("MAX", pc(0.1067)), ("MAY", pc(0.0481)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
         ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
         ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
         ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
@@ -829,9 +961,9 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("NAME", esc(&c.name)),
-        ("MANA", manaify(&c.mana_cost)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("RULES", rules_html(&c.oracle_text)),
+        ("RULES", rules_html(&c.oracle_text, &mana_base)),
         ("PT", pt),
         ("ILLUS", illus),
         ("YEAR", year),
@@ -846,11 +978,11 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
 }
 
 /// Rules text → paragraphs, mana symbols inline, parenthetical reminder italic.
-fn rules_html(text: &str) -> String {
+fn rules_html(text: &str, mana_base: &str) -> String {
     let mut s = String::new();
     for line in text.split('\n').filter(|l| !l.trim().is_empty()) {
         s.push_str("<p>");
-        s.push_str(&reminder_italic(&manaify(line)));
+        s.push_str(&reminder_italic(&manaify(line, mana_base)));
         s.push_str("</p>");
     }
     s
@@ -887,7 +1019,7 @@ fn reminder_italic(html: &str) -> String {
     out
 }
 
-fn manaify(text: &str) -> String {
+fn manaify(text: &str, mana_base: &str) -> String {
     let mut out = String::new();
     let mut chars = text.chars().peekable();
     while let Some(ch) = chars.next() {
@@ -899,7 +1031,7 @@ fn manaify(text: &str) -> String {
                 }
                 sym.push(c2);
             }
-            out.push_str(&mana_icon(&sym));
+            out.push_str(&mana_icon(&sym, mana_base));
         } else {
             out.push_str(&esc_char(ch));
         }
@@ -907,13 +1039,16 @@ fn manaify(text: &str) -> String {
     out
 }
 
-fn mana_icon(sym: &str) -> String {
+/// One pip = cardconjurer's own mana-symbol SVG (disk + glyph baked in), so the
+/// pips match cardconjurer exactly. `{T}`→t.svg, `{Q}`→untap.svg, else the
+/// lowercased code with `/` stripped (e.g. `{W/U}`→wu.svg, `{2/U}`→2u.svg).
+fn mana_icon(sym: &str, mana_base: &str) -> String {
     let key = match sym.to_uppercase().as_str() {
-        "T" => "tap".to_string(),
+        "T" => "t".to_string(),
         "Q" => "untap".to_string(),
         other => other.replace('/', "").to_lowercase(),
     };
-    format!(r#"<i class="ms ms-{key} ms-cost"></i>"#)
+    format!(r#"<img class="ms-img" src="{mana_base}/{key}.svg">"#)
 }
 
 // ---------------------------------------------------------------------------

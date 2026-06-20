@@ -1,0 +1,1 @@
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/card-compare: /Users/sweater/Github/mtgbrain/tools/cardgeom/src/bin/card_compare.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/src/lib.rs

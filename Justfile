@@ -98,3 +98,10 @@ fmt:
 
 lint:
     cargo clippy --all-targets
+
+# Async FULL PASS: generate GenAI galleries for all flagged cards (keys via rageveil).
+# Idempotent/resumable; review + choose in the editor's Review GenAI tab.
+genai-pass:
+    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
+    OPENAI_API_KEY="$({{openai_key}} | head -1)" \
+      cargo run --release -- render genai-pass --art-backend https://mpcfill.com

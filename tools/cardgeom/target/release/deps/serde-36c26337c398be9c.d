@@ -1,0 +1,14 @@
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/deps/serde-36c26337c398be9c.d: /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/build/serde-d9627d2ba0bc883d/out/private.rs
+
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/deps/libserde-36c26337c398be9c.rlib: /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/build/serde-d9627d2ba0bc883d/out/private.rs
+
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/deps/libserde-36c26337c398be9c.rmeta: /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/build/serde-d9627d2ba0bc883d/out/private.rs
+
+/Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/sweater/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/build/serde-d9627d2ba0bc883d/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/build/serde-d9627d2ba0bc883d/out

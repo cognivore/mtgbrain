@@ -422,6 +422,40 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 let segs: Vec<&str> = rest.split('/').collect();
                 let gid = segs.first().and_then(|s| s.parse::<i64>().ok());
                 match (&method, segs.as_slice(), gid) {
+                    // Review dashboard: every genai-flagged card + its status.
+                    (Method::Get, ["dashboard"], _) => {
+                        match crate::render::genai_dashboard(editor_db, &rc.cache) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    // Event history / time-travel for a card.
+                    (Method::Get, [_, "history"], Some(gid)) => {
+                        match crate::render::genai_history(&rc.cache, gid) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    // Restore an old event's prompt as the current direction.
+                    (Method::Post, [_, "reprompt"], Some(gid)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let ev = serde_json::from_str::<Value>(&body)
+                            .ok()
+                            .and_then(|v| v["event_id"].as_i64())
+                            .unwrap_or(0);
+                        match crate::render::genai_reprompt(editor_db, &rc.cache, gid, ev) {
+                            Ok(d) => json_response(&json!({"direction": d})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    // Clear the chosen art (logged).
+                    (Method::Post, [_, "unchoose"], Some(gid)) => {
+                        match crate::render::genai_unchoose(editor_db, &rc.cache, gid) {
+                            Ok(()) => json_response(&json!({"ok": true})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
                     // Art direction: fetch (cached/Claude) or regenerate; user edits before generating.
                     (Method::Post, [_, "direction"], Some(gid)) => {
                         let mut body = String::new();

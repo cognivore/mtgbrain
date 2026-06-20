@@ -19,6 +19,23 @@ assertion below. (Geometry spec: see CARD-GEOMETRY.md.)
 | **Cabal Pit** | land frame; ability text + `{T}`/`{B}` pips. |
 | **Wild Mongrel** | `{G}` discard ability pip; short rules vertically centered. |
 
+### Pixel geometry gate (objective)
+
+For cards with a real scan cached at `render-cache/cards/<Card>/scryfall/*.png`,
+verify geometry numerically instead of eyeballing:
+
+```sh
+cd tools/cardgeom && cargo build --release
+target/release/card-compare \
+  --ref   ../../render-cache/cards/Serra_Angel/scryfall/7ed.png \
+  --render ../../render-cache/cards/Serra_Angel/serra_FIXED.png
+```
+
+It reports title/pip position, size and shadow deltas as fractions of the face
+(bleed auto-cropped) and a PASS/FAIL verdict. See `tools/cardgeom/README.md`
+(and its metric caveats — pip "dark load" tracks glyph weight, judge pips with
+`card-crop` too).
+
 ### Always-check invariants (every card)
 1. **Mana pips are never italic** (cost row *and* inline in rules).
 2. **Title is not doubled** — white fill + tight black outline, single crisp image.
