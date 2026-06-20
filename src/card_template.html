@@ -14,28 +14,34 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .box { position:absolute; color:#080808; }
 .titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%;
    display:flex; align-items:center; justify-content:space-between; gap:.4em; }
-.titlerow .nm { font-family:'goudy'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+/* Seventh: white fill + TIGHT black outline (engraved old look, readable on beige) */
+.titlerow .nm { font-family:'goudy'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap;
+   overflow:hidden; color:#f7f5ec;
+   text-shadow:-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000,0 -3px 0 #000,0 3px 0 #000,-3px 0 0 #000,3px 0 0 #000; }
 .titlerow .mana { flex:none; white-space:nowrap; font-size:%%MSZ%%px; }
 .type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:4.6%;
    display:flex; align-items:center; font-family:'mplantin'; font-weight:bold;
-   font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+   font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f7f5ec;
+   text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000,0 -2px 0 #000,0 2px 0 #000,-2px 0 0 #000,2px 0 0 #000; }
 .rules { left:%%RX%%%; top:%%RY%%%; width:%%RW%%%; height:%%RH%%%;
    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
-   text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; }
+   text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; color:#0a0a0a; }
 .rules p { margin:0 0 .42em; width:100%; }
 .rules p:last-child { margin-bottom:0; }
 .rules i { font-style:italic; }
 .pt { left:%%PX%%%; top:%%PY%%%; width:13.67%; height:4.6%;
    display:flex; align-items:center; justify-content:center;
-   font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1; }
-.info { position:absolute; left:10%; width:80%; text-align:center; color:#0a0a0a;
-   font-family:'mplantin'; line-height:1; white-space:nowrap; }
-.illus { top:%%IY%%%; font-size:46px; }
-.wiz { top:%%WY%%%; font-size:32px; }
-.nfs { top:%%NY%%%; font-size:36px; letter-spacing:.03em; }
-.ms { vertical-align:baseline; }
-/* darker generic pip + classic drop-shadow so pips read on the beige nameplate */
-.ms-cost { background-color:#b1aa9f; box-shadow:-0.04em 0.06em 0.03em rgba(0,0,0,.5); }
+   font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1;
+   color:#f7f5ec; text-shadow:4px 5px 0 #000, 1px 1px 0 #000; }
+.info { position:absolute; left:8%; width:84%; text-align:center; color:#f7f5ec;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:2px 3px 0 #000; }
+.illus { top:%%IY%%%; font-size:44px; }
+.legal { top:%%LY%%%; font-size:34px; letter-spacing:.02em; }
+.ms { vertical-align:middle; }
+/* pips: prominent like real old frames (~ title height); generic grey + drop-shadow */
+.ms-cost { width:1.18em; height:1.18em; line-height:1.18em; font-size:1em;
+   background-color:#b1aa9f; box-shadow:-0.04em 0.06em 0.03em rgba(0,0,0,.55); }
+.titlerow .mana .ms-cost { margin-left:0.07em; }
 .foilstar { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 </style></head>
 <body>
@@ -47,8 +53,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box rules" id="rules">%%RULES%%</div>
     %%PT%%
     %%ILLUS%%
-    <div class="info wiz"><span>&#8482; &amp; &#169; %%YEAR%% Wizards of the Coast, Inc.</span></div>
-    <div class="info nfs"><span>NOT FOR SALE</span></div>
+    <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; %%YEAR%% Wizards of the Coast, Inc.</span></div>
     %%FOIL%%
   </div>
 <script>

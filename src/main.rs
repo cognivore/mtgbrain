@@ -110,8 +110,8 @@ enum Cmd {
 #[derive(Args, Clone)]
 pub struct RenderCommon {
     /// Editor DB to read cards + overrides from (read-only).
-    #[arg(long)]
-    db: Option<PathBuf>,
+    #[arg(long = "editor-db")]
+    editor_db: Option<PathBuf>,
     /// Directory holding downloaded frame/font assets.
     #[arg(long, default_value = "assets")]
     assets: PathBuf,
@@ -304,7 +304,7 @@ fn main() -> Result<()> {
             RenderCmd::Assets { force, dir } => render::assets(dir, *force),
             RenderCmd::Card { id, common } => {
                 let edb = common
-                    .db
+                    .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 let out = render::render_one(
@@ -316,7 +316,7 @@ fn main() -> Result<()> {
             }
             RenderCmd::All { common } => {
                 let edb = common
-                    .db
+                    .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 render::render_all(

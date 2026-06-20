@@ -18,11 +18,12 @@
 //! `cards/<Name>/<hash>.png` (foil: `.../foil/<hash>.png`).
 
 use std::fs;
-use std::io::Write;
+use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{bail, Context, Result};
+use base64::Engine;
 use rusqlite::{params, Connection, OpenFlags};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -105,7 +106,7 @@ pub fn assets(assets_dir: &Path, force: bool) -> Result<()> {
 
 fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
     let status = Command::new("curl")
-        .args(["-sSL", "--fail", "--max-time", "60", "-o"])
+        .args(["-sSL", "--fail", "--max-time", "90", "-A", "Mozilla/5.0", "-o"])
         .arg(dst)
         .arg(url)
         .status()
@@ -114,6 +115,18 @@ fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
         bail!("curl failed for {url}");
     }
     Ok(())
+}
+
+fn curl_post_json(url: &str, body: &str) -> Result<String> {
+    let out = Command::new("curl")
+        .args(["-sS", "--fail", "--max-time", "60", "-A", "Mozilla/5.0",
+            "-H", "Content-Type: application/json", "-X", "POST", "-d", body, url])
+        .output()
+        .context("curl POST")?;
+    if !out.status.success() {
+        bail!("POST {url} failed");
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 // ---------------------------------------------------------------------------
@@ -215,9 +228,28 @@ struct Art {
     year: String,
 }
 
-fn acquire_art(name: &str, art_dir: &Path, _backend: Option<&str>) -> Result<Art> {
-    fs::create_dir_all(art_dir)?;
-    // Scryfall: all paper prints oldest-first → take the oldest (authentic old art).
+/// Acquire art: oldest Scryfall printing as reference+fallback (+artist/year); if a
+/// MPC-Autofill `backend` and `ANTHROPIC_API_KEY` are present, pull all high-DPI
+/// candidates (cached per bucket), pick the highest-DPI one whose illustration
+/// Claude confirms matches the old art, and crop its art window cleanly.
+fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&str>) -> Result<Art> {
+    let art_dir = cache_root.join("art");
+    fs::create_dir_all(&art_dir)?;
+    let (ref_path, artist, year, set) = scryfall_oldest(name, &art_dir)?;
+
+    let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
+    if let (Some(base), Some(key)) = (backend, key.as_deref()) {
+        match mpcfill_pick(name, base, cache_root, card_dir, &ref_path, key) {
+            Ok(Some((path, art_ref))) => return Ok(Art { path, art_ref, artist, year }),
+            Ok(None) => eprintln!("  art: no MPCfill match for {name:?} — using Scryfall art_crop"),
+            Err(e) => eprintln!("  art: MPCfill/Claude error ({e}) — using Scryfall art_crop"),
+        }
+    }
+    Ok(Art { path: ref_path, art_ref: format!("scryfall:{set}:{year}:art_crop"), artist, year })
+}
+
+/// Oldest paper printing's art_crop (authentic pre-modern art) + artist/year/set.
+fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, String, String)> {
     let meta_url = format!(
         "https://api.scryfall.com/cards/search?order=released&dir=asc&unique=prints&q={}",
         percent(&format!("!\"{name}\" game:paper"))
@@ -226,17 +258,221 @@ fn acquire_art(name: &str, art_dir: &Path, _backend: Option<&str>) -> Result<Art
     curl_to_file(&meta_url, &meta_file)?;
     let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
         .with_context(|| format!("parsing Scryfall metadata for {name}"))?;
-    let first = v["data"].as_array().and_then(|a| a.first())
+    let first = v["data"]
+        .as_array()
+        .and_then(|a| a.first())
         .with_context(|| format!("no Scryfall print found for {name}"))?;
     let artist = first["artist"].as_str().unwrap_or("").to_string();
     let year = first["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
     let set = first["set"].as_str().unwrap_or("?").to_string();
-    let art_url = first["image_uris"]["art_crop"].as_str()
+    let art_url = first["image_uris"]["art_crop"]
+        .as_str()
         .or_else(|| first["card_faces"][0]["image_uris"]["art_crop"].as_str())
         .with_context(|| format!("no art_crop for {name}"))?;
     let dst = art_dir.join(format!("{}.jpg", sanitize(name)));
     curl_to_file(art_url, &dst)?;
-    Ok(Art { path: dst, art_ref: format!("scryfall:{set}:{year}:art_crop"), artist, year })
+    Ok((dst, artist, year, set))
+}
+
+struct McCand {
+    dpi: i64,
+    identifier: String,
+    label: String,
+    ext: String,
+    bucket: String,
+    link: String,
+    ext_link: String,
+}
+
+/// All MPCfill source `[pk,true]` pairs (cached) — needed to enable every source.
+fn mpcfill_sources(base: &str, cache_root: &Path) -> Result<String> {
+    let f = cache_root.join("mpcfill_sources.json");
+    if !f.exists() {
+        curl_to_file(&format!("{}/2/sources/", base.trim_end_matches('/')), &f)?;
+    }
+    let v: Value = serde_json::from_str(&fs::read_to_string(&f)?)?;
+    let pairs: Vec<String> = v["results"]
+        .as_object()
+        .map(|o| o.values().filter_map(|s| s["pk"].as_i64()).map(|pk| format!("[{pk},true]")).collect())
+        .unwrap_or_default();
+    Ok(format!("[{}]", pairs.join(",")))
+}
+
+/// Pull + cache all candidates, pick the best art-matching one, crop it.
+fn mpcfill_pick(
+    name: &str,
+    base: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+    ref_path: &Path,
+    key: &str,
+) -> Result<Option<(PathBuf, String)>> {
+    let base = base.trim_end_matches('/');
+    let sources = mpcfill_sources(base, cache_root)?;
+    // editorSearch
+    let search = format!(
+        r#"{{"searchSettings":{{"searchTypeSettings":{{"fuzzySearch":true,"filterCardbacks":false}},"sourceSettings":{{"sources":{sources}}},"filterSettings":{{"minimumDPI":300,"maximumDPI":1500,"maximumSize":50,"languages":[],"includesTags":[],"excludesTags":["NSFW"]}}}},"queries":[{{"query":{q},"cardType":"CARD"}}]}}"#,
+        q = serde_json::to_string(name)?
+    );
+    let resp = curl_post_json(&format!("{base}/2/editorSearch/"), &search)?;
+    let v: Value = serde_json::from_str(&resp).context("editorSearch response")?;
+    let ids: Vec<String> = v["results"][name]["CARD"]
+        .as_array()
+        .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+    if ids.is_empty() {
+        return Ok(None);
+    }
+    // resolve metadata
+    let cards_req = json!({ "cardIdentifiers": ids }).to_string();
+    let resp = curl_post_json(&format!("{base}/2/cards/"), &cards_req)?;
+    let cv: Value = serde_json::from_str(&resp).context("cards response")?;
+    let mut cands: Vec<McCand> = cv["results"]
+        .as_object()
+        .map(|o| {
+            o.values()
+                .map(|c| McCand {
+                    dpi: c["dpi"].as_i64().unwrap_or(0),
+                    identifier: c["identifier"].as_str().unwrap_or("").to_string(),
+                    label: c["name"].as_str().unwrap_or("").to_string(),
+                    ext: c["extension"].as_str().unwrap_or("jpg").to_string(),
+                    bucket: c["sourceName"].as_str().unwrap_or("unknown").to_string(),
+                    link: c["downloadLink"].as_str().unwrap_or("").to_string(),
+                    ext_link: c["sourceExternalLink"].as_str().unwrap_or("").to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // Cache EVERY download under cards/<Card>/mpcfill/<bucket>/<id>.<ext> (never re-fetch).
+    for c in &cands {
+        let dir = card_dir.join("mpcfill").join(sanitize_bucket(&c.bucket));
+        fs::create_dir_all(&dir)?;
+        let dst = dir.join(format!("{}.{}", c.identifier, c.ext));
+        if !dst.exists() && !c.link.is_empty() {
+            if curl_to_file(&c.link, &dst).is_err() {
+                eprintln!("    (download failed) {}", c.identifier);
+            }
+        }
+        record_bucket(&c.bucket, &c.ext_link)?;
+    }
+
+    // Prefer plain prints (skip extended/full-art/showcase/etc), then highest DPI.
+    let banned = ["extended", "full art", "fullart", "textless", "showcase", "borderless", "alt"];
+    cands.sort_by(|a, b| {
+        let pa = banned.iter().any(|w| a.label.to_lowercase().contains(w));
+        let pb = banned.iter().any(|w| b.label.to_lowercase().contains(w));
+        pa.cmp(&pb).then(b.dpi.cmp(&a.dpi))
+    });
+
+    // Verify art match + get crop box via Claude vision; take the first that matches.
+    for c in cands.iter().take(4) {
+        let file = card_dir
+            .join("mpcfill")
+            .join(sanitize_bucket(&c.bucket))
+            .join(format!("{}.{}", c.identifier, c.ext));
+        if !file.exists() {
+            continue;
+        }
+        match claude_match_and_box(key, ref_path, &file) {
+            Ok((true, bx)) => {
+                let out = card_dir.join("art.png");
+                crop_to(&file, bx, &out)?;
+                return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
+            }
+            Ok((false, _)) => {}
+            Err(e) => eprintln!("    (vision error) {e}"),
+        }
+    }
+    Ok(None)
+}
+
+/// Ask Claude: does candidate's illustration match the reference art? + art box.
+fn claude_match_and_box(key: &str, ref_path: &Path, cand: &Path) -> Result<(bool, [f64; 4])> {
+    let ref_b64 = img_b64_small(ref_path, 700)?;
+    let cand_b64 = img_b64_small(cand, 1024)?;
+    let prompt = "Image 1 is reference art from an older printing. Image 2 is a full proxy card. \
+        Return ONLY compact JSON: {\"same_artwork\":true|false,\"art_box\":{\"x\":..,\"y\":..,\"w\":..,\"h\":..}}. \
+        same_artwork = whether image 2's illustration depicts the SAME painting as image 1. \
+        art_box = image 2's illustration window (painted art only, exclude frame/title/text/border) \
+        as FRACTIONS of image 2 (0..1), precise to the art's inner edge.";
+    let body = json!({
+        "model": "claude-opus-4-8",
+        "max_tokens": 300,
+        "messages": [{"role":"user","content":[
+            {"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":ref_b64}},
+            {"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":cand_b64}},
+            {"type":"text","text":prompt}
+        ]}]
+    });
+    let body_file = std::env::temp_dir().join("mtgbrain-claude-req.json");
+    fs::write(&body_file, body.to_string())?;
+    let out = Command::new("curl")
+        .args(["-sS", "--max-time", "90", "https://api.anthropic.com/v1/messages",
+            "-H", &format!("x-api-key: {key}"), "-H", "anthropic-version: 2023-06-01",
+            "-H", "content-type: application/json", "--data"])
+        .arg(format!("@{}", body_file.display()))
+        .output()
+        .context("curl claude")?;
+    if !out.status.success() {
+        bail!("claude request failed");
+    }
+    let resp: Value = serde_json::from_slice(&out.stdout).context("claude response")?;
+    let text = resp["content"][0]["text"].as_str().unwrap_or("");
+    let json_str = text
+        .trim()
+        .trim_start_matches("```json")
+        .trim_start_matches("```")
+        .trim_end_matches("```")
+        .trim();
+    let parsed: Value = serde_json::from_str(json_str).with_context(|| format!("parsing vision JSON: {text}"))?;
+    let same = parsed["same_artwork"].as_bool().unwrap_or(false);
+    let b = &parsed["art_box"];
+    let g = |k: &str| b[k].as_f64().unwrap_or(0.0);
+    Ok((same, [g("x"), g("y"), g("w"), g("h")]))
+}
+
+fn img_b64_small(path: &Path, max: u32) -> Result<String> {
+    let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let small = img.thumbnail(max, max);
+    let mut buf = Vec::new();
+    small.write_to(&mut Cursor::new(&mut buf), image::ImageFormat::Jpeg)?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(&buf))
+}
+
+/// Crop `path` to the fractional box and save as PNG at `out`.
+fn crop_to(path: &Path, bx: [f64; 4], out: &Path) -> Result<()> {
+    let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
+    let x = (bx[0] * iw).clamp(0.0, iw - 1.0) as u32;
+    let y = (bx[1] * ih).clamp(0.0, ih - 1.0) as u32;
+    let w = (bx[2] * iw).clamp(1.0, iw - f64::from(x)) as u32;
+    let h = (bx[3] * ih).clamp(1.0, ih - f64::from(y)) as u32;
+    img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
+    Ok(())
+}
+
+fn sanitize_bucket(b: &str) -> String {
+    b.chars().map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' }).collect()
+}
+
+/// Maintain projects/odyssey2026/MPCFILLBUCKETS.md (bucket → drive link).
+fn record_bucket(bucket: &str, link: &str) -> Result<()> {
+    let md = Path::new("projects/odyssey2026/MPCFILLBUCKETS.md");
+    let header = "# MPCFill buckets\n\nSources art was pulled from. Image files live under \
+        `render-cache/cards/<Card>/mpcfill/<bucket>/<id>.<ext>` (gitignored).\n\n\
+        | Bucket | Drive / source |\n|---|---|\n";
+    let existing = fs::read_to_string(md).unwrap_or_default();
+    if existing.lines().any(|l| l.starts_with(&format!("| {bucket} |"))) {
+        return Ok(());
+    }
+    if let Some(parent) = md.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let base = if existing.is_empty() { header.to_string() } else { existing };
+    let link = if link.is_empty() { "—" } else { link };
+    fs::write(md, format!("{base}| {bucket} | {link} |\n"))?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +511,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         String::new()
     };
 
-    let pairs: [(&str, String); 35] = [
+    let pairs: Vec<(&str, String)> = vec![
         ("MANA_CSS", f("mana.css")),
         ("GOUDY", f("goudy-medieval.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),
@@ -289,7 +525,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYSZ", px(0.032)),
         ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
         ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PSZ", px(0.0429)),
-        ("IY", pc(0.903)), ("WY", pc(0.927)), ("NY", pc(0.948)),
+        ("IY", pc(0.907)), ("LY", pc(0.930)),
     ];
     let content: [(&str, String); 9] = [
         ("ART", format!("file://{}", art_abs.display())),
@@ -399,10 +635,10 @@ pub fn render_one(
     if !frame_rel.exists() {
         bail!("missing frame asset {} — run `mtgbrain render assets`", frame_rel.display());
     }
-    let art = acquire_art(&card.name, &cache_dir.join("art"), backend)?;
+    let dir = cache_dir.join("cards").join(sanitize(&card.name));
+    let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
     let hash = card_hash(&card, &art.art_ref, &art.artist);
 
-    let dir = cache_dir.join("cards").join(sanitize(&card.name));
     let out = if foil { dir.join("foil").join(format!("{hash}.png")) } else { dir.join(format!("{hash}.png")) };
     if out.exists() && !force {
         return Ok(out);
