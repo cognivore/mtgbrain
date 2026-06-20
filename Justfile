@@ -42,6 +42,14 @@ search QUERY:
 card NAME:
     cargo run --release -- card "{{NAME}}"
 
+# Build the cube-editor DB from projects/odyssey2026/cube360/cube_list.txt.
+edit-seed:
+    cargo run --release -- edit seed --force
+
+# Launch the local cube-editor web UI (deliberately weird port to avoid clashes).
+edit PORT="49737":
+    cargo run --release -- edit serve --port {{PORT}}
+
 fmt:
     cargo fmt
 

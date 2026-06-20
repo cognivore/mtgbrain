@@ -55,6 +55,8 @@ The build is fully reproducible: re-run `mtgbrain setup` to refresh to the lates
 | `mtgbrain sql "<SELECT…>"` | run a single read-only `SELECT`/`WITH` and print the result |
 | `mtgbrain search "<fts>"` | ranked full-text search over name/type/oracle text |
 | `mtgbrain card "<name>"` | show every face + rulings for one card |
+| `mtgbrain edit seed` | build a cube-editor DB from a card-name list, snapshotting all fields |
+| `mtgbrain edit serve` | serve a local card-by-card review/errata UI |
 
 Output: `-f table` (default), `--json`, `--md`, `--csv`. Plus `--limit N`, `--full` (don't
 truncate text), `--width N`, `--cols a,b,c`. The DB is opened **read-only**, and `sql`
@@ -188,10 +190,42 @@ data/              AtomicCards.json, cubecobra_elo.jsonl, mtg.sqlite (gitignored
 COOKBOOK.md        20 verified natural-language -> SQL recipes for obscure archetypes
 ```
 
+## Cube editor (oddysey2026)
+
+A tiny **local web app** to walk a cube list one card at a time, accept each card or attach an
+**errata**, and toggle a per-card **"GenAI new art in the style of Odyssey-block artists?"** flag.
+It needs `data/mtg.sqlite` built first (`just setup`).
+
+```sh
+just edit-seed          # build data/cube_editor.sqlite from projects/odyssey2026/cube360/cube_list.txt
+just edit               # serve the UI at http://127.0.0.1:49737  (override: just edit 50001)
+
+# or directly:
+mtgbrain edit seed --list projects/odyssey2026/cube360/cube_list.txt --force
+mtgbrain edit serve --port 49737
+```
+
+The seeder snapshots every field from `mtg.sqlite` into a separate editor DB (your decisions never
+touch the source data) and applies two **pre-sets** (a starting point — review each card by hand):
+
+- **Pre-approved** (`decision = accepted`): Odyssey-block creatures only — a Creature printed in
+  ODY / TOR / JUD. Nothing else.
+- **GenAI-art flag pre-set on**: every card *released after 2000* (no printing in any pre-2001 set).
+  Nothing else.
+
+The UI: filter (all / pending / accepted / errata / genai) + name search in the sidebar; the detail
+pane shows the full card and an errata box. Keys: `a` accept · `e` errata · `g` toggle GenAI art ·
+`j`/`k` next/prev · `n` next pending. Everything persists immediately to `data/cube_editor.sqlite`
+(table `cube_cards` — query/export it with `sqlite3` like any other DB). Port is deliberately high
+(`49737`) to avoid clashes; change with `--port`.
+
 ## Rebuilding / updating
 
 `mtgbrain setup --force` re-downloads the latest MTGJSON and rebuilds the DB. The build drops
 and recreates `mtg.sqlite` from scratch each time, so it always matches the current JSON.
+
+Re-running `mtgbrain edit seed --force` rebuilds the editor DB from the list and **discards saved
+decisions**; omit `--force` to protect an in-progress review.
 
 ## License
 

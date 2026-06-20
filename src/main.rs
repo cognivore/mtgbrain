@@ -3,6 +3,7 @@
 
 mod build;
 mod download;
+mod edit;
 mod model;
 mod query;
 
@@ -93,6 +94,36 @@ enum Cmd {
         #[command(flatten)]
         out: OutputArgs,
     },
+    /// Cube editor: seed an editor DB from a card list, then serve a local review UI.
+    Edit {
+        #[command(subcommand)]
+        cmd: EditCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum EditCmd {
+    /// Build the editor DB from a plain card-name list (one per line).
+    Seed {
+        /// Card list (one name per line; blank/`#` lines ignored).
+        #[arg(long, default_value = "projects/odyssey2026/cube360/cube_list.txt")]
+        list: PathBuf,
+        /// Output editor DB (default: <data-dir>/cube_editor.sqlite).
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Overwrite an existing editor DB (discards saved decisions).
+        #[arg(long)]
+        force: bool,
+    },
+    /// Serve the review UI on a local port.
+    Serve {
+        /// Editor DB (default: <data-dir>/cube_editor.sqlite).
+        #[arg(long)]
+        db: Option<PathBuf>,
+        /// Port (deliberately high to avoid clashes).
+        #[arg(long, default_value_t = 49737)]
+        port: u16,
+    },
 }
 
 #[derive(Args, Clone)]
@@ -174,5 +205,19 @@ fn main() -> Result<()> {
             out,
         } => query::search(&db, query, where_clause.as_deref(), order, *phrase, out),
         Cmd::Card { name, out } => query::card(&db, name, out),
+        Cmd::Edit { cmd } => match cmd {
+            EditCmd::Seed { list, out, force } => {
+                let out = out
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                edit::seed(&db, list, &out, *force)
+            }
+            EditCmd::Serve { db: edb, port } => {
+                let edb = edb
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                edit::serve(&edb, *port)
+            }
+        },
     }
 }

@@ -1,0 +1,391 @@
+Mystic Penitent
+Suntail Hawk
+Beloved Chaplain
+Mystic Familiar
+Mystic Visionary
+Patrol Hound
+Phantom Nomad
+Soulcatcher
+Airlift Chaplain
+Auramancer
+Glowrider
+Lieutenant Kirtar
+Master Apothecary
+Mesa Enchantress
+Militant Monk
+Nomad Decoy
+Pianna, Nomad Captain
+Vigilant Sentry
+Academy Rector
+Auriok Salvagers
+Battlewise Aven
+Blessed Orator
+Commander Eesha
+Mystic Zealot
+Valor
+Phantom Flock
+Wayward Angel
+Ancestor's Chosen
+Enlightened Tutor
+Oblation
+Replenish
+Earnest Fellowship
+Seal of Cleansing
+Soulcatchers' Aerie
+Suppression Field
+Aura of Silence
+Cage of Hands
+Ghostly Prison
+Karmic Justice
+Oblivion Ring
+Phyrexian Unlife
+Rule of Law
+Solitary Confinement
+Story Circle
+Humility
+Opalescence
+Test of Endurance
+Sphere of Safety
+Starfield of Nyx
+Serra's Sanctum
+Azure Mage
+Cephalid Scout
+Cephalid Vandal
+Narcomoeba
+Thought Eater
+Thrummingbird
+Ambassador Laquatus
+Cephalid Looter
+Dreamtide Whale
+Emry, Lurker of the Loch
+Laboratory Maniac
+Puppeteer
+Skywing Aven
+Wormfang Drake
+Aven Fisher
+Cephalid Broker
+Cephalid Sage
+Aven Windreader
+Balshan Griffin
+Scalpelexis
+Scrivener
+Aboshan, Cephalid Emperor
+Amugaba
+Palinchron
+Narset, Parter of Veils
+Jace, Wielder of Mysteries
+High Tide
+Whispers of the Muse
+Brain Freeze
+Experimental Augury
+Reset
+Snap
+Capsize
+Exclude
+Forbid
+Frantic Search
+Mana Short
+Steady Progress
+Stroke of Genius
+Dismiss
+Rewind
+Turnabout
+Aquitect's Will
+Careful Study
+Mystic Speculation
+Mana Severance
+Merchant Scroll
+Day's Undoing
+Tezzeret's Gambit
+Folio of Fancies
+Mystic Remora
+Sea's Claim
+Convincing Mirage
+Spreading Seas
+Standstill
+Back to Basics
+Propaganda
+Sphinx's Tutelage
+Opposition
+Cabal Trainee
+Carrion Rats
+Death's Shadow
+Nested Shambler
+Putrid Imp
+Stitcher's Supplier
+Boneshard Slasher
+Crypt Creeper
+Mesmeric Fiend
+Nantuko Shade
+Organ Grinder
+Treacherous Werewolf
+Braids, Cabal Minion
+Cabal Surgeon
+Childhood Horror
+Faceless Butcher
+Gloomdrifter
+Gravedigger
+Mortivore
+Painbringer
+Bone Miser
+Carrion Wurm
+Masked Gorgon
+Repentant Vampire
+Skirge Familiar
+Treacherous Vampire
+Cabal Patriarch
+Laquatus's Champion
+Sutured Ghoul
+Culling the Weak
+Dark Ritual
+Demonic Consultation
+One with Nothing
+Songs of the Damned
+Spoils of the Vault
+Cabal Ritual
+Shadow of the Grave
+Tainted Pact
+Ad Nauseam
+Bond of Agony
+Raven's Crime
+Chain of Smog
+Collective Brutality
+Infernal Tutor
+Sickening Dreams
+Doomsday
+Ill-Gotten Gains
+Tendrils of Agony
+The Last Ride
+Pact Weapon
+Font of Agonies
+Quest for the Nihil Stone
+Shrieking Affliction
+Blight Mound
+Faith of the Devoted
+Seal of Doom
+Feast of Sanity
+Greed
+Nether Void
+Nihilistic Glee
+Gibbering Descent
+Goblin Welder
+Grim Lavamancer
+Jackal Pup
+Spark Mage
+Spikeshot Elder
+Minotaur Explorer
+Balthor the Stout
+Barbarian Lunatic
+Dwarven Bloodboiler
+Dwarven Recruiter
+Flamewave Invoker
+Glint-Horn Buccaneer
+Pitchstone Wall
+Anger
+Bomb Squad
+Chainflinger
+Dwarven Driller
+Fledgling Dragon
+Jeska, Warrior Adept
+Mine Layer
+Anarchist
+Dwarven Strike Force
+Frenetic Ogre
+Savage Firecat
+Kamahl, Pit Fighter
+Pyretic Ritual
+Fiery Temper
+Lightning Storm
+Seething Song
+Violent Eruption
+Faithless Looting
+Mana Clash
+Cathartic Reunion
+Grapeshot
+Tribal Flames
+Fiery Gambit
+Game of Chaos
+Molten Birth
+Wheel of Fortune
+Change of Fortune
+Empty the Warrens
+Reforge the Soul
+Seal of Fire
+Braid of Fire
+Goblin Festival
+Chance Encounter
+Heart of Bogardan
+Impulsive Maneuvers
+Magmatic Core
+Basking Rootwalla
+Diligent Farmhand
+Thallid
+Tukatongue Thallid
+Nantuko Tracer
+Seton's Scout
+Werebear
+Wild Mongrel
+Anurid Swarmsnapper
+Cartographer
+Chlorophant
+Dryad of the Ilysian Grove
+Krosan Avenger
+Penumbra Bobcat
+Squirrel Mob
+Centaur Chieftain
+Nantuko Calmer
+Quarry Hauler
+Squirrel Wrangler
+Zoologist
+Arrogant Wurm
+Gorilla Titan
+Rabid Elephant
+Giant Warthog
+Nut Collector
+Thriss, Nantuko Primus
+Krosan Reclamation
+Moment's Peace
+Elephant Ambush
+Chatter of the Squirrel
+Rampant Growth
+Call of the Herd
+Acorn Harvest
+Grizzly Fate
+Roar of the Wurm
+Carpet of Flowers
+Cocoon
+Utopia Sprawl
+Wild Growth
+Druid's Call
+Nylea's Presence
+Prismatic Omen
+By Gnome Means
+Nantuko Shrine
+Squirrel Nest
+Saproling Burst
+Leveler
+Astral Cornucopia
+Lion's Eye Diamond
+Black Vise
+Codex Shredder
+Cursed Scroll
+Expedition Map
+Ghoulcaller's Bell
+Lantern of Insight
+Pyxis of Pandemonium
+The Rack
+Anvil of Bogardan
+Coldsteel Heart
+Contagion Clasp
+Cursed Totem
+Damping Sphere
+Defense Grid
+Ebony Owl Netsuke
+Fellwar Stone
+Howling Mine
+Krark's Thumb
+Mind Stone
+Mindcrank
+Prismatic Lens
+Spawning Pit
+Sphere of Resistance
+Star Compass
+Sundial of the Infinite
+Throne of Geth
+Tsabo's Web
+Winter Orb
+Crawlspace
+Crucible of Worlds
+Ensnaring Bridge
+Iron Maiden
+Misers' Cage
+Monument to Endurance
+Pristine Talisman
+Static Orb
+Storage Matrix
+Tangle Wire
+Temple Bell
+Worn Powerstone
+Cursed Rack
+Darksteel Reactor
+Empowered Autogenerator
+Font of Mythos
+Giant Fan
+Krark-Clan Ironworks
+Otherworld Atlas
+Smokestack
+Teferi's Puzzle Box
+Trading Post
+Memory Jar
+Mind's Eye
+Contagion Engine
+Mirror Universe
+Soul Conduit
+Possessed Portal
+Dance of the Manse
+Mirror Wall
+Enchanted Evening
+Teferi's Moat
+Dovescape
+Iridescent Angel
+Glimpse the Unthinkable
+Shadowmage Infiltrator
+Soul Manipulation
+Balshan Collaborator
+Possessed Aven
+Rain of Gore
+Possessed Barbarian
+Spiteful Visions
+Vampiric Dragon
+Aether Rift
+Stormbind
+Sterling Grove
+Travel Preparations
+Phantom Nishoba
+Death Grasp
+Final Payment
+Doom Foretold
+Possessed Nomad
+Epic Experiment
+Fevered Visions
+Stitch in Time
+Squandered Resources
+Pernicious Deed
+Possessed Centaur
+Goblin Trenches
+Glory of Warfare
+Phyrexian Tyranny
+Last Stand
+Calciform Pools
+Mystic Gate
+Skycloud Expanse
+Darkwater Catacombs
+Dreadship Reef
+Sunken Ruins
+Graven Cairns
+Molten Slagheap
+Shadowblood Ridge
+Fire-Lit Thicket
+Fungal Reaches
+Mossfire Valley
+Nantuko Monastery
+Saltcrusted Steppe
+Sungrass Prairie
+Wooded Bastion
+Barbarian Ring
+Barren Moor
+Cabal Pit
+Centaur Garden
+Cephalid Coliseum
+Forgotten Cave
+Karn's Bastion
+Lonely Sandbar
+Mage-Ring Network
+Mikokoro, Center of the Sea
+Nesting Grounds
+Nomad Stadium
+Riptide Laboratory
+Sea Gate Wreckage
+Seafloor Debris
+Secluded Steppe
+Tranquil Thicket
