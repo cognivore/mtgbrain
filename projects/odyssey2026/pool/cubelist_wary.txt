@@ -1,0 +1,360 @@
+Pull from Eternity
+Abiding Grace
+Pandemonium
+Altar of Dementia
+Jinxed Idol
+Martyr's Cause
+Stonesplitter Bolt
+Skull Catapult
+Emeria, the Sky Ruin
+Curse of Silence
+Prismatic Omen
+Leyline of the Guildpact
+Nylea's Presence
+Tribal Flames
+Mimic Vat
+Decaying Soil
+Deluxe Dragster
+Brotherhood Vertibird
+TARDIS
+Imperial Recovery Unit
+Mobile Homestead
+Daredevil Dragster
+Bessie, the Doctor's Roadster
+Goliath Truck
+Leyline Binding
+Mukotai Soulripper
+Dreadmobile
+Gilded Assault Cart
+Dodgy Jalopy
+Capenna Express
+Mission Briefing
+Consign to Memory
+Isochron Scepter
+Dismember
+Sword of the Paruns
+Masako the Humorless
+Acolyte's Reward
+Witch's Oven
+Rustler Rampage
+Roar of the Kha
+Benefactor's Draught
+Swift Reconfiguration
+Weatherlight
+Golden Argosy
+Jackdaw
+Unidentified Hovership
+Subterranean Schooner
+Consulate Dreadnought
+Magmatic Galleon
+Bomat Bazaar Barge
+Cultivator's Caravan
+Bonesplitter
+Sleek Schooner
+Bone Saw
+Spreading Plague
+Lethal Vapors
+Death Match
+Impact Tremors
+Warstorm Surge
+Spellweaver Volute
+Funeral Longboat
+Fling
+Colossus Hammer
+Hammer of Nazahn
+Battlefield Improvisation
+Strip Bare
+Magnetic Theft
+Daretti, Scrap Savant
+Tower of Fortunes
+Sundial of the Infinite
+Planar Bridge
+Umbral Mantle
+Lithoform Engine
+Strionic Resonator
+Memory Jar
+Meditate
+Guardian Project
+Warleader's Call
+Flameshadow Conjuring
+Tinybones Joins Up
+Electropotence
+Gossip's Talent
+Cream of the Crop
+Candlekeep Sage
+The Great Henge
+Portcullis
+War Barge
+Candy Grapple
+Deadly Dispute
+Makeshift Munitions
+Angelic Exaltation
+Answered Prayers
+Essence Reliquary
+Nykthos, Shrine to Nyx
+Boxing Ring
+Shrapnel Blast
+Karakas
+Intruder Alarm
+Animate Land
+Lifespark Spellbomb
+Rampaging Growth
+Shifting Woodland
+Vivify
+Hydroform
+Assimilation Aegis
+Behind the Mask
+Chimeric Coils
+Disturbed Slumber
+Elemental Uprising
+Fleeting Reflection
+Frostwalk Bastion
+Hidden Stag
+Illusionary Mask
+Mirage Mirror
+Killer Cosplay
+Oko, the Trickster
+Shameless Charlatan
+Suit Up
+The Everflowing Well
+The Mycosynth Gardens
+Vengeant Earth
+Sanguine Bond
+Midnight Snack
+Fortifying Draught
+Snow-Covered Forest
+Snow-Covered Island
+Snow-Covered Mountain
+Snow-Covered Plains
+Snow-Covered Swamp
+Snow-Covered Wastes
+Arcum's Astrolabe
+Monument to Perfection
+Touch the Spirit Realm
+Road // Ruin
+Entish Restoration
+Deathsprout
+Growth Spiral
+Roiling Regrowth
+Crucible of Worlds
+Walk-In Closet // Forgotten Cellar
+Counterspell
+Mana Leak
+Miscalculation
+Brainstorm
+Opt
+Consider
+Boomerang
+Harm's Way
+Equal Treatment
+Saving Grace
+Together Forever
+Runed Halo
+Path to Exile
+Settle the Wreckage
+Sudden Spoiling
+Imp's Mischief
+One with Nothing
+Feast of Sanity
+Brink of Madness
+Twinstrike
+Infernal Tutor
+Gibbering Descent
+Nihilistic Glee
+Profane Tutor
+Shadow of the Grave
+Fiery Temper
+Diabolic Intent
+Everlasting Torment
+Hogaak, Arisen Necropolis
+Leave // Chance
+Yawgmoth's Will
+Underworld Breach
+High Tide
+Frantic Search
+Extraplanar Lens
+Overabundance
+Mirari's Wake
+Heartbeat of Spring
+Mana Flare
+Mirror Room // Fractured Realm
+Enlightened Tutor
+Idyllic Tutor
+March of Otherworldly Light
+Crop Rotation
+Faithless Looting
+Faithless Salvaging
+Lion's Eye Diamond
+Molten Collapse
+Archmage's Charm
+Talisman of Conviction
+Talisman of Creativity
+Talisman of Curiosity
+Talisman of Dominance
+Talisman of Hierarchy
+Talisman of Impulse
+Talisman of Indulgence
+Talisman of Progress
+Talisman of Resilience
+Talisman of Unity
+Dihada's Ploy
+Ancient Excavation
+Escape to the Wilds
+Sterling Grove
+Rite of Harmony
+Dress Down
+Galvanic Iteration
+Fracture
+Rite of Oblivion
+Vampiric Tutor
+Bitter Triumph
+Pact Weapon
+Mystic Sanctuary
+Sickening Dreams
+Collective Brutality
+Bespoke Battlewagon
+Haunted Hellride
+Thundering Broodwagon
+Guidelight Pathmaker
+Dune Drifter
+Cloudspire Skycycle
+Boosted Sloop
+Veloheart Bike
+Lumbering Worldwagon
+Clamorous Ironclad
+Burner Rocket
+Hulldrifter
+Midnight Mangler
+Air Response Unit
+Skyseer's Chariot
+Voyager Glidecar
+The Last Ride
+Demonic Junker
+Gastal Thrillroller
+Road Rage
+Crash and Burn
+Monument to Endurance
+Thunderous Velocipede
+Pumpkin Bombs
+Hedge Shredder
+Hidden Footblade
+Hunter's Bow
+Power Fist
+Bite Down
+Abrade
+Wheel of Misfortune
+Wheel of Fate
+The Chase Is On
+Voltage Surge
+Invasion of Kaldheim
+Hoarder's Overflow
+Chain of Smog
+Mind Rake
+Urza's Cave
+Cloudpost
+Glimmerpost
+Trenchpost
+Expedition Map
+Tempt with Discovery
+Flooded Strand
+Wooded Foothills
+Bloodstained Mire
+Windswept Heath
+Polluted Delta
+Marsh Flats
+Arid Mesa
+Misty Rainforest
+Scalding Tarn
+Verdant Catacombs
+Commercial District
+Elegant Parlor
+Hedge Maze
+Lush Portico
+Meticulous Archive
+Raucous Theater
+Shadowy Backstreet
+Thundering Falls
+Undercity Sewers
+Underground Mortuary
+Smile at Death
+One Last Job
+Bag of Holding
+Mystic Redaction
+Faith of the Devoted
+Windfall
+Ill-Gotten Gains
+Will of the Jeskai
+Will of the Temur
+Untimely Malfunction
+Collective Resistance
+Kamahl's Will
+Tinker
+Change of Fortune
+Seasons Past
+Paradoxical Outcome
+Ornithopter
+Tree of Perdition
+Tree of Redemption
+Rograkh, Son of Rohgahh
+Jeweled Lotus
+Lotus Petal
+Jeweled Amulet
+Welding Jar
+Haystack
+Fabrication Foundry
+Invasion of Gobakhan
+Overburden
+Avacyn's Judgment
+Circular Logic
+Ideas Unbound
+Tolarian Winds
+Curse of Fool's Wisdom
+Phantom Train
+Adventurer's Airship
+The Lunar Whale
+Cargo Ship
+The Falcon, Airship Restored
+Subway Train
+Feed the Swarm
+Perilous Snare
+Momentum Breaker
+Outpace Oblivion
+Racers' Scoreboard
+Amonkhet Raceway
+Avishkar Raceway
+Hearthhull, the Worldseed
+Larval Scoutlander
+Sledge-Class Seedship
+Exploration Broodship
+Debris Field Crusher
+Warmaker Gunship
+Entropic Battlecruiser
+Tempered in Solitude
+Connecting the Dots
+Amazing Alliance
+Long-Range Sensor
+Dark Ritual
+Cabal Ritual
+Seedship Impact
+Exorcise
+Cast Out
+Recurring Nightmare
+Seething Song
+Forsake the Worldly
+Crystal Shard
+Season of Weaving
+Ineffable Blessing
+Path of Discovery
+Oath of Druids
+Cloudpost
+Trenchpost
+Glimmerpost
+Celestial Dawn
+Valkyrie's Call
+Meticulous Excavation
+Synthesizer Labship
+Phyrexian Dreadnought
+Spark Double
+Sawtooth Loon
+Delay
+Search for Tomorrow

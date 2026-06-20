@@ -1,0 +1,1254 @@
+[
+  {
+    "name": "High Tide",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Instant",
+    "printings": "DMR, FEM, ME1, PIDW, VMA",
+    "cube_elo": 1366.05,
+    "edhrec_rank": 809,
+    "in_block": "N/A",
+    "role": "Payoff / ritual engine — the archetype's namesake; doubles Island mana for a turn",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo"
+    ],
+    "text": "Until end of turn, whenever a player taps an Island for mana, that player adds an additional {U}.",
+    "note": "Namesake payoff. Islands-matter ritual; fuels free-spell chains.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Sea's Claim",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Enchantment — Aura",
+    "printings": "9ED, ONS",
+    "cube_elo": 1140.67,
+    "edhrec_rank": 20456,
+    "in_block": "ONS-block",
+    "role": "Islands-maker — own-ramp + opponent land-denial (turn a dual into a mono Island)",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Enchant land\nEnchanted land is an Island.",
+    "note": "Cheapest permanent Islands-maker. In-block (ONS). Ramp or denial.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Spreading Seas",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Enchantment — Aura",
+    "printings": "PLST, WOT, ZEN",
+    "cube_elo": 1217.15,
+    "edhrec_rank": 11499,
+    "in_block": "N/A",
+    "role": "Islands-maker + cantrip — best denial enabler (replaces itself)",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Enchant land\nWhen this Aura enters, draw a card.\nEnchanted land is an Island.",
+    "note": "Cantrip Islands-maker. Strands opp off colors; ramps you.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Convincing Mirage",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Enchantment — Aura",
+    "printings": "M10",
+    "cube_elo": 1112.63,
+    "edhrec_rank": 26111,
+    "in_block": "N/A",
+    "role": "Flexible type-changer — Island for you / off-color denial vs opponent",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Enchant land\nAs this Aura enters, choose a basic land type.\nEnchanted land is the chosen type.",
+    "note": "Choose Island for ramp, or strand opponent's nonbasic.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Lingering Mirage",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Enchantment — Aura",
+    "printings": "USG",
+    "cube_elo": 1165.4,
+    "edhrec_rank": 23035,
+    "in_block": "N/A",
+    "role": "Islands-maker with cycling — flexible (denial enabler or pitch late)",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Enchant land\nEnchanted land is an Island.\nCycling {2} ({2}, Discard this card: Draw a card.)",
+    "note": "Islands-maker that cycles if you don't need the lock.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Phantasmal Terrain",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}{U}",
+    "mv": 2.0,
+    "type": "Enchantment — Aura",
+    "printings": "INV, ME4, others",
+    "cube_elo": 992.47,
+    "edhrec_rank": 24078,
+    "in_block": "N/A",
+    "role": "Type-changer — old-school denial (strand a basic) or own Island",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Enchant land\nAs this Aura enters, choose a basic land type.\nEnchanted land is the chosen type.",
+    "note": "Properly-old denial. Redundant with Convincing Mirage; surplus.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Aquitect's Will",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Kindred Sorcery — Merfolk",
+    "printings": "DDT, LRW, PZ2",
+    "cube_elo": 1092.64,
+    "edhrec_rank": 6849,
+    "in_block": "N/A",
+    "role": "Cheap flood-counter Islands-maker — repeatable denial vector via counter",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Put a flood counter on target land. That land is an Island in addition to its other types for as long as it has a flood counter on it. If you control a Merfolk, draw a card.",
+    "note": "Flood-counter Island; additive (keeps mana online for you).",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Quicksilver Fountain",
+    "section": "Colorless",
+    "cube_color": "C",
+    "mana_cost": "{3}",
+    "mv": 3.0,
+    "type": "Artifact",
+    "printings": "MRD",
+    "cube_elo": 1127.05,
+    "edhrec_rank": 12729,
+    "in_block": "N/A",
+    "role": "Slow Islands-lock engine — grinds every land to Island; classic prison piece",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "At the beginning of each player's upkeep, that player puts a flood counter on target non-Island land they control of their choice. That land is an Island for as long as it has a flood counter on it. At the beginning of each end step, if all lands on the battlefield are Islands, remove all flood counters from them.",
+    "note": "Colorless flood engine; locks foes off colors, fuels High Tide.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Celestial Dawn",
+    "section": "Mono-W",
+    "cube_color": "W",
+    "mana_cost": "{1}{W}{W}",
+    "mv": 3.0,
+    "type": "Enchantment",
+    "printings": "6ED, MIR, PLST, TSB",
+    "cube_elo": 1129.23,
+    "edhrec_rank": 16740,
+    "in_block": "N/A",
+    "role": "All-your-lands-Plains fixer — listed enabler; off-axis (Plains not Island)",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Lands you control are Plains. Nonland permanents you control are white. The same is true for spells you control and nonland cards you own that aren't on the battlefield. You may spend white mana as though it were mana of any color. You may spend other mana only as though it were colorless mana.",
+    "note": "Brief named enabler but makes Plains, anti-synergy w/High Tide. Weak include.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Sunken City",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}{U}",
+    "mv": 2.0,
+    "type": "Enchantment",
+    "printings": "4ED, DRK, ME1",
+    "cube_elo": 1037.46,
+    "edhrec_rank": 26791,
+    "in_block": "N/A",
+    "role": "Listed enabler — but is actually a blue-creature anthem w/ upkeep cost",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "At the beginning of your upkeep, sacrifice this enchantment unless you pay {U}{U}. Blue creatures get +1/+1.\n[ERRATA: also makes lands you control Islands while it remains.]",
+    "note": "Real text is +1/+1 anthem, NOT Islands. Needs errata to fit theme.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Tidal Warrior",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Creature — Merfolk Warrior",
+    "printings": "DDT, PLST, STH",
+    "cube_elo": 1157.82,
+    "edhrec_rank": 16684,
+    "in_block": "Out-exception",
+    "role": "Repeatable Island-maker body — denial/ramp engine on a stick",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "{T}: Target land becomes an Island until end of turn.",
+    "note": "Out-exception: rare repeatable Islands-maker creature for the theme.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Harbinger of the Seas",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}{U}",
+    "mv": 3.0,
+    "type": "Creature — Merfolk Wizard",
+    "printings": "MAR, MH3, PMH3",
+    "cube_elo": 1282.2,
+    "edhrec_rank": 3609,
+    "in_block": "Out-exception",
+    "role": "Static mass Islands-lock body — all nonbasics become Islands (denial keystone)",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Nonbasic lands are Islands.",
+    "note": "Out-exception: turns every nonbasic into an Island; strong prison key.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Frantic Search",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "ULG, DMR, UMA, VMA, others",
+    "cube_elo": 1445.21,
+    "edhrec_rank": 107,
+    "in_block": "N/A",
+    "role": "Free spell — net-zero mana with 3 Islands+High Tide; loots + storm count",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Draw two cards, then discard two cards. Untap up to three lands.",
+    "note": "Effectively free under High Tide; dig + storm fuel.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Snap",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Instant",
+    "printings": "ULG, DMR, PLST, others",
+    "cube_elo": 1379.07,
+    "edhrec_rank": 269,
+    "in_block": "N/A",
+    "role": "Free bounce — untaps 2 lands; tempo + free storm-count under High Tide",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Return target creature to its owner's hand. Untap up to two lands.",
+    "note": "Free tempo bounce; resets ETBs, pads storm.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Turnabout",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}{U}",
+    "mv": 4.0,
+    "type": "Instant",
+    "printings": "USG, DMR, RVR, VMA",
+    "cube_elo": 1355.25,
+    "edhrec_rank": 4132,
+    "in_block": "N/A",
+    "role": "Big mana burst — untap all your lands (net mana w/ High Tide) or tap-down lock",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Choose artifact, creature, or land. Tap all untapped permanents of the chosen type target player controls, or untap all tapped permanents of that type that player controls.",
+    "note": "Untap-lands ritual engine; also a tempo tap-down lock.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Rewind",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}{U}",
+    "mv": 4.0,
+    "type": "Instant",
+    "printings": "USG, M13, M21, others",
+    "cube_elo": 1271.84,
+    "edhrec_rank": 995,
+    "in_block": "N/A",
+    "role": "Free counter — untaps 4 lands; mana-neutral countermagic for the deck",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Counter target spell. Untap up to four lands.",
+    "note": "Effectively-free counter; refunds its own cost via untap.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Unwind",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "DOM",
+    "cube_elo": 1293.59,
+    "edhrec_rank": 1052,
+    "in_block": "N/A",
+    "role": "Free counter (noncreature) — untaps 3 lands; protects the combo turn",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Counter target noncreature spell. Untap up to three lands.",
+    "note": "Mana-neutral noncreature counter; combo protection.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Reset",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}{U}",
+    "mv": 2.0,
+    "type": "Instant",
+    "printings": "LEG, MB2, ME3",
+    "cube_elo": 1186.97,
+    "edhrec_rank": 13748,
+    "in_block": "N/A",
+    "role": "Untap-all-lands ritual — huge mana burst with High Tide (Reserved-adjacent jank)",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Cast this spell only during an opponent's turn after their upkeep step. Untap all lands you control.",
+    "note": "Untap all lands; explosive w/ High Tide. Opp-turn restriction.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Cloud of Faeries",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Creature — Faerie",
+    "printings": "ULG, DMR, VMA, others",
+    "cube_elo": 1277.96,
+    "edhrec_rank": 1386,
+    "in_block": "Out-exception",
+    "role": "Free creature — untaps 2 lands, cycles; the canonical free-spell body",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Flying\nWhen this creature enters, untap up to two lands.\nCycling {2}",
+    "note": "Out-exception: iconic free flyer; refunds mana, cycles if dead.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Peregrine Drake",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{4}{U}",
+    "mv": 5.0,
+    "type": "Creature — Drake",
+    "printings": "USG, DMR, EMA, others",
+    "cube_elo": 1390.67,
+    "edhrec_rank": 901,
+    "in_block": "Out-exception",
+    "role": "Net-positive mana body — untaps 5 lands; flying clock; combo with flicker",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Flying\nWhen this creature enters, untap up to five lands.",
+    "note": "Out-exception: net +mana w/ High Tide; honest single-body, no auto-loop.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Great Whale",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{5}{U}{U}",
+    "mv": 7.0,
+    "type": "Creature — Whale",
+    "printings": "USG",
+    "cube_elo": 1335.54,
+    "edhrec_rank": 11458,
+    "in_block": "Out-exception",
+    "role": "Big untap-7-lands body — top-end mana refund; honest one-shot (no bounce loop)",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "When this creature enters, untap up to seven lands.",
+    "note": "Out-exception: Palinchron without self-bounce, so safe at low power.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Merchant Scroll",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Sorcery",
+    "printings": "8ED, HML, MB2, others",
+    "cube_elo": 1306.27,
+    "edhrec_rank": 2583,
+    "in_block": "N/A",
+    "role": "Tutor — fetches High Tide / Brain Freeze / a free spell; consistency glue",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo"
+    ],
+    "text": "Search your library for a blue instant card, reveal that card, put it into your hand, then shuffle.",
+    "note": "Finds High Tide, Brain Freeze, Snap, Turnabout. Combo glue.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Mystic Speculation",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Sorcery",
+    "printings": "FUT, PLST",
+    "cube_elo": 1264.03,
+    "edhrec_rank": 7704,
+    "in_block": "N/A",
+    "role": "Buyback scry-3 — repeatable selection + storm-count padder under High Tide",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Buyback {2}\nScry 3.",
+    "note": "Recurring cheap spell to set up + build storm count.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Whispers of the Muse",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Instant",
+    "printings": "TMP, TPR, WC98",
+    "cube_elo": 1218.03,
+    "edhrec_rank": 14370,
+    "in_block": "N/A",
+    "role": "Buyback cantrip — recurring storm fodder + late-game card engine",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Buyback {5}\nDraw a card.",
+    "note": "Repeatable draw; cheap storm count once High Tide is up.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Capsize",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "TMP, TPR, MP2",
+    "cube_elo": 1360.61,
+    "edhrec_rank": 5062,
+    "in_block": "N/A",
+    "role": "Buyback bounce — grindy soft-lock (bounce a land each turn) + storm engine",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Buyback {3}\nReturn target permanent to its owner's hand.",
+    "note": "Recurring bounce = soft prison; mana-hungry, fair at low power.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Brain Freeze",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Instant",
+    "printings": "SCG, MB2, VMA, others",
+    "cube_elo": 1502.7,
+    "edhrec_rank": 791,
+    "in_block": "ONS-block",
+    "role": "Storm mill payoff — the honest spent-on-a-spell win (deck the opponent)",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo",
+      "mill-storm"
+    ],
+    "text": "Target player mills three cards.\nStorm",
+    "note": "In-block (SCG) storm mill kill; honest stapled-to-spell wincon.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Stroke of Genius",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{X}{2}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "USG, DMR, C14, others",
+    "cube_elo": 1318.14,
+    "edhrec_rank": 3637,
+    "in_block": "N/A",
+    "role": "Big-X mana sink — the High-Tide payoff; draw huge or deck-out opponent",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo"
+    ],
+    "text": "Target player draws X cards.",
+    "note": "Instant-speed X-draw payoff; can target opp to deck them.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Braingeyser",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{X}{U}{U}",
+    "mv": 2.0,
+    "type": "Sorcery",
+    "printings": "2ED, 3ED, FBB, others",
+    "cube_elo": 1471.36,
+    "edhrec_rank": 11654,
+    "in_block": "N/A",
+    "role": "Classic big-X draw — sorcery-speed High-Tide payoff / mana sink",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo"
+    ],
+    "text": "Target player draws X cards.",
+    "note": "Old-school X-draw payoff; redundant w/Stroke, surplus pick.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Blue Sun's Zenith",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{X}{U}{U}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "MBS, C13, STA, others",
+    "cube_elo": 1266.29,
+    "edhrec_rank": 1704,
+    "in_block": "N/A",
+    "role": "Recurring big-X draw — shuffles back; reusable mill-out / draw payoff",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Target player draws X cards. Shuffle Blue Sun's Zenith into its owner's library.",
+    "note": "Reusable X-draw; can iteratively deck an opponent. UUU-heavy.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Laboratory Maniac",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}",
+    "mv": 3.0,
+    "type": "Creature — Human Wizard",
+    "printings": "ISD, UMA, TSR, others",
+    "cube_elo": 1304.82,
+    "edhrec_rank": 574,
+    "in_block": "Out-exception",
+    "role": "Shared alt-win — empty-library win for High Tide draw AND the Ad Nauseam package",
+    "archetypes": [
+      "high-tide-prison",
+      "ad-nauseam-combo"
+    ],
+    "text": "If you would draw a card while your library has no cards in it, you win the game instead.",
+    "note": "Out-exception: shared labman wincon (user spec #4). Never Thassa's Oracle.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Mana Severance",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Sorcery",
+    "printings": "TMP",
+    "cube_elo": 1154.91,
+    "edhrec_rank": 14671,
+    "in_block": "N/A",
+    "role": "Lab Maniac enabler — strip all lands so a big draw decks YOU into the win",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Search your library for any number of land cards, exile them, then shuffle.",
+    "note": "Thins lands so Stroke/Braingeyser + Labman draws you out to win.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Sundial of the Infinite",
+    "section": "Colorless",
+    "cube_color": "C",
+    "mana_cost": "{2}",
+    "mv": 2.0,
+    "type": "Artifact",
+    "printings": "M12, PLST, TLE",
+    "cube_elo": 1321.3,
+    "edhrec_rank": 2781,
+    "in_block": "N/A",
+    "role": "Combo enabler — end turn to keep a Leveler/Mana Severance empty library, fizzle triggers",
+    "archetypes": [
+      "high-tide-prison",
+      "ad-nauseam-combo"
+    ],
+    "text": "{1}, {T}: End the turn. Activate only during your turn.",
+    "note": "Per spec #13: Stifle-on-a-stick for Leveler empty-library wins; cross-package.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Leveler",
+    "section": "Colorless",
+    "cube_color": "C",
+    "mana_cost": "{5}",
+    "mv": 5.0,
+    "type": "Artifact Creature — Juggernaut",
+    "printings": "MRD, PLST, TSR",
+    "cube_elo": 1200.71,
+    "edhrec_rank": 6741,
+    "in_block": "Out-exception",
+    "role": "Empty-library enabler — with Sundial/Labman, the non-Ad-Nauseam combo finish",
+    "archetypes": [
+      "high-tide-prison",
+      "ad-nauseam-combo"
+    ],
+    "text": "When this creature enters, exile all cards from your library.",
+    "note": "Out-exception (colorless artifact): Sundial fizzles its draw-block; Labman wins.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Mana Short",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}",
+    "mv": 3.0,
+    "type": "Instant",
+    "printings": "2ED, 6ED, 7ED, others",
+    "cube_elo": 1191.56,
+    "edhrec_rank": 15292,
+    "in_block": "N/A",
+    "role": "Tempo lock finisher — tap all opp lands + burn their mana; clears the combo turn",
+    "archetypes": [
+      "high-tide-prison",
+      "free-spell-tempo"
+    ],
+    "text": "Tap all lands target player controls and that player loses all unspent mana.",
+    "note": "Lock their mana for a turn; protects a storm or alpha turn.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Back to Basics",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}",
+    "mv": 3.0,
+    "type": "Enchantment",
+    "printings": "USG, UMA, MB2, SLD",
+    "cube_elo": 1234.71,
+    "edhrec_rank": 5043,
+    "in_block": "N/A",
+    "role": "Prison piece — nonbasics don't untap; asymmetric vs greedy manabases",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Nonbasic lands don't untap during their controllers' untap steps.",
+    "note": "Soft mana prison; you run mostly Islands so it's one-sided.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Rising Waters",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{3}{U}",
+    "mv": 4.0,
+    "type": "Enchantment",
+    "printings": "NEM, WC00",
+    "cube_elo": 1271.59,
+    "edhrec_rank": 16911,
+    "in_block": "N/A",
+    "role": "Stax-lite prison — one land per upkeep; throttles the table, you adapt around it",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Lands don't untap during their controllers' untap steps. At the beginning of each player's upkeep, that player untaps a land they control.",
+    "note": "Symmetric land-lock; pairs with cheap free spells you can still cast.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Choke",
+    "section": "Mono-G",
+    "cube_color": "G",
+    "mana_cost": "{2}{G}",
+    "mv": 3.0,
+    "type": "Enchantment",
+    "printings": "TMP, 8ED, MP2",
+    "cube_elo": 1170.61,
+    "edhrec_rank": 16760,
+    "in_block": "N/A",
+    "role": "Anti-mirror hate / Islands-prison turned outward — punishes Islands decks",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Islands don't untap during their controllers' untap steps.",
+    "note": "Hoses opp who got their lands turned to Islands; sideboard-y green hate.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Words of Wisdom",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{1}{U}",
+    "mv": 2.0,
+    "type": "Instant",
+    "printings": "ODY",
+    "cube_elo": 1223.07,
+    "edhrec_rank": 6558,
+    "in_block": "ODY-block",
+    "role": "Cheap card flow + storm padder — in-block draw that feeds the engine",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "You draw two cards, then each other player draws a card.",
+    "note": "In-block (ODY) cheap draw; nearly free under High Tide.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Careful Study",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{U}",
+    "mv": 1.0,
+    "type": "Sorcery",
+    "printings": "ODY, PLST, SLD",
+    "cube_elo": 1309.01,
+    "edhrec_rank": 2795,
+    "in_block": "ODY-block",
+    "role": "1-mana loot — digs to High Tide / fills yard for Brain Freeze flashback turns",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Draw two cards, then discard two cards.",
+    "note": "In-block (ODY) cheap dig + cheap storm count.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Slipstream Eel",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{5}{U}{U}",
+    "mv": 7.0,
+    "type": "Creature — Fish Beast",
+    "printings": "ONS, CMD, PLST",
+    "cube_elo": 1083.42,
+    "edhrec_rank": 25093,
+    "in_block": "ONS-block",
+    "role": "In-block Islands-matters body — cycles early, beats only into Island decks late",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "This creature can't attack unless defending player controls an Island.\nCycling {1}{U}",
+    "note": "In-block (ONS) Islands payoff; cycle early, finisher once you flood foe.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Shoreline Ranger",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{5}{U}",
+    "mv": 6.0,
+    "type": "Creature — Bird Soldier Ranger",
+    "printings": "SCG, CNS, EMA, others",
+    "cube_elo": 1293.86,
+    "edhrec_rank": 21772,
+    "in_block": "ONS-block",
+    "role": "In-block flyer with Islandcycling — flexible Island-fetch or beater",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Flying\nIslandcycling {2}",
+    "note": "In-block (SCG); islandcycle to find an Island or play a 3/4 flyer.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Wonder",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{3}{U}",
+    "mv": 4.0,
+    "type": "Creature — Incarnation",
+    "printings": "JUD, CMA, EMA, others",
+    "cube_elo": 1284.93,
+    "edhrec_rank": 839,
+    "in_block": "ODY-block",
+    "role": "In-block Islands payoff — graveyard grants flying while you control an Island",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "Flying\nAs long as this card is in your graveyard and you control an Island, creatures you control have flying.",
+    "note": "In-block (JUD) Islands-matters; self-mill payoff, evasion enabler.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Dreamwinder",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{3}{U}",
+    "mv": 4.0,
+    "type": "Creature — Serpent",
+    "printings": "ODY",
+    "cube_elo": 1186.13,
+    "edhrec_rank": 29085,
+    "in_block": "ODY-block",
+    "role": "In-block Island-maker body — sac an Island to spread Islands; on-theme but slow",
+    "archetypes": [
+      "high-tide-prison"
+    ],
+    "text": "This creature can't attack unless defending player controls an Island.\n{U}, Sacrifice an Island: Target land becomes an Island until end of turn.",
+    "note": "In-block (ODY) Islands engine + body; flavor-perfect, low power.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Glimpse the Unthinkable",
+    "section": "Dimir UB",
+    "cube_color": "U/B",
+    "mana_cost": "{U}{B}",
+    "mv": 2.0,
+    "type": "Sorcery",
+    "printings": "RAV, GK1, IMA, others",
+    "cube_elo": 1248.95,
+    "edhrec_rank": 5206,
+    "in_block": "N/A",
+    "role": "Gold mill payoff — big chunk mill to pair with Brain Freeze deck-out plan",
+    "archetypes": [
+      "high-tide-prison",
+      "mill-storm"
+    ],
+    "text": "Target player mills ten cards.",
+    "note": "Dimir mill payoff to back up Brain Freeze; possibly redundant.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Mind Funeral",
+    "section": "Dimir UB",
+    "cube_color": "U/B",
+    "mana_cost": "{1}{U}{B}",
+    "mv": 3.0,
+    "type": "Sorcery",
+    "printings": "ARB, MMA, PLST",
+    "cube_elo": 1153.88,
+    "edhrec_rank": 9437,
+    "in_block": "N/A",
+    "role": "Gold mill payoff — variable big mill; alternate Dimir deck-out angle",
+    "archetypes": [
+      "high-tide-prison",
+      "mill-storm"
+    ],
+    "text": "Target opponent reveals cards from the top of their library until four land cards are revealed. That player puts all cards revealed this way into their graveyard.",
+    "note": "Dimir mill; surplus mill payoff alongside Brain Freeze.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Palinchron",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{5}{U}{U}",
+    "mv": 7.0,
+    "type": "Creature — Illusion",
+    "printings": "ULG, VMA",
+    "cube_elo": 1374.32,
+    "edhrec_rank": 7559,
+    "in_block": "Out-exception",
+    "role": "EXCLUDED — infinite-mana engine; self-bounce + untap 7 loops with any mana doubler",
+    "archetypes": [
+      "free-spell-tempo"
+    ],
+    "text": "Flying\nWhen this creature enters, untap up to seven lands.\n{2}{U}{U}: Return this creature to its owner's hand.",
+    "note": "REJECT: self-bounce loops to infinite mana w/High Tide. too_strong.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": true,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    }
+  },
+  {
+    "name": "Time Spiral",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{4}{U}{U}",
+    "mv": 6.0,
+    "type": "Sorcery",
+    "printings": "USG, PRM",
+    "cube_elo": 1563.72,
+    "edhrec_rank": 6918,
+    "in_block": "N/A",
+    "role": "EXCLUDED — untap-6-lands + refill hand; free 7-card draw engine, format-warper",
+    "archetypes": [
+      "free-spell-tempo"
+    ],
+    "text": "Exile Time Spiral. Each player shuffles their hand and graveyard into their library, then draws seven cards. You untap up to six lands.",
+    "note": "REJECT: near-free Timetwister + ritual; explosive combo enabler. too_strong.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": true,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Mind Over Matter",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{2}{U}{U}{U}{U}",
+    "mv": 6.0,
+    "type": "Enchantment",
+    "printings": "EXO",
+    "cube_elo": 1340.24,
+    "edhrec_rank": 8115,
+    "in_block": "N/A",
+    "role": "EXCLUDED — board-camping engine; untap-lands at will + draw engine = infinite",
+    "archetypes": [
+      "free-spell-tempo"
+    ],
+    "text": "Discard a card: You may tap or untap target artifact, creature, or land.",
+    "note": "REJECT: permanent that camps + goes infinite with draw. Violates honest-combo. too_strong.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": true,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  },
+  {
+    "name": "Reality Spasm",
+    "section": "Mono-U",
+    "cube_color": "U",
+    "mana_cost": "{X}{U}{U}",
+    "mv": 2.0,
+    "type": "Instant",
+    "printings": "ROE",
+    "cube_elo": 1226.79,
+    "edhrec_rank": 10859,
+    "in_block": "N/A",
+    "role": "Scalable untap — untap X lands as a flexible High-Tide ritual or tap-down",
+    "archetypes": [
+      "free-spell-tempo",
+      "high-tide-prison"
+    ],
+    "text": "Choose one — Tap X target permanents.; Untap X target permanents.",
+    "note": "Untap-X-lands ritual; flexible w/ High Tide, also a tempo tap.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    }
+  }
+]

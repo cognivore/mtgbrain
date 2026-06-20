@@ -1,0 +1,2022 @@
+[
+ {
+  "name": "One with Nothing",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "engine: empty-hand enabler / storm loop",
+  "in_block": "N/A",
+  "cube_elo": 1055.9,
+  "edhrec_rank": 16807,
+  "printings": "PLST, SOK",
+  "flags": {
+   "does_nothing_alone": true,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": true,
+   "out_of_block_exception": false
+  },
+  "note": "Errata to drain per card discarded; loops w/ Shadow of the Grave",
+  "text": "Discard your hand.",
+  "errata_proposal": "Discard your hand, then each opponent loses 1 life for each card discarded this way.",
+  "archetypes": [
+   "gy-storm",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Shadow of the Grave",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "engine: refill discarded/cycled hand",
+  "in_block": "N/A",
+  "cube_elo": 1232.6,
+  "edhrec_rank": 8736,
+  "printings": "AKH, AKR, PAKH",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Loops One With Nothing/cycling; storm fuel + hand refill",
+  "text": "Return to your hand all cards in your graveyard that you cycled or discarded this turn.",
+  "archetypes": [
+   "gy-storm",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Putrid Imp",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Creature — Zombie Imp",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard outlet (1-drop, threshold)",
+  "in_block": "ODY-block",
+  "cube_elo": 1276.8,
+  "edhrec_rank": 5159,
+  "printings": "PD3, TOR, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Premier block self-discard outlet; threshold flyer",
+  "text": "Discard a card: This creature gains flying until end of turn.\nThreshold — As long as there are seven or more cards in your graveyard, this creature gets +1/+1 and can't block.",
+  "archetypes": [
+   "gy-storm",
+   "madness"
+  ]
+ },
+ {
+  "name": "Faithless Looting",
+  "mana_cost": "{R}",
+  "mv": 1.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "discard outlet + flashback",
+  "in_block": "N/A",
+  "cube_elo": 1395.7,
+  "edhrec_rank": 94,
+  "printings": "BRC, C14, C15, C19, C21, CM2, CMM, DDK, DKA, DMC, EMA, INR, LCC, LTC, M3C, MB2, OTC, PIDW, PLST, PZ1, SIS, SLD, SOC, STA, TDC, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Cheap loot, flashback = 2 discards; storm/GY enabler",
+  "text": "Draw two cards, then discard two cards.\nFlashback {2}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Cathartic Reunion",
+  "mana_cost": "{1}{R}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "discard outlet (bulk)",
+  "in_block": "N/A",
+  "cube_elo": 1329.7,
+  "edhrec_rank": 1050,
+  "printings": "2XM, ACR, ECC, IKO, KLD, KLR, PLST, SLD, SS3, TLE",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard 2 draw 3; big GY/threshold filler",
+  "text": "As an additional cost to cast this spell, discard two cards.\nDraw three cards.",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Burning Inquiry",
+  "mana_cost": "{R}",
+  "mv": 1.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "symmetric random discard outlet",
+  "in_block": "N/A",
+  "cube_elo": 1256.4,
+  "edhrec_rank": 3448,
+  "printings": "M10, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "1-mana fill GY for both; chaos enabler",
+  "text": "Each player draws three cards, then discards three cards at random.",
+  "archetypes": [
+   "gy-storm",
+   "madness"
+  ]
+ },
+ {
+  "name": "Windfall",
+  "mana_cost": "{2}{U}",
+  "mv": 3.0,
+  "type": "Sorcery",
+  "printed_colors": "U",
+  "cube_color": "U",
+  "section": "Mono-U",
+  "role": "wheel (off-color enabler)",
+  "in_block": "N/A",
+  "cube_elo": 1397.2,
+  "edhrec_rank": 151,
+  "printings": "BRB, C15, C16, C20, CM2, CMD, CMM, IMA, KHC, LCC, OTC, P30A, PLST, PRM, SLD, USG",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Wheel; pairs Megrim/Liliana's Caress. Blue—home in UB/UR",
+  "text": "Each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way.",
+  "archetypes": [
+   "wheel",
+   "storm"
+  ]
+ },
+ {
+  "name": "Wheel of Fortune",
+  "mana_cost": "{2}{R}",
+  "mv": 3.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "wheel (premium)",
+  "in_block": "N/A",
+  "cube_elo": 1315.0,
+  "edhrec_rank": 11685,
+  "printings": "SOC",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Each draws 7; ELO 1315 ok—fragile sorcery, no engine",
+  "text": "Each player discards their hand, then draws seven cards.",
+  "archetypes": [
+   "wheel",
+   "storm"
+  ]
+ },
+ {
+  "name": "Reforge the Soul",
+  "mana_cost": "{3}{R}{R}",
+  "mv": 5.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "wheel + miracle",
+  "in_block": "N/A",
+  "cube_elo": 1299.4,
+  "edhrec_rank": 1713,
+  "printings": "AVR, C16, INR, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Wheel; miracle off topdeck. Symmetric refuel",
+  "text": "Each player discards their hand, then draws seven cards.\nMiracle {1}{R} (You may cast this card for its miracle cost when you draw it if it's the first card you drew this turn.)",
+  "archetypes": [
+   "wheel"
+  ]
+ },
+ {
+  "name": "Change of Fortune",
+  "mana_cost": "{3}{R}",
+  "mv": 4.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "discard-then-draw payoff",
+  "in_block": "N/A",
+  "cube_elo": 1227.2,
+  "edhrec_rank": 5867,
+  "printings": "DBL, PRM, PVOW, VOW",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Empties hand then draws per discard; hellbent refuel",
+  "text": "Discard your hand, then draw a card for each card you've discarded this turn.",
+  "archetypes": [
+   "gy-storm",
+   "wheel"
+  ]
+ },
+ {
+  "name": "Tolarian Winds",
+  "mana_cost": "{1}{U}",
+  "mv": 2.0,
+  "type": "Instant",
+  "printed_colors": "U",
+  "cube_color": "U",
+  "section": "Mono-U",
+  "role": "discard-all wheel (off-color)",
+  "in_block": "N/A",
+  "cube_elo": 1318.8,
+  "edhrec_rank": 3225,
+  "printings": "7ED, BTD, USG",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard hand draw that many. Blue—UR/UB home",
+  "text": "Discard all the cards in your hand, then draw that many cards.",
+  "archetypes": [
+   "wheel"
+  ]
+ },
+ {
+  "name": "Dark Ritual",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "ritual (storm mana)",
+  "in_block": "N/A",
+  "cube_elo": 1459.4,
+  "edhrec_rank": 34,
+  "printings": "2ED, 30A, 3ED, 40K, 4BB, 4ED, 5ED, A25, BRB, BTD, CED, CEI, CST, DDC, DDE, DKM, DVD, FBB, FCA, G09, HOP, ICE, ITP, J21, LEA, LEB, MB2, ME4, MIR, MMQ, MP2, MSC, PLST, PMEI, PRM, PTC, RQS, SLD, SLP, STA, SUM, TMC, TMP, TPR, USG, V13, VMA, WC01, WC99",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Net +2 B; storm count + burst. ELO high but fragile alone",
+  "text": "Add {B}{B}{B}.",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Cabal Ritual",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "ritual w/ threshold",
+  "in_block": "N/A",
+  "cube_elo": 1323.0,
+  "edhrec_rank": 467,
+  "printings": "MB2, SLD, TOR, V16, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Threshold = +4; rewards full GY",
+  "text": "Add {B}{B}{B}.\nThreshold — Add {B}{B}{B}{B}{B} instead if there are seven or more cards in your graveyard.",
+  "archetypes": [
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Seething Song",
+  "mana_cost": "{2}{R}",
+  "mv": 3.0,
+  "type": "Instant",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "ritual (storm mana)",
+  "in_block": "N/A",
+  "cube_elo": 1285.8,
+  "edhrec_rank": 8740,
+  "printings": "SOS",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "+2 R burst for storm turns",
+  "text": "Add {R}{R}{R}{R}{R}.",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Pyretic Ritual",
+  "mana_cost": "{1}{R}",
+  "mv": 2.0,
+  "type": "Instant",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "ritual (storm mana)",
+  "in_block": "N/A",
+  "cube_elo": 1300.1,
+  "edhrec_rank": 827,
+  "printings": "M11, PLST, SLD, SOA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "+1 R; redundant storm accel",
+  "text": "Add {R}{R}{R}.",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Songs of the Damned",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "graveyard ritual",
+  "in_block": "N/A",
+  "cube_elo": 1203.6,
+  "edhrec_rank": 3244,
+  "printings": "ICE, ME2, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "B per creature in GY; huge after self-mill. Storm payoff",
+  "text": "Add {B} for each creature card in your graveyard.",
+  "archetypes": [
+   "gy-storm",
+   "storm"
+  ]
+ },
+ {
+  "name": "Culling the Weak",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "sac ritual",
+  "in_block": "N/A",
+  "cube_elo": 1353.8,
+  "edhrec_rank": 569,
+  "printings": "EXO, MB2, PMEI, SLD, SOA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Sac creature -> BBBB; storm w/ token chaff",
+  "text": "As an additional cost to cast this spell, sacrifice a creature.\nAdd {B}{B}{B}{B}.",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Lion's Eye Diamond",
+  "mana_cost": "{0}",
+  "mv": 0.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "ritual + discard enabler (tutor combo)",
+  "in_block": "N/A",
+  "cube_elo": 1610.7,
+  "edhrec_rank": 724,
+  "printings": "MIR, PRM, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard hand for 3; enables Infernal Tutor hellbent. ELO 1611 but fragile/blank-ish",
+  "text": "Discard your hand, Sacrifice this artifact: Add three mana of any one color. Activate only as an instant.",
+  "archetypes": [
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Infernal Tutor",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "tutor (hellbent w/ LED)",
+  "in_block": "N/A",
+  "cube_elo": 1237.4,
+  "edhrec_rank": 16268,
+  "printings": "DIS, J20, RVR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Hellbent = any card; w/ Lion's Eye Diamond = combo glue",
+  "text": "Reveal a card from your hand. Search your library for a card with the same name as that card, reveal it, put it into your hand, then shuffle.\nHellbent — If you have no cards in hand, instead search your library for a card, put it into your hand, then shuffle.",
+  "archetypes": [
+   "storm",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Profane Tutor",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "slow tutor (suspend 2)",
+  "in_block": "N/A",
+  "cube_elo": 1396.0,
+  "edhrec_rank": 1639,
+  "printings": "MH2, PMH2, PRM",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Blank turn-of-cast; slow = low-power tutor",
+  "text": "Suspend 2—{1}{B} (Rather than cast this card from your hand, pay {1}{B} and exile it with two time counters on it. At the beginning of your upkeep, remove a time counter. When the last is removed, you may cast it without paying its mana cost.)\nSearch your library for a card, put that card into your hand, then shuffle.",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Tendrils of Agony",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "storm payoff (drain win)",
+  "in_block": "N/A",
+  "cube_elo": 1263.5,
+  "edhrec_rank": 5488,
+  "printings": "F08, MB2, PEWK, PRM, SCG, SLD, STA, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Honest one-shot storm kill; the GY-storm finisher",
+  "text": "Target player loses 2 life and you gain 2 life.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)",
+  "archetypes": [
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Grapeshot",
+  "mana_cost": "{1}{R}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "storm payoff (burn)",
+  "in_block": "N/A",
+  "cube_elo": 1356.6,
+  "edhrec_rank": 714,
+  "printings": "DDS, DMR, MMA, MSC, PLST, SLD, STA, TSP, TSR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Storm burn finisher; spent spell, honest",
+  "text": "Grapeshot deals 1 damage to any target.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Empty the Warrens",
+  "mana_cost": "{3}{R}",
+  "mv": 4.0,
+  "type": "Sorcery",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "storm payoff (goblins)",
+  "in_block": "N/A",
+  "cube_elo": 1230.9,
+  "edhrec_rank": 2524,
+  "printings": "AA2, DDS, DMR, MMA, PLST, SLD, SOA, TSP, TSR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Storm tokens; slow board-based payoff, low power",
+  "text": "Create two 1/1 red Goblin creature tokens.\nStorm (When you cast this spell, copy it for each spell cast before it this turn.)",
+  "archetypes": [
+   "storm"
+  ]
+ },
+ {
+  "name": "Faith of the Devoted",
+  "mana_cost": "{2}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard/cycle drain engine",
+  "in_block": "N/A",
+  "cube_elo": 1247.6,
+  "edhrec_rank": 8077,
+  "printings": "AKH, C19, HA4",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Drain per cycle/discard; honest w/ cycling lands+Raven's Crime",
+  "text": "Whenever you cycle or discard a card, you may pay {1}. If you do, each opponent loses 2 life and you gain 2 life.",
+  "archetypes": [
+   "gy-storm",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Tendrils of Corruption",
+  "mana_cost": "{3}{B}",
+  "mv": 4.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "removal + lifegain (Swamps)",
+  "in_block": "N/A",
+  "cube_elo": 1215.1,
+  "edhrec_rank": 8727,
+  "printings": "C14, DDD, DDE, DDR, GVL, HA1, M10, PLST, TSP, TSR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Swamp-count removal; mono-B glue, not combo",
+  "text": "Tendrils of Corruption deals X damage to target creature and you gain X life, where X is the number of Swamps you control.",
+  "archetypes": [
+   "control"
+  ]
+ },
+ {
+  "name": "Yawgmoth's Will",
+  "mana_cost": "{2}{B}",
+  "mv": 3.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "one-shot GY replay (judge #16)",
+  "in_block": "N/A",
+  "cube_elo": 1384.4,
+  "edhrec_rank": 2554,
+  "printings": "G07, PRM, USG, VMA, WC00, WC99",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": true,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Spent sorcery, EOT exile = honest one-shot; flag for review",
+  "text": "Until end of turn, you may play lands and cast spells from your graveyard.\nIf a card would be put into your graveyard from anywhere this turn, exile that card instead.",
+  "archetypes": [
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Underworld Breach",
+  "mana_cost": "{1}{R}",
+  "mv": 2.0,
+  "type": "Enchantment",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "one-shot escape engine (judge #16)",
+  "in_block": "N/A",
+  "cube_elo": 1546.3,
+  "edhrec_rank": 389,
+  "printings": "MB2, PRM, PTHB, PZA, SLD, SPG, THB",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": true,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Escape from GY; spent enchant but enables loops—flag",
+  "text": "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus exile three other cards from your graveyard. (You may cast cards from your graveyard for their escape cost.)\nAt the beginning of the end step, sacrifice this enchantment.",
+  "archetypes": [
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Ad Nauseam",
+  "mana_cost": "{3}{B}{B}",
+  "mv": 5.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "alt-draw engine (life for cards)",
+  "in_block": "N/A",
+  "cube_elo": 1349.4,
+  "edhrec_rank": 1305,
+  "printings": "2XM, ALA, SOA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Spec #4 core; honest stapled spell. Feeds storm/Tendrils",
+  "text": "Reveal the top card of your library and put that card into your hand. You lose life equal to its mana value. You may repeat this process any number of times.",
+  "archetypes": [
+   "combo",
+   "storm"
+  ]
+ },
+ {
+  "name": "Lightning Storm",
+  "mana_cost": "{1}{R}{R}",
+  "mv": 3.0,
+  "type": "Instant",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "Ad Nauseam win-con (discard-fueled)",
+  "in_block": "N/A",
+  "cube_elo": 1200.9,
+  "edhrec_rank": 21278,
+  "printings": "CSP, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Spec #4 modern-deck kill; discard lands to grow X",
+  "text": "Lightning Storm deals X damage to any target, where X is 3 plus the number of charge counters on Lightning Storm.\nDiscard a land card: Put two charge counters on Lightning Storm. You may choose a new target for it. Any player may activate this ability but only if Lightning Storm is on the stack.",
+  "archetypes": [
+   "combo"
+  ]
+ },
+ {
+  "name": "Gibbering Descent",
+  "mana_cost": "{4}{B}{B}",
+  "mv": 6.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "hellbent payoff (symmetric drain+mill)",
+  "in_block": "N/A",
+  "cube_elo": 1146.7,
+  "edhrec_rank": 15419,
+  "printings": "FUT",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Hellbent skips upkeep cost; madness self-cast. Drain engine",
+  "text": "At the beginning of each player's upkeep, that player loses 1 life and discards a card.\nHellbent — Skip your upkeep step if you have no cards in hand.\nMadness {2}{B}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+  "archetypes": [
+   "hellbent",
+   "madness"
+  ]
+ },
+ {
+  "name": "Nihilistic Glee",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "hellbent card-advantage + drain",
+  "in_block": "N/A",
+  "cube_elo": 1093.5,
+  "edhrec_rank": 25581,
+  "printings": "DIS",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Empty-hand card draw + discard drain; honest grind",
+  "text": "{2}{B}, Discard a card: Target opponent loses 1 life and you gain 1 life.\nHellbent — {1}, Pay 2 life: Draw a card. Activate only if you have no cards in hand.",
+  "archetypes": [
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Brink of Madness",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "hellbent payoff (strip opp hand)",
+  "in_block": "N/A",
+  "cube_elo": 1172.8,
+  "edhrec_rank": 25376,
+  "printings": "PLST, ULG",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Empty hand -> opp discards hand; sac-fires, one-shot-ish",
+  "text": "At the beginning of your upkeep, if you have no cards in hand, sacrifice this enchantment and target opponent discards their hand.",
+  "archetypes": [
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Asylum Visitor",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Creature — Vampire Wizard",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "madness creature + hellbent draw",
+  "in_block": "Out-exception",
+  "cube_elo": 1272.3,
+  "edhrec_rank": 7118,
+  "printings": "C19, INR, J21, PSOI, SOI",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Out-exc: madness + empty-hand draw payoff; no block equiv",
+  "text": "At the beginning of each player's upkeep, if that player has no cards in hand, you draw a card and you lose 1 life.\nMadness {1}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+  "archetypes": [
+   "hellbent",
+   "madness"
+  ]
+ },
+ {
+  "name": "Sickening Dreams",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard-X sweeper + drain (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1249.2,
+  "edhrec_rank": 14220,
+  "printings": "PD3, TOR, WC03",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard X = X dmg all; storm/hellbent board wipe + reach",
+  "text": "As an additional cost to cast this spell, discard X cards.\nSickening Dreams deals X damage to each creature and each player.",
+  "archetypes": [
+   "gy-storm",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Psychotic Haze",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "madness sweeper (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1128.1,
+  "edhrec_rank": 17565,
+  "printings": "TOR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Block madness payoff; pings board+players",
+  "text": "Psychotic Haze deals 1 damage to each creature and each player.\nMadness {1}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+  "archetypes": [
+   "madness"
+  ]
+ },
+ {
+  "name": "Violent Eruption",
+  "mana_cost": "{1}{R}{R}{R}",
+  "mv": 4.0,
+  "type": "Instant",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "madness burn (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1267.9,
+  "edhrec_rank": 13994,
+  "printings": "C19, PLST, TOR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "TOR madness; 4 dmg split when discarded cheaply",
+  "text": "Violent Eruption deals 4 damage divided as you choose among any number of targets.\nMadness {1}{R}{R} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+  "archetypes": [
+   "madness"
+  ]
+ },
+ {
+  "name": "Fiery Temper",
+  "mana_cost": "{1}{R}{R}",
+  "mv": 3.0,
+  "type": "Instant",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "madness burn (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1363.7,
+  "edhrec_rank": 7757,
+  "printings": "C19, DCI, F16, INR, J21, PLST, PRM, SIR, SOI, TOR, TSB, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "TOR madness Shock+; premier red madness card",
+  "text": "Fiery Temper deals 3 damage to any target.\nMadness {R} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+  "archetypes": [
+   "madness"
+  ]
+ },
+ {
+  "name": "Collective Brutality",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "escalate discard (modal)",
+  "in_block": "N/A",
+  "cube_elo": 1368.5,
+  "edhrec_rank": 11710,
+  "printings": "EMN, INR, PEMN, PLST, SIR, SLD",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard to escalate; drain+disrupt, fuels GY",
+  "text": "Escalate—Discard a card. (Pay this cost for each mode chosen beyond the first.)\nChoose one or more —\n• Target opponent reveals their hand. You choose an instant or sorcery card from it. That player discards that card.\n• Target creature gets -2/-2 until end of turn.\n• Target opponent loses 2 life and you gain 2 life.",
+  "archetypes": [
+   "hellbent",
+   "control"
+  ]
+ },
+ {
+  "name": "Organ Grinder",
+  "mana_cost": "{2}{B}",
+  "mv": 3.0,
+  "type": "Creature — Zombie",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "GY-storm payoff creature (in-block)",
+  "in_block": "ODY-block",
+  "cube_elo": 1190.3,
+  "edhrec_rank": 29236,
+  "printings": "TOR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Exile 3 from GY: opp loses 3; repeatable GY drain",
+  "text": "{T}, Exile three cards from your graveyard: Target player loses 3 life.",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Earsplitting Rats",
+  "mana_cost": "{3}{B}",
+  "mv": 4.0,
+  "type": "Creature — Rat",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard ETB + regen outlet (in-block)",
+  "in_block": "ODY-block",
+  "cube_elo": 1188.7,
+  "edhrec_rank": 20964,
+  "printings": "JUD",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Symmetric ETB discard; discard-to-regen outlet",
+  "text": "When this creature enters, each player discards a card.\nDiscard a card: Regenerate this creature.",
+  "archetypes": [
+   "gy-storm",
+   "madness"
+  ]
+ },
+ {
+  "name": "Filth",
+  "mana_cost": "{3}{B}",
+  "mv": 4.0,
+  "type": "Creature — Incarnation",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "GY incarnation (swampwalk anthem)",
+  "in_block": "ODY-block",
+  "cube_elo": 1252.4,
+  "edhrec_rank": 4699,
+  "printings": "JUD, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "From GY = team swampwalk evasion; self-mill payoff",
+  "text": "Swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)\nAs long as this card is in your graveyard and you control a Swamp, creatures you control have swampwalk.",
+  "archetypes": [
+   "gy-storm",
+   "aggro"
+  ]
+ },
+ {
+  "name": "Anger",
+  "mana_cost": "{3}{R}",
+  "mv": 4.0,
+  "type": "Creature — Incarnation",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "GY incarnation (haste anthem)",
+  "in_block": "ODY-block",
+  "cube_elo": 1274.6,
+  "edhrec_rank": 351,
+  "printings": "AFC, CMA, CMD, DDI, FIC, JUD, LTC, M3C, PLST, PZ1, SLD, SOC, TD0, UMA, WC03",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "From GY = team haste; classic discard-to-GY payoff",
+  "text": "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
+  "archetypes": [
+   "gy-storm",
+   "aggro"
+  ]
+ },
+ {
+  "name": "Squee, Goblin Nabob",
+  "mana_cost": "{2}{R}",
+  "mv": 3.0,
+  "type": "Legendary Creature — Goblin",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "recurring discard fuel",
+  "in_block": "Out-exception",
+  "cube_elo": 1304.9,
+  "edhrec_rank": 4017,
+  "printings": "10E, C19, CMM, MB2, MMA, MMQ, SLC, SOC, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Out-exc: returns from GY each upkeep = infinite discard fodder",
+  "text": "At the beginning of your upkeep, you may return this card from your graveyard to your hand.",
+  "archetypes": [
+   "gy-storm",
+   "madness"
+  ]
+ },
+ {
+  "name": "Balthor the Defiled",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Legendary Creature — Zombie Dwarf",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "mass B/R reanimation (in-block)",
+  "in_block": "ODY-block",
+  "cube_elo": 1261.3,
+  "edhrec_rank": 9076,
+  "printings": "JUD, SLD",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "One-shot: return all B/R creatures from all GYs; honest payoff",
+  "text": "Minion creatures get +1/+1.\n{B}{B}{B}, Exile Balthor: Each player returns all black and all red creature cards from their graveyard to the battlefield.",
+  "archetypes": [
+   "reanimator",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Hell-Bent Raider",
+  "mana_cost": "{1}{R}{R}",
+  "mv": 3.0,
+  "type": "Creature — Human Barbarian",
+  "printed_colors": "R",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "discard-outlet beater (in-block)",
+  "in_block": "ODY-block",
+  "cube_elo": 1157.2,
+  "edhrec_rank": 27932,
+  "printings": "TOR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Random-discard outlet; on-theme name, pro-white evasion",
+  "text": "First strike, haste\nDiscard a card at random: This creature gains protection from white until end of turn.",
+  "archetypes": [
+   "gy-storm",
+   "aggro"
+  ]
+ },
+ {
+  "name": "Cabal Pit",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Land",
+  "printed_colors": "",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "threshold removal land (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1128.6,
+  "edhrec_rank": 6399,
+  "printings": "ODY, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "B + self-ping (life-loss synergy); threshold -2/-2",
+  "text": "{T}: Add {B}. This land deals 1 damage to you.\nThreshold — {B}, {T}, Sacrifice this land: Target creature gets -2/-2 until end of turn. Activate only if there are seven or more cards in your graveyard.",
+  "archetypes": [
+   "gy-storm",
+   "control"
+  ]
+ },
+ {
+  "name": "Barbarian Ring",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Land",
+  "printed_colors": "",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "threshold burn land (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1219.0,
+  "edhrec_rank": 4819,
+  "printings": "MH3, ODY, PD2, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "R + self-ping; threshold 2 dmg any target",
+  "text": "{T}: Add {R}. This land deals 1 damage to you.\nThreshold — {R}, {T}, Sacrifice this land: It deals 2 damage to any target. Activate only if there are seven or more cards in your graveyard.",
+  "archetypes": [
+   "gy-storm",
+   "aggro"
+  ]
+ },
+ {
+  "name": "Polluted Mire",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Land",
+  "printed_colors": "",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "cycling land (discard synergy)",
+  "in_block": "N/A",
+  "cube_elo": 1192.5,
+  "edhrec_rank": 4011,
+  "printings": "40K, ATH, BRB, BTD, C14, C15, CMA, DDD, DMR, GVL, PD3, USG",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "B source; cycling = discard trigger for Faith/Shadow",
+  "text": "This land enters tapped.\n{T}: Add {B}.\nCycling {2} ({2}, Discard this card: Draw a card.)",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Forgotten Cave",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Land",
+  "printed_colors": "",
+  "cube_color": "R",
+  "section": "Mono-R",
+  "role": "cycling land (discard synergy)",
+  "in_block": "N/A",
+  "cube_elo": 1184.5,
+  "edhrec_rank": 811,
+  "printings": "40K, BLC, C13, C14, C15, C18, C19, C20, C21, CM2, CMA, CMD, CMR, DD1, DDJ, DDT, EVG, HA2, J22, J25, M3C, MH1, ONC, ONS, PLST, TD0, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "R source; cycling fuels Faith of the Devoted/Containment",
+  "text": "This land enters tapped.\n{T}: Add {R}.\nCycling {R} ({R}, Discard this card: Draw a card.)",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Dakmor Salvage",
+  "mana_cost": "",
+  "mv": 0.0,
+  "type": "Land",
+  "printed_colors": "",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "dredge land (self-mill + retrace fuel)",
+  "in_block": "N/A",
+  "cube_elo": 1194.0,
+  "edhrec_rank": 1281,
+  "printings": "DDJ, EOC, FUT, M3C, MMA, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Dredge 2 self-mill; recurs for Raven's Crime retrace",
+  "text": "This land enters tapped.\n{T}: Add {B}.\nDredge 2 (If you would draw a card, you may mill two cards instead. If you do, return this card from your graveyard to your hand.)",
+  "archetypes": [
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Raven's Crime",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "recurring discard (retrace)",
+  "in_block": "N/A",
+  "cube_elo": 1193.5,
+  "edhrec_rank": 15296,
+  "printings": "EVE, MMA, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Retrace via land discard; grindy w/ Dakmor + Faith",
+  "text": "Target player discards a card.\nRetrace (You may cast this card from your graveyard by discarding a land card in addition to paying its other costs.)",
+  "archetypes": [
+   "hellbent",
+   "control"
+  ]
+ },
+ {
+  "name": "Chain of Smog",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard 2 (copyable)",
+  "in_block": "N/A",
+  "cube_elo": 1405.1,
+  "edhrec_rank": 3111,
+  "printings": "ONS, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Strip 2; ELO 1405 but no infinite engine present here",
+  "text": "Target player discards two cards. That player may copy this spell and may choose a new target for that copy.",
+  "archetypes": [
+   "control"
+  ]
+ },
+ {
+  "name": "Smallpox",
+  "mana_cost": "{B}{B}",
+  "mv": 2.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "symmetric resource denial",
+  "in_block": "N/A",
+  "cube_elo": 1237.5,
+  "edhrec_rank": 5533,
+  "printings": "CNS, DDR, M12, SOA, TSP, TSR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "You go hellbent + life-loss; powers Ensnaring Bridge plan",
+  "text": "Each player loses 1 life, discards a card, sacrifices a creature of their choice, then sacrifices a land of their choice.",
+  "archetypes": [
+   "hellbent",
+   "prison"
+  ]
+ },
+ {
+  "name": "Necrogen Mists",
+  "mana_cost": "{2}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "symmetric per-upkeep discard",
+  "in_block": "N/A",
+  "cube_elo": 1227.5,
+  "edhrec_rank": 6347,
+  "printings": "MRD, SLD",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Fuels your madness/hellbent while emptying opp",
+  "text": "At the beginning of each player's upkeep, that player discards a card.",
+  "archetypes": [
+   "hellbent",
+   "prison"
+  ]
+ },
+ {
+  "name": "Bottomless Pit",
+  "mana_cost": "{1}{B}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "symmetric random discard",
+  "in_block": "N/A",
+  "cube_elo": 1183.3,
+  "edhrec_rank": 5475,
+  "printings": "SLD, STH",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Per-upkeep discard; redundant Necrogen but random",
+  "text": "At the beginning of each player's upkeep, that player discards a card at random.",
+  "archetypes": [
+   "hellbent",
+   "prison"
+  ]
+ },
+ {
+  "name": "Liliana's Caress",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard punisher (life loss)",
+  "in_block": "N/A",
+  "cube_elo": 1180.8,
+  "edhrec_rank": 2456,
+  "printings": "M11, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Opp discard -> -2 life; wheel payoff",
+  "text": "Whenever an opponent discards a card, that player loses 2 life.",
+  "archetypes": [
+   "wheel",
+   "prison"
+  ]
+ },
+ {
+  "name": "Megrim",
+  "mana_cost": "{2}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "discard punisher (damage)",
+  "in_block": "N/A",
+  "cube_elo": 1258.9,
+  "edhrec_rank": 2609,
+  "printings": "10E, 7ED, 8ED, 9ED, DPA, M10, PS11, STH",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Opp discard -> 2 dmg; redundant w/ Caress, both fine surplus",
+  "text": "Whenever an opponent discards a card, this enchantment deals 2 damage to that player.",
+  "archetypes": [
+   "wheel",
+   "prison"
+  ]
+ },
+ {
+  "name": "Quest for the Nihil Stone",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "empty-opp-hand payoff",
+  "in_block": "N/A",
+  "cube_elo": 1195.7,
+  "edhrec_rank": 10281,
+  "printings": "PLST, WWK",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Discard punisher -> 5 life loss when opp hellbent",
+  "text": "Whenever an opponent discards a card, you may put a quest counter on this enchantment.\nAt the beginning of each opponent's upkeep, if that player has no cards in hand and this enchantment has two or more quest counters on it, you may have that player lose 5 life.",
+  "archetypes": [
+   "prison",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "Shrieking Affliction",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "empty-opp-hand payoff",
+  "in_block": "N/A",
+  "cube_elo": 1164.5,
+  "edhrec_rank": 11028,
+  "printings": "RTR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Opp <=1 card -> lose 3; closes discard-lock games",
+  "text": "At the beginning of each opponent's upkeep, if that player has one or fewer cards in hand, they lose 3 life.",
+  "archetypes": [
+   "prison"
+  ]
+ },
+ {
+  "name": "Ensnaring Bridge",
+  "mana_cost": "{3}",
+  "mv": 3.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "B/R",
+  "section": "Rakdos BR",
+  "role": "prison anchor (colorshift)",
+  "in_block": "N/A",
+  "cube_elo": 1294.8,
+  "edhrec_rank": 4879,
+  "printings": "2XM, 7ED, 8ED, A25, LTC, MB2, MPS, STH",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "B/R",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Colorshift->BR; empty hand = no attackers can hit you",
+  "text": "Creatures with power greater than the number of cards in your hand can't attack.",
+  "archetypes": [
+   "prison",
+   "hellbent"
+  ]
+ },
+ {
+  "name": "The Rack",
+  "mana_cost": "{1}",
+  "mv": 1.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "empty-opp-hand payoff (prison win)",
+  "in_block": "N/A",
+  "cube_elo": 1169.4,
+  "edhrec_rank": 16305,
+  "printings": "3ED, 4BB, 4ED, ATQ, DPA, FBB, MB2, PRM, PS11, PTC, SUM, TSB",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Punishes empty opp hand behind Bridge; honest clock",
+  "text": "As this artifact enters, choose an opponent.\nAt the beginning of the chosen player's upkeep, this artifact deals X damage to that player, where X is 3 minus the number of cards in their hand.",
+  "archetypes": [
+   "prison"
+  ]
+ },
+ {
+  "name": "Cursed Scroll",
+  "mana_cost": "{1}",
+  "mv": 1.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "hellbent win-con (repeatable burn)",
+  "in_block": "N/A",
+  "cube_elo": 1438.0,
+  "edhrec_rank": 26338,
+  "printings": "OLEP, TMP, TPR, VMA, WC98, WC99",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Empty/1-card hand = reliable 2 dmg; classic hellbent finisher",
+  "text": "{3}, {T}: Choose a card name, then reveal a card at random from your hand. If that card has the chosen name, this artifact deals 2 damage to any target.",
+  "archetypes": [
+   "hellbent",
+   "prison"
+  ]
+ },
+ {
+  "name": "Bottled Cloister",
+  "mana_cost": "{4}",
+  "mv": 4.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "hand-hiding engine (Bridge synergy)",
+  "in_block": "N/A",
+  "cube_elo": 1192.9,
+  "edhrec_rank": 20772,
+  "printings": "RAV, RVR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Hide hand each opp turn = empty board-hand for Bridge",
+  "text": "At the beginning of each opponent's upkeep, exile all cards from your hand face down.\nAt the beginning of your upkeep, return all cards you own exiled with this artifact to your hand, then draw a card.",
+  "archetypes": [
+   "prison"
+  ]
+ },
+ {
+  "name": "Memory Jar",
+  "mana_cost": "{5}",
+  "mv": 5.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "wheel artifact (storm burst)",
+  "in_block": "N/A",
+  "cube_elo": 1378.4,
+  "edhrec_rank": 6807,
+  "printings": "AA3, ULG, V10, VMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Sac for fresh 7s; one-shot storm/draw burst",
+  "text": "{T}, Sacrifice this artifact: Each player exiles all cards from their hand face down and draws seven cards. At the beginning of the next end step, each player discards their hand and returns to their hand each card they exiled this way.",
+  "archetypes": [
+   "wheel",
+   "storm"
+  ]
+ },
+ {
+  "name": "Ill-Gotten Gains",
+  "mana_cost": "{2}{B}{B}",
+  "mv": 4.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "wheel + GY recursion (storm)",
+  "in_block": "N/A",
+  "cube_elo": 1181.8,
+  "edhrec_rank": 13707,
+  "printings": "CNS, USG",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Empties hands, regrows 3 from GY; storm engine glue",
+  "text": "Exile Ill-Gotten Gains. Each player discards their hand, then returns up to three cards from their graveyard to their hand.",
+  "archetypes": [
+   "wheel",
+   "storm",
+   "gy-storm"
+  ]
+ },
+ {
+  "name": "Trading Post",
+  "mana_cost": "{4}",
+  "mv": 4.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "discard outlet + value (spec note)",
+  "in_block": "N/A",
+  "cube_elo": 1256.4,
+  "edhrec_rank": 2126,
+  "printings": "BRC, C14, C16, CM2, LTC, M13, M14, MSC, PLST",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Spec-named; discard->life, sac/draw modes; slow value",
+  "text": "{1}, {T}, Discard a card: You gain 4 life.\n{1}, {T}, Pay 1 life: Create a 0/1 white Goat creature token.\n{1}, {T}, Sacrifice a creature: Return target artifact card from your graveyard to your hand.\n{1}, {T}, Sacrifice an artifact: Draw a card.",
+  "archetypes": [
+   "value"
+  ]
+ },
+ {
+  "name": "Waste Not",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "wheel payoff engine",
+  "in_block": "N/A",
+  "cube_elo": 1259.7,
+  "edhrec_rank": 1254,
+  "printings": "C16, HA2, M15, SLD, TMC, WOT",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Opp discard -> tokens/mana/cards; best w/ Windfall/wheels",
+  "text": "Whenever an opponent discards a creature card, create a 2/2 black Zombie creature token.\nWhenever an opponent discards a land card, add {B}{B}.\nWhenever an opponent discards a noncreature, nonland card, draw a card.",
+  "archetypes": [
+   "wheel"
+  ]
+ },
+ {
+  "name": "Containment Construct",
+  "mana_cost": "{2}",
+  "mv": 2.0,
+  "type": "Artifact Creature — Construct",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "discard-recursion engine",
+  "in_block": "Out-exception",
+  "cube_elo": 1244.5,
+  "edhrec_rank": 1984,
+  "printings": "MSC, NEO, PLST, SOC",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Play discarded cards; turns loot into card advantage",
+  "text": "Whenever you discard a card, you may exile that card from your graveyard. If you do, you may play that card this turn.",
+  "archetypes": [
+   "gy-storm",
+   "madness"
+  ]
+ },
+ {
+  "name": "Underworld Dreams",
+  "mana_cost": "{B}{B}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "draw punisher (symmetric)",
+  "in_block": "N/A",
+  "cube_elo": 1218.4,
+  "edhrec_rank": 1418,
+  "printings": "10E, 8ED, 9ED, DPA, LEG, M10, P2HG, PRM, PS11, SLD, THB",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Opp draw -> 1 dmg; you skip draws via hellbent/Necro",
+  "text": "Whenever an opponent draws a card, this enchantment deals 1 damage to that player.",
+  "archetypes": [
+   "prison"
+  ]
+ },
+ {
+  "name": "Death's Shadow",
+  "mana_cost": "{B}",
+  "mv": 1.0,
+  "type": "Creature — Avatar",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "life-loss payoff beater (spec #11)",
+  "in_block": "Out-exception",
+  "cube_elo": 1204.4,
+  "edhrec_rank": 8283,
+  "printings": "2XM, HA4, MB2, MM3, SCH, SLD, SLP, WWK",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Out-exc: spec #11 names it; huge when life low (Bridge/rituals)",
+  "text": "This creature gets -X/-X, where X is your life total.",
+  "archetypes": [
+   "aggro",
+   "combo"
+  ]
+ },
+ {
+  "name": "Tainted Pact",
+  "mana_cost": "{1}{B}",
+  "mv": 2.0,
+  "type": "Instant",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "library-thinning combo (in-block)",
+  "in_block": "N/A",
+  "cube_elo": 1386.5,
+  "edhrec_rank": 794,
+  "printings": "ODY, STA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "ODY! Empties library for Lab Maniac/Lightning Storm line",
+  "text": "Exile the top card of your library. You may put that card into your hand unless it has the same name as another card exiled this way. Repeat this process until you put a card into your hand or you exile two cards with the same name, whichever comes first.",
+  "archetypes": [
+   "combo"
+  ]
+ },
+ {
+  "name": "Doomsday",
+  "mana_cost": "{B}{B}{B}",
+  "mv": 3.0,
+  "type": "Sorcery",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "combo build-around (alt-win)",
+  "in_block": "N/A",
+  "cube_elo": 1278.0,
+  "edhrec_rank": 5645,
+  "printings": "6ED, A25, MB2, MP2, MSC, PLST, PRM, SLD, WTH",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "5-card pile -> Lab Maniac/Tendrils kill; fragile sorcery",
+  "text": "Search your library and graveyard for five cards and exile the rest. Put the chosen cards on top of your library in any order. You lose half your life, rounded up.",
+  "archetypes": [
+   "combo"
+  ]
+ },
+ {
+  "name": "Laboratory Maniac",
+  "mana_cost": "{2}{U}",
+  "mv": 3.0,
+  "type": "Creature — Human Wizard",
+  "printed_colors": "U",
+  "cube_color": "U",
+  "section": "Mono-U",
+  "role": "alt-win (empty-library, spec #4)",
+  "in_block": "Out-exception",
+  "cube_elo": 1304.8,
+  "edhrec_rank": 574,
+  "printings": "FCA, INR, ISD, PLST, SLD, TSR, UMA",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Out-exc/off-color: spec #4 win-con w/ Tainted Pact/Doomsday",
+  "text": "If you would draw a card while your library has no cards in it, you win the game instead.",
+  "archetypes": [
+   "combo"
+  ]
+ },
+ {
+  "name": "Leveler",
+  "mana_cost": "{5}",
+  "mv": 5.0,
+  "type": "Artifact Creature — Juggernaut",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "library-emptier (spec #13 w/ Sundial)",
+  "in_block": "Out-exception",
+  "cube_elo": 1200.7,
+  "edhrec_rank": 6741,
+  "printings": "MRD, PLST, TSR",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": true
+  },
+  "note": "Sundial-stifle the drawback -> Lab Maniac win (spec #13)",
+  "text": "When this creature enters, exile all cards from your library.",
+  "archetypes": [
+   "combo"
+  ]
+ },
+ {
+  "name": "Sundial of the Infinite",
+  "mana_cost": "{2}",
+  "mv": 2.0,
+  "type": "Artifact",
+  "printed_colors": "",
+  "cube_color": "C",
+  "section": "Colorless",
+  "role": "Stifle-on-a-stick (spec #13)",
+  "in_block": "N/A",
+  "cube_elo": 1321.3,
+  "edhrec_rank": 2781,
+  "printings": "M12, PLST, TLE",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": false,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Spec #13: stops Leveler/triggers; combo-protect + lock",
+  "text": "{1}, {T}: End the turn. Activate only during your turn. (Exile all spells and abilities from the stack. Discard down to your maximum hand size. Damage wears off, and \"this turn\" and \"until end of turn\" effects end.)",
+  "archetypes": [
+   "combo",
+   "prison"
+  ]
+ },
+ {
+  "name": "Necropotence",
+  "mana_cost": "{B}{B}{B}",
+  "mv": 3.0,
+  "type": "Enchantment",
+  "printed_colors": "B",
+  "cube_color": "B",
+  "section": "Mono-B",
+  "role": "hellbent enabler (flag #16)",
+  "in_block": "N/A",
+  "cube_elo": 1348.2,
+  "edhrec_rank": 503,
+  "printings": "5ED, DKM, EMA, ICE, IMA, ME2, OLEP, PTC, SLC, V09, VMA, WOT",
+  "flags": {
+   "does_nothing_alone": false,
+   "colorshift": "",
+   "too_strong": true,
+   "errata_needed": false,
+   "out_of_block_exception": false
+  },
+  "note": "Iconic empty-hand engine BUT camps board = #16 tension; flag",
+  "text": "Skip your draw step.\nWhenever you discard a card, exile that card from your graveyard.\nPay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of your next end step.",
+  "archetypes": [
+   "hellbent"
+  ]
+ }
+]

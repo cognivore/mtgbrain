@@ -1,0 +1,1206 @@
+[
+  {
+    "name": "Braid of Fire",
+    "mana_cost": "{1}{R}",
+    "mv": 2,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Big-red mana engine / cumulative-upkeep age-counter payoff (#1 headliner)",
+    "in_block": "N/A",
+    "cube_elo": 1283.38,
+    "edhrec_rank": 4135,
+    "printings": "CSP, PLST, SLD",
+    "text": "Cumulative upkeep—Add {R}. (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-red mana sink",
+      "cumulative-upkeep/age",
+      "proliferate"
+    ],
+    "note": "User #1 card: age counters add R each upkeep; proliferate grows the pool"
+  },
+  {
+    "name": "Heart of Bogardan",
+    "mana_cost": "{2}{R}{R}",
+    "mv": 4,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Cumulative-upkeep age-counter time bomb (pay or it blows up)",
+    "in_block": "N/A",
+    "cube_elo": 1214.72,
+    "edhrec_rank": 29239,
+    "printings": "WTH",
+    "text": "Cumulative upkeep {2} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)\nWhen a player doesn't pay this enchantment's cumulative upkeep, this enchantment deals X damage to target player or planeswalker and each creature that player or that planeswalker's controller controls, where X is twice the number of age counters on this enchantment minus 2.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "cumulative-upkeep/age",
+      "big-red mana sink"
+    ],
+    "note": "Pay R-mana each upkeep or it nukes; ties Braid of Fire mana to a clock"
+  },
+  {
+    "name": "Magmatic Core",
+    "mana_cost": "{2}{R}{R}",
+    "mv": 4,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Cumulative-upkeep age-counter repeatable damage (Pyroclasm engine)",
+    "in_block": "N/A",
+    "cube_elo": 1252.08,
+    "edhrec_rank": 28958,
+    "printings": "CSP",
+    "text": "Cumulative upkeep {1} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)\nAt the beginning of your end step, this enchantment deals X damage divided as you choose among any number of target creatures, where X is the number of age counters on it.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "cumulative-upkeep/age",
+      "big-red mana sink"
+    ],
+    "note": "Growing board-wipe; age counters = damage; Braid of Fire pays the upkeep"
+  },
+  {
+    "name": "Mystic Remora",
+    "mana_cost": "{U}",
+    "mv": 1,
+    "type": "Enchantment",
+    "printed_colors": "U",
+    "cube_color": "U",
+    "section": "Mono-U",
+    "role": "Cumulative-upkeep age-counter card-draw tax (cross-ref blue)",
+    "in_block": "N/A",
+    "cube_elo": 1525.7,
+    "edhrec_rank": 96,
+    "printings": "DMR, ICE, ME1, SLD, TLE",
+    "text": "Cumulative upkeep {1} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)\nWhenever an opponent casts a noncreature spell, you may draw a card unless that player pays {4}.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "cumulative-upkeep/age",
+      "card advantage"
+    ],
+    "note": "High elo but self-limiting via age counters; blue age-counter anchor"
+  },
+  {
+    "name": "Glacial Chasm",
+    "mana_cost": "",
+    "mv": 0,
+    "type": "Land",
+    "printed_colors": "",
+    "cube_color": "Land",
+    "section": "Land",
+    "role": "Cumulative-upkeep age-counter pillow-fort land (buys time for slow wins)",
+    "in_block": "N/A",
+    "cube_elo": 1291.46,
+    "edhrec_rank": 2181,
+    "printings": "ICE, ME2, V12",
+    "text": "Cumulative upkeep—Pay 2 life. (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)\nWhen this land enters, sacrifice a land.\nCreatures you control can't attack.\nPrevent all damage that would be dealt to you.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "cumulative-upkeep/age",
+      "pillow-fort",
+      "alt-win enabler"
+    ],
+    "note": "Total damage immunity for escalating life cost; shields the count-to-win clocks"
+  },
+  {
+    "name": "Mage-Ring Network",
+    "mana_cost": "",
+    "mv": 0,
+    "type": "Land",
+    "printed_colors": "",
+    "cube_color": "Land",
+    "role": "Storage-counter mana battery (Braid of Fire payoff / big-red sink)",
+    "section": "Land",
+    "in_block": "N/A",
+    "cube_elo": 1129.8,
+    "edhrec_rank": 4180,
+    "printings": "C21, CMM, ORI, UMA",
+    "text": "{T}: Add {C}.\n{1}, {T}: Put a storage counter on this land.\n{T}, Remove any number of storage counters from this land: Add {C} for each storage counter removed this way.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-red mana sink",
+      "proliferate",
+      "ramp"
+    ],
+    "note": "Stores mana into counters; proliferate-able; banks Braid of Fire's R surplus"
+  },
+  {
+    "name": "Squandered Resources",
+    "mana_cost": "{B}{G}",
+    "mv": 2,
+    "type": "Enchantment",
+    "printed_colors": "B/G",
+    "cube_color": "B/G",
+    "section": "Golgari BG",
+    "role": "Burst-mana sink fuel (sac lands for big X / combo turns)",
+    "in_block": "N/A",
+    "cube_elo": 1254.52,
+    "edhrec_rank": 5386,
+    "printings": "OLEP, VIS",
+    "text": "Sacrifice a land: Add one mana of any type the sacrificed land could produce.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-mana sink",
+      "ritual",
+      "sacrifice"
+    ],
+    "note": "Cross-ref Tangle Wire/Parallax: dump lands for explosive X-spell turns"
+  },
+  {
+    "name": "Carpet of Flowers",
+    "mana_cost": "{G}",
+    "mv": 1,
+    "type": "Enchantment",
+    "printed_colors": "G",
+    "cube_color": "G",
+    "section": "Mono-G",
+    "role": "Anti-blue ramp (fuels big-X / High Tide hate)",
+    "in_block": "N/A",
+    "cube_elo": 1312.9,
+    "edhrec_rank": 1194,
+    "printings": "FCA, PLST, SLD, USG, WHO",
+    "text": "At the beginning of each of your main phases, if you haven't added mana with this ability this turn, you may add X mana of any one color, where X is the number of Islands target opponent controls.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-mana sink",
+      "ramp",
+      "anti-Island"
+    ],
+    "note": "Cross-ref the High Tide/Islands archetype; green ramp vs blue prison"
+  },
+  {
+    "name": "Astral Cornucopia",
+    "mana_cost": "{X}{X}{X}",
+    "mv": 0,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Charge-counter mana rock (big-red X sink + proliferate target)",
+    "in_block": "N/A",
+    "cube_elo": 1289.63,
+    "edhrec_rank": 1339,
+    "printings": "BNG, BRR, C16, CM2, EOC, SOC",
+    "text": "This artifact enters with X charge counters on it.\n{T}: Choose a color. Add one mana of that color for each charge counter on this artifact.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-red mana sink",
+      "proliferate",
+      "charge counters"
+    ],
+    "note": "Pay XXX to bank charge counters; proliferate grows the rock; slow ramp"
+  },
+  {
+    "name": "Empowered Autogenerator",
+    "mana_cost": "{4}",
+    "mv": 4,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Charge-counter ramp battery (proliferate target, escalating mana)",
+    "in_block": "N/A",
+    "cube_elo": 1292.32,
+    "edhrec_rank": 4166,
+    "printings": "C19, EOC, PLST",
+    "text": "This artifact enters tapped.\n{T}: Put a charge counter on this artifact. Add X mana of any one color, where X is the number of charge counters on this artifact.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-red mana sink",
+      "proliferate",
+      "charge counters"
+    ],
+    "note": "Self-growing mana; proliferate jumps it ahead; honest slow build-around"
+  },
+  {
+    "name": "Trading Post",
+    "mana_cost": "{4}",
+    "mv": 4,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Grindy mana-sink value engine (user-named for big-red shell)",
+    "in_block": "N/A",
+    "cube_elo": 1256.36,
+    "edhrec_rank": 2126,
+    "printings": "BRC, C14, C16, CM2, LTC, M13, M14, MSC, PLST",
+    "text": "{1}, {T}, Discard a card: You gain 4 life.\n{1}, {T}, Pay 1 life: Create a 0/1 white Goat creature token.\n{1}, {T}, Sacrifice a creature: Return target artifact card from your graveyard to your hand.\n{1}, {T}, Sacrifice an artifact: Draw a card.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "mana sink",
+      "value engine",
+      "lifegain"
+    ],
+    "note": "User-named: four modal sinks (goats/life/draw); honest grind, no fast value"
+  },
+  {
+    "name": "Comet Storm",
+    "mana_cost": "{X}{R}{R}",
+    "mv": 2,
+    "type": "Instant",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Multikicker big-red X mana sink (honest spent payoff)",
+    "in_block": "N/A",
+    "cube_elo": 1217.6,
+    "edhrec_rank": 1415,
+    "printings": "C15, C17, C20, CMA, CMD, CMR, MM2, P10, PRM, PWWK, WWK",
+    "text": "Multikicker {1} (You may pay an additional {1} any number of times as you cast this spell.)\nChoose any target, then choose another target for each time this spell was kicked. Comet Storm deals X damage to each of them.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "big-red mana sink",
+      "burn"
+    ],
+    "note": "Cast-and-spent X-sink for Braid of Fire's surplus; scales but fragile"
+  },
+  {
+    "name": "Spawning Pit",
+    "mana_cost": "{2}",
+    "mv": 2,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Charge-counter sac engine (proliferate target, token sink)",
+    "in_block": "N/A",
+    "cube_elo": 1268.88,
+    "edhrec_rank": 4245,
+    "printings": "DST, J22, PLST, TD2",
+    "text": "Sacrifice a creature: Put a charge counter on this artifact.\n{1}, Remove two charge counters from this artifact: Create a 2/2 colorless Spawn artifact creature token.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "charge counters",
+      "proliferate",
+      "sacrifice"
+    ],
+    "note": "Banks sacs as charge counters; proliferate doubles tokens; grindy"
+  },
+  {
+    "name": "Chance Encounter",
+    "mana_cost": "{2}{R}{R}",
+    "mv": 4,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Red counter alt-win (luck counters → 10 = win); coin-flip anchor",
+    "in_block": "ODY-block",
+    "cube_elo": 1129.5,
+    "edhrec_rank": 6866,
+    "printings": "MH2, ODY, PLST",
+    "text": "Whenever you win a coin flip, put a luck counter on this enchantment.\nAt the beginning of your upkeep, if this enchantment has ten or more luck counters on it, you win the game.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "Lower threshold to 7 luck counters; also gain a luck counter the first time you LOSE a flip each turn (so it always ticks); ETB: flip a coin.",
+    "archetypes": [
+      "counter alt-win",
+      "coin-flip"
+    ],
+    "note": "In-block (ODY) red wincon; needs coin-flips + proliferate; errata per #12"
+  },
+  {
+    "name": "Darksteel Reactor",
+    "mana_cost": "{4}",
+    "mv": 4,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Colorless counter alt-win (charge → 20 = win); proliferate payoff",
+    "in_block": "N/A",
+    "cube_elo": 1166.49,
+    "edhrec_rank": 3914,
+    "printings": "DST, EOC, HA1",
+    "text": "Indestructible (Effects that say \"destroy\" don't destroy this artifact.)\nAt the beginning of your upkeep, you may put a charge counter on this artifact.\nWhen this artifact has twenty or more charge counters on it, you win the game.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "ETB: put 3 charge counters on it (so it isn't a do-nothing for ~10 turns) and add a mana sink: {2}: put a charge counter on it. Headline proliferate payoff.",
+    "archetypes": [
+      "counter alt-win",
+      "proliferate",
+      "charge counters"
+    ],
+    "note": "Cleanest count-to-20 win for proliferate; indestructible; errata per #12"
+  },
+  {
+    "name": "Helix Pinnacle",
+    "mana_cost": "{G}",
+    "mv": 1,
+    "type": "Enchantment",
+    "printed_colors": "G",
+    "cube_color": "G",
+    "section": "Mono-G",
+    "role": "Green counter alt-win (tower → 100 = win); big-mana sink",
+    "in_block": "N/A",
+    "cube_elo": 1219.42,
+    "edhrec_rank": 4524,
+    "printings": "EVE, PLST, SLD, SPG",
+    "text": "Shroud (This enchantment can't be the target of spells or abilities.)\n{X}: Put X tower counters on this enchantment.\nAt the beginning of your upkeep, if there are 100 or more tower counters on this enchantment, you win the game.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "Already a mana sink, so it pays its own way; ETB: put 10 tower counters on it so it isn't a pure blank. Proliferate-able shrouded win.",
+    "archetypes": [
+      "counter alt-win",
+      "big-mana sink",
+      "proliferate"
+    ],
+    "note": "Glacial green wincon = pure mana sink; perfect Braid-of-Fire payoff; #12"
+  },
+  {
+    "name": "Simic Ascendancy",
+    "mana_cost": "{G}{U}",
+    "mv": 2,
+    "type": "Enchantment",
+    "printed_colors": "G/U",
+    "cube_color": "G/U",
+    "section": "Simic UG",
+    "role": "UG counter alt-win (growth → 20 = win); +1/+1 payoff",
+    "in_block": "N/A",
+    "cube_elo": 1169.52,
+    "edhrec_rank": 1265,
+    "printings": "BLC, LCC, PRM, PRNA, RNA, SLD",
+    "text": "{1}{G}{U}: Put a +1/+1 counter on target creature you control.\nWhenever one or more +1/+1 counters are put on a creature you control, put that many growth counters on this enchantment.\nAt the beginning of your upkeep, if this enchantment has twenty or more growth counters on it, you win the game.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "counter alt-win",
+      "+1/+1 matters",
+      "proliferate"
+    ],
+    "note": "Self-contained mana sink; turns block's +1/+1 / Amplify into a clock"
+  },
+  {
+    "name": "Azor's Elocutors",
+    "mana_cost": "{3}{W/U}{W/U}",
+    "mv": 5,
+    "type": "Creature — Human Advisor",
+    "printed_colors": "W/U",
+    "cube_color": "W/U",
+    "section": "Azorius WU",
+    "role": "WU counter alt-win (filibuster → 5 = win); interactive defensive",
+    "in_block": "Out-exception",
+    "cube_elo": 1174.24,
+    "edhrec_rank": 8282,
+    "printings": "RTR",
+    "text": "At the beginning of your upkeep, put a filibuster counter on this creature. Then if this creature has five or more filibuster counters on it, you win the game.\nWhenever a source deals damage to you, remove a filibuster counter from this creature.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": true
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "counter alt-win",
+      "proliferate",
+      "lifegain/defensive"
+    ],
+    "note": "Out-exception creature: only-in-block wincon for the WU/cleric pillow shell"
+  },
+  {
+    "name": "Krark's Thumb",
+    "mana_cost": "{2}",
+    "mv": 2,
+    "type": "Legendary Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Coin-flip enabler (flip two, ignore one) — the flip linchpin",
+    "in_block": "N/A",
+    "cube_elo": 1200.0,
+    "edhrec_rank": 5001,
+    "printings": "MRD, PLST, SLD",
+    "text": "If you would flip a coin, instead flip two coins and ignore one.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "Add a mana sink so it's not dead without flippers: {2}, {T}: Flip a coin. (Now it always generates flips for Chance Encounter / Goblin Bomb itself.)",
+    "archetypes": [
+      "coin-flip",
+      "counter alt-win enabler"
+    ],
+    "note": "Turns 50/50 into 75/25; backbone of the Chance Encounter package; #12"
+  },
+  {
+    "name": "Goblin Bomb",
+    "mana_cost": "{1}{R}",
+    "mv": 2,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip fuse near-win (5 fuse → 20 dmg); flip + counter payoff",
+    "in_block": "N/A",
+    "cube_elo": 1105.58,
+    "edhrec_rank": 12438,
+    "printings": "WTH",
+    "text": "At the beginning of your upkeep, you may flip a coin. If you win the flip, put a fuse counter on this enchantment. If you lose the flip, remove a fuse counter from this enchantment.\nRemove five fuse counters from this enchantment and sacrifice it: It deals 20 damage to target player or planeswalker.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "Optional: also gain a fuse counter when you win ANY coin flip (ties it to the wider flip package and proliferate); already does something alone.",
+    "archetypes": [
+      "coin-flip",
+      "fuse counters",
+      "proliferate",
+      "alt-win"
+    ],
+    "note": "Flip-fueled 20-damage kill; proliferate or Krark's Thumb accelerate fuses"
+  },
+  {
+    "name": "Goblin Festival",
+    "mana_cost": "{1}{R}",
+    "mv": 2,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip repeatable ping (flip support for the luck package)",
+    "in_block": "N/A",
+    "cube_elo": 1120.1,
+    "edhrec_rank": 17509,
+    "printings": "UDS",
+    "text": "{2}: This enchantment deals 1 damage to any target. Flip a coin. If you lose the flip, choose one of your opponents. That player gains control of this enchantment.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "burn"
+    ],
+    "note": "Repeatable {2} flip-source feeds Chance Encounter; risk of losing it = decisions"
+  },
+  {
+    "name": "Mana Clash",
+    "mana_cost": "{R}",
+    "mv": 1,
+    "type": "Sorcery",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip burn (repeat-flip damage); cheap flip generator",
+    "in_block": "N/A",
+    "cube_elo": 1135.79,
+    "edhrec_rank": 8303,
+    "printings": "4BB, 4ED, 5ED, 7ED, 8ED, 9ED, DRK, REN",
+    "text": "You and target opponent each flip a coin. Mana Clash deals 1 damage to each player whose coin comes up tails. Repeat this process until both players' coins come up heads on the same flip.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "burn"
+    ],
+    "note": "Many flips per cast = lots of Chance Encounter luck counters; swingy but low power"
+  },
+  {
+    "name": "Fiery Gambit",
+    "mana_cost": "{2}{R}",
+    "mv": 3,
+    "type": "Sorcery",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip escalating payoff (flip until lose; tiered rewards)",
+    "in_block": "N/A",
+    "cube_elo": 1062.31,
+    "edhrec_rank": 6700,
+    "printings": "MRD, PLST",
+    "text": "Flip a coin until you lose a flip or choose to stop flipping. If you lose a flip, Fiery Gambit has no effect. If you win one or more flips, Fiery Gambit deals 3 damage to target creature. If you win two or more flips, Fiery Gambit deals 6 damage to each opponent. If you win three or more flips, draw nine cards and untap all lands you control.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "burn",
+      "card advantage"
+    ],
+    "note": "Pure flip lottery; huge upside with Krark's Thumb; decision-rich push-your-luck"
+  },
+  {
+    "name": "Game of Chaos",
+    "mana_cost": "{R}{R}{R}",
+    "mv": 3,
+    "type": "Sorcery",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip doubling life swing (push-your-luck)",
+    "in_block": "N/A",
+    "cube_elo": 1152.17,
+    "edhrec_rank": 7490,
+    "printings": "5ED, ICE, PZ2",
+    "text": "Flip a coin. If you win the flip, you gain 1 life and target opponent loses 1 life, and you decide whether to flip again. If you lose the flip, you lose 1 life and that opponent gains 1 life, and that player decides whether to flip again. Double the life stakes with each flip.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "life-swing"
+    ],
+    "note": "Escalating flip duel; many flips for Chance Encounter; classic chaos"
+  },
+  {
+    "name": "Molten Birth",
+    "mana_cost": "{1}{R}{R}",
+    "mv": 3,
+    "type": "Sorcery",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip token maker (win flip = recast); cheap flip + bodies",
+    "in_block": "N/A",
+    "cube_elo": 1197.14,
+    "edhrec_rank": 10432,
+    "printings": "M14, PLST, UMA",
+    "text": "Create two 1/1 red Elemental creature tokens, then flip a coin. If you win the flip, return Molten Birth to its owner's hand.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "tokens"
+    ],
+    "note": "Always makes 2 bodies; flip-to-rebuy = repeatable flips with no card loss"
+  },
+  {
+    "name": "Stitch in Time",
+    "mana_cost": "{1}{U}{R}",
+    "mv": 3,
+    "type": "Sorcery",
+    "printed_colors": "U/R",
+    "cube_color": "U/R",
+    "section": "Izzet UR",
+    "role": "Coin-flip extra turn (Izzet flip payoff)",
+    "in_block": "N/A",
+    "cube_elo": 1192.74,
+    "edhrec_rank": 5040,
+    "printings": "GK1, GPT, RVR, SLD",
+    "text": "Flip a coin. If you win the flip, take an extra turn after this one.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "extra turn"
+    ],
+    "note": "50/50 extra turn (75% with Thumb); Izzet UR flip card; spent-on-cast"
+  },
+  {
+    "name": "Impulsive Maneuvers",
+    "mana_cost": "{2}{R}{R}",
+    "mv": 4,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "In-block coin-flip combat doubler (flip per attacker)",
+    "in_block": "ODY-block",
+    "cube_elo": 1117.66,
+    "edhrec_rank": 10573,
+    "printings": "ODY, PLST",
+    "text": "Whenever a creature attacks, flip a coin. If you win the flip, the next time that creature would deal combat damage this turn, it deals double that damage instead. If you lose the flip, the next time that creature would deal combat damage this turn, prevent that damage.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "combat"
+    ],
+    "note": "In-block (ODY) flip enchantment; many flips per combat for Chance Encounter"
+  },
+  {
+    "name": "Risky Move",
+    "mana_cost": "{3}{R}{R}{R}",
+    "mv": 6,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "In-block chaos coin-flip (donate-and-flip control swing)",
+    "in_block": "ONS-block",
+    "cube_elo": 1162.79,
+    "edhrec_rank": 11687,
+    "printings": "ONS, PLST",
+    "text": "At the beginning of each player's upkeep, that player gains control of this enchantment.\nWhen you gain control of this enchantment from another player, choose a creature you control and an opponent. Flip a coin. If you lose the flip, that opponent gains control of that creature.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "chaos",
+      "politics"
+    ],
+    "note": "In-block (ONS) every-upkeep flip; generates luck counters table-wide; chaotic"
+  },
+  {
+    "name": "Mirror March",
+    "mana_cost": "{5}{R}",
+    "mv": 6,
+    "type": "Enchantment",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Coin-flip token-copy engine (flip per creature ETB)",
+    "in_block": "N/A",
+    "cube_elo": 1220.98,
+    "edhrec_rank": 3912,
+    "printings": "PLST, PRNA, RNA",
+    "text": "Whenever a nontoken creature you control enters, flip a coin until you lose a flip. For each flip you won, create a token that's a copy of that creature. Those tokens gain haste. Exile them at the beginning of the next end step.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": true,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "tokens"
+    ],
+    "note": "Flagged too_strong per #4: camps board, repeated free copies each ETB; user judges"
+  },
+  {
+    "name": "Bomb Squad",
+    "mana_cost": "{3}{R}",
+    "mv": 4,
+    "type": "Creature — Dwarf",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "In-block fuse-counter ticking removal (doubling fuses)",
+    "in_block": "ODY-block",
+    "cube_elo": 1127.96,
+    "edhrec_rank": 18968,
+    "printings": "ODY",
+    "text": "{T}: Put a fuse counter on target creature.\nAt the beginning of your upkeep, put a fuse counter on each creature with a fuse counter on it.\nWhenever a creature has four or more fuse counters on it, remove all fuse counters from it and destroy it. That creature deals 4 damage to its controller.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "fuse counters",
+      "proliferate",
+      "removal"
+    ],
+    "note": "In-block (ODY) fuse engine; proliferate accelerates the bomb; high decision density"
+  },
+  {
+    "name": "Crazed Firecat",
+    "mana_cost": "{5}{R}{R}",
+    "mv": 7,
+    "type": "Creature — Elemental Cat",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "In-block coin-flip body (flip until lose → +1/+1 counters)",
+    "in_block": "ODY-block",
+    "cube_elo": 1208.58,
+    "edhrec_rank": 17822,
+    "printings": "TOR",
+    "text": "When this creature enters, flip a coin until you lose a flip. Put a +1/+1 counter on this creature for each flip you won.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "+1/+1 counters"
+    ],
+    "note": "In-block (TOR) flip body; ETB flips feed Chance Encounter; proliferate-able"
+  },
+  {
+    "name": "Skittish Valesk",
+    "mana_cost": "{6}{R}",
+    "mv": 7,
+    "type": "Creature — Beast",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "In-block coin-flip upkeep body (morph + flip-down risk)",
+    "in_block": "ONS-block",
+    "cube_elo": 1107.69,
+    "edhrec_rank": 26729,
+    "printings": "ONS",
+    "text": "At the beginning of your upkeep, flip a coin. If you lose the flip, turn this creature face down.\nMorph {5}{R} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "coin-flip",
+      "morph"
+    ],
+    "note": "In-block (ONS) recurring upkeep flip = steady Chance Encounter fuel; morph synergy"
+  },
+  {
+    "name": "Karn's Bastion",
+    "mana_cost": "",
+    "mv": 0,
+    "type": "Land",
+    "printed_colors": "",
+    "cube_color": "Land",
+    "role": "Repeatable proliferate land (counter-package engine)",
+    "section": "Land",
+    "in_block": "N/A",
+    "cube_elo": 1170.35,
+    "edhrec_rank": 202,
+    "printings": "CMM, EOC, LCC, MOC, NCC, ONC, PRM, PWAR, RVR, SLD, WAR",
+    "text": "{T}: Add {C}.\n{4}, {T}: Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "counter alt-win",
+      "Tangle Wire"
+    ],
+    "note": "Colorless repeatable proliferate; powers Braid age / Tangle Wire fade / alt-wins"
+  },
+  {
+    "name": "Contagion Clasp",
+    "mana_cost": "{2}",
+    "mv": 2,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Proliferate + removal (repeatable counter engine)",
+    "in_block": "N/A",
+    "cube_elo": 1195.28,
+    "edhrec_rank": 1396,
+    "printings": "DDF, ECC, F11, ONC, PIP, PLST, PRM, SOM, TD2, TSR",
+    "text": "When this artifact enters, put a -1/-1 counter on target creature.\n{4}, {T}: Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "removal",
+      "counter alt-win"
+    ],
+    "note": "ETB shrinks a creature, then repeatable proliferate; cheap counter accelerant"
+  },
+  {
+    "name": "Contagion Engine",
+    "mana_cost": "{6}",
+    "mv": 6,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Proliferate-twice engine + board shrink (top-end counter payoff)",
+    "in_block": "N/A",
+    "cube_elo": 1254.66,
+    "edhrec_rank": 1802,
+    "printings": "OTP, PLST, SLD, SOM",
+    "text": "When this artifact enters, put a -1/-1 counter on each creature target player controls.\n{4}, {T}: Proliferate twice. (Choose any number of permanents and/or players, then give each another counter of each kind already there. Then do it again.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "removal",
+      "counter alt-win"
+    ],
+    "note": "Double-proliferate engine; jumps alt-win counters and Tangle Wire fades fast"
+  },
+  {
+    "name": "Throne of Geth",
+    "mana_cost": "{2}",
+    "mv": 2,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "One-shot proliferate via artifact sac (cheap counter burst)",
+    "in_block": "N/A",
+    "cube_elo": 1201.81,
+    "edhrec_rank": 3696,
+    "printings": "2XM, SOM",
+    "text": "{T}, Sacrifice an artifact: Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "sacrifice",
+      "counter alt-win"
+    ],
+    "note": "Sac an artifact for a free proliferate; cheap kick for alt-win/fade counters"
+  },
+  {
+    "name": "Volt Charge",
+    "mana_cost": "{2}{R}",
+    "mv": 3,
+    "type": "Instant",
+    "printed_colors": "R",
+    "cube_color": "R",
+    "section": "Mono-R",
+    "role": "Red removal + proliferate (counter package in-color)",
+    "in_block": "N/A",
+    "cube_elo": 1281.21,
+    "edhrec_rank": 7406,
+    "printings": "DDL, NPH, ONE",
+    "text": "Volt Charge deals 3 damage to any target. Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "burn",
+      "counter alt-win"
+    ],
+    "note": "Red burn that also proliferates; in-color counter accelerant for Chance Encounter"
+  },
+  {
+    "name": "Steady Progress",
+    "mana_cost": "{2}{U}",
+    "mv": 3,
+    "type": "Instant",
+    "printed_colors": "U",
+    "cube_color": "U",
+    "section": "Mono-U",
+    "role": "Proliferate + cantrip (blue counter accelerant)",
+    "in_block": "N/A",
+    "cube_elo": 1206.71,
+    "edhrec_rank": 4846,
+    "printings": "MM2, PLST, SOM",
+    "text": "Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)\nDraw a card.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "card advantage",
+      "counter alt-win"
+    ],
+    "note": "Cantrip proliferate; replaces itself while advancing every counter clock"
+  },
+  {
+    "name": "Tezzeret's Gambit",
+    "mana_cost": "{3}{U/P}",
+    "mv": 4,
+    "type": "Sorcery",
+    "printed_colors": "U",
+    "cube_color": "U",
+    "section": "Mono-U",
+    "role": "Draw-two + proliferate (Phyrexian-mana counter accelerant)",
+    "in_block": "N/A",
+    "cube_elo": 1298.98,
+    "edhrec_rank": 919,
+    "printings": "C16, C19, CM2, EOC, M3C, MM2, NCC, NPH, OTC, PLST, STA",
+    "text": "({U/P} can be paid with either {U} or 2 life.)\nDraw two cards, then proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "proliferate",
+      "card advantage",
+      "counter alt-win"
+    ],
+    "note": "Card draw + proliferate, castable colorless via 2 life; strong counter engine"
+  },
+  {
+    "name": "Parallax Tide",
+    "mana_cost": "{2}{U}{U}",
+    "mv": 4,
+    "type": "Enchantment",
+    "printed_colors": "U",
+    "cube_color": "U",
+    "section": "Mono-U",
+    "role": "Fading-counter land lock (cross-ref Tangle Wire / Parallax Inhibitor)",
+    "in_block": "N/A",
+    "cube_elo": 1382.26,
+    "edhrec_rank": 20439,
+    "printings": "NEM, WC00",
+    "text": "Fading 5 (This enchantment enters with five fade counters on it. At the beginning of your upkeep, remove a fade counter from it. If you can't, sacrifice it.)\nRemove a fade counter from this enchantment: Exile target land.\nWhen this enchantment leaves the battlefield, each player returns to the battlefield all cards they own exiled with it.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "fading",
+      "proliferate",
+      "stax/prison"
+    ],
+    "note": "THE missed fading card: temp land lock; proliferate adds fade counters to extend"
+  },
+  {
+    "name": "Parallax Inhibitor",
+    "mana_cost": "{2}",
+    "mv": 2,
+    "type": "Artifact",
+    "printed_colors": "",
+    "cube_color": "C",
+    "section": "Colorless",
+    "role": "Fading-counter refueler (re-arms Parallax / Tangle Wire fades)",
+    "in_block": "N/A",
+    "cube_elo": 1165.43,
+    "edhrec_rank": 30798,
+    "printings": "NEM",
+    "text": "{1}, {T}, Sacrifice this artifact: Put a fade counter on each permanent with fading you control.",
+    "flags": {
+      "does_nothing_alone": true,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": true,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "Make it repeatable instead of sacrifice so it's not a do-nothing in non-fading games: {2}, {T}: Put a fade counter on each permanent with fading you control. (Now a real fade/Tangle Wire engine.)",
+    "archetypes": [
+      "fading",
+      "stax/prison",
+      "Tangle Wire"
+    ],
+    "note": "Directly extends Tangle Wire (fading 3) + Parallax suite; niche, errata per #12"
+  },
+  {
+    "name": "Saproling Burst",
+    "mana_cost": "{4}{G}",
+    "mv": 5,
+    "type": "Enchantment",
+    "printed_colors": "G",
+    "cube_color": "G",
+    "section": "Mono-G",
+    "role": "Fading-counter token engine (green fade payoff; proliferate-able)",
+    "in_block": "N/A",
+    "cube_elo": 1348.79,
+    "edhrec_rank": 18369,
+    "printings": "NEM, VMA, WC00, WC01",
+    "text": "Fading 7 (This enchantment enters with seven fade counters on it. At the beginning of your upkeep, remove a fade counter from it. If you can't, sacrifice it.)\nRemove a fade counter from this enchantment: Create a green Saproling creature token. It has \"This token's power and toughness are each equal to the number of fade counters on Saproling Burst.\"\nWhen this enchantment leaves the battlefield, destroy all tokens created with this enchantment. They can't be regenerated.",
+    "flags": {
+      "does_nothing_alone": false,
+      "colorshift": "",
+      "too_strong": false,
+      "errata_needed": false,
+      "out_of_block_exception": false
+    },
+    "errata_proposal": "",
+    "archetypes": [
+      "fading",
+      "tokens",
+      "proliferate"
+    ],
+    "note": "Green fading payoff; proliferate adds fade counters = more/bigger Saprolings"
+  }
+]
