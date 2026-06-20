@@ -60,7 +60,8 @@ fn asset_list() -> Vec<(String, &'static str)> {
     // old fonts (proprietary — kept out of git; personal-use only)
     v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
-    v.push((format!("{CC}/fonts/mplantin-italic.ttf"), "fonts/mplantin-italic.ttf"));
+    // cardconjurer's italic is named mplantin-i.ttf; saved under our -italic.ttf name.
+    v.push((format!("{CC}/fonts/mplantin-i.ttf"), "fonts/mplantin-italic.ttf"));
     v.push((format!("{CC}/fonts/matrix.ttf"), "fonts/matrix.ttf"));
     // mana font (OFL) — kept for any legacy use
     v.push((format!("{MANA}/fonts/mana.ttf"), "fonts/mana.ttf"));
@@ -155,11 +156,18 @@ struct Card {
     mana_cost: String,
     type_line: String,
     oracle_text: String,
+    flavor: String,
     power: String,
     toughness: String,
     loyalty: String,
     colors: String,
     is_creature: bool,
+    set: String,
+    rarity: String,
+    /// Printed "Illus." credit chosen in the editor (the artist pseudonym for GenAI
+    /// art). Empty for cards still using real Scryfall art (which credit the real
+    /// historical illustrator). NOT part of the `overrides` errata blob.
+    illustrator: String,
 }
 
 type RawRow = (
@@ -183,16 +191,24 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
     let pick = |key: &str, base: Option<String>| -> String {
         o.get(key).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
     };
+    // Best-effort: tolerate older editor DBs that predate the `illustrator` column.
+    let illustrator: String = db
+        .query_row("SELECT COALESCE(illustrator,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .unwrap_or_default();
     Ok(Card {
         name: pick("name", Some(name)),
         mana_cost: pick("mana_cost", mc),
         type_line: pick("type", tl),
         oracle_text: pick("oracle_text", ot),
+        flavor: String::new(), // filled from Scryfall in render_one (override key: "flavor")
         power: pick("power", p),
         toughness: pick("toughness", t),
         loyalty: pick("loyalty", l),
         colors: pick("colors", colors),
         is_creature: is_cr != 0,
+        set: String::new(),    // from Scryfall (oldest print) in render_one
+        rarity: String::new(), // from Scryfall (oldest print) in render_one
+        illustrator,
     })
 }
 
@@ -202,9 +218,10 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
     colors.sort();
     let canon = json!({
         "name": c.name, "mana_cost": c.mana_cost, "type": c.type_line,
-        "oracle_text": c.oracle_text, "power": c.power, "toughness": c.toughness,
+        "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "colors": colors, "is_creature": c.is_creature,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 2,
+        "set": c.set, "rarity": c.rarity,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 3,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -409,23 +426,47 @@ fn mpcfill_pick(
         pa.cmp(&pb).then(b.dpi.cmp(&a.dpi))
     });
 
-    // Claude gives the crop box per candidate + whether the art matches the old
-    // reference. Prefer a confirmed art-match; if none confirm, still use the best
-    // (highest-DPI) candidate — never throw away high-DPI art for low-res Scryfall.
     let out = card_dir.join("art.png");
+    // TRUE art aspect from Scryfall's canonical art_crop — drives crop height so the
+    // proxy's type line can't leak into our art window.
+    let art_aspect = image_aspect(ref_path).unwrap_or(1.30);
+    let path_of = |c: &McCand| {
+        card_dir.join("mpcfill").join(sanitize_bucket(&c.bucket)).join(format!("{}.{}", c.identifier, c.ext))
+    };
+
+    // PRIMARY: deterministic computer-vision match (template-match the reference art
+    // inside each proxy). Pick the highest-DPI candidate whose CV score clears the
+    // threshold; crop exactly where the art was located. No LLM, no cost.
+    const CV_OK: f64 = 0.42;
+    let mut best_cv: Option<(usize, [f64; 4], f64)> = None;
+    for (i, c) in cands.iter().take(6).enumerate() {
+        let file = path_of(c);
+        if !file.exists() {
+            continue;
+        }
+        if let Some((bx, score)) = cv_art_box(ref_path, &file) {
+            if score >= CV_OK {
+                crop_to(&file, bx, &out, art_aspect)?;
+                return Ok(Some((out, format!("mpcfill:{}:dpi{}:cv{:.2}", c.identifier, c.dpi, score))));
+            }
+            if best_cv.map_or(true, |(_, _, b)| score > b) {
+                best_cv = Some((i, bx, score));
+            }
+        }
+    }
+
+    // FALLBACK: Claude vision (art match + box) when CV is unsure (e.g. recropped /
+    // alt art that doesn't pixel-match the reference).
     let mut best_box: Option<(usize, [f64; 4])> = None;
     for (i, c) in cands.iter().take(3).enumerate() {
-        let file = card_dir
-            .join("mpcfill")
-            .join(sanitize_bucket(&c.bucket))
-            .join(format!("{}.{}", c.identifier, c.ext));
+        let file = path_of(c);
         if !file.exists() {
             continue;
         }
         match claude_match_and_box(key, ref_path, &file) {
             Ok((same, bx)) => {
                 if same {
-                    crop_to(&file, bx, &out)?;
+                    crop_to(&file, bx, &out, art_aspect)?;
                     return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
                 }
                 best_box.get_or_insert((i, bx));
@@ -433,15 +474,14 @@ fn mpcfill_pick(
             Err(e) => eprintln!("    (vision error) {e}"),
         }
     }
-    // No confirmed match — use the top candidate with the box we already got.
+    // Last resort: the best CV box (even if below threshold) beats an unverified guess.
+    if let Some((i, bx, score)) = best_cv {
+        crop_to(&path_of(&cands[i]), bx, &out, art_aspect)?;
+        return Ok(Some((out, format!("mpcfill:{}:dpi{}:cv{:.2}", cands[i].identifier, cands[i].dpi, score))));
+    }
     if let Some((i, bx)) = best_box {
-        let c = &cands[i];
-        let file = card_dir
-            .join("mpcfill")
-            .join(sanitize_bucket(&c.bucket))
-            .join(format!("{}.{}", c.identifier, c.ext));
-        crop_to(&file, bx, &out)?;
-        return Ok(Some((out, format!("mpcfill:{}:dpi{}:unconfirmed", c.identifier, c.dpi))));
+        crop_to(&path_of(&cands[i]), bx, &out, art_aspect)?;
+        return Ok(Some((out, format!("mpcfill:{}:dpi{}:unconfirmed", cands[i].identifier, cands[i].dpi))));
     }
     Ok(None)
 }
@@ -450,11 +490,17 @@ fn mpcfill_pick(
 fn claude_match_and_box(key: &str, ref_path: &Path, cand: &Path) -> Result<(bool, [f64; 4])> {
     let ref_b64 = img_b64_small(ref_path, 700)?;
     let cand_b64 = img_b64_small(cand, 1024)?;
-    let prompt = "Image 1 is reference art from an older printing. Image 2 is a full proxy card. \
-        Return ONLY compact JSON: {\"same_artwork\":true|false,\"art_box\":{\"x\":..,\"y\":..,\"w\":..,\"h\":..}}. \
+    let prompt = "Image 1 is reference art from an older printing. Image 2 is a full proxy card \
+        (it may use a MODERN frame with a title bar, type bar, mana symbols, set symbol and an \
+        outer border). Return ONLY compact JSON: \
+        {\"same_artwork\":true|false,\"art_box\":{\"x\":..,\"y\":..,\"w\":..,\"h\":..}}. \
         same_artwork = whether image 2's illustration depicts the SAME painting as image 1. \
-        art_box = image 2's illustration window (painted art only, exclude frame/title/text/border) \
-        as FRACTIONS of image 2 (0..1), precise to the art's inner edge.";
+        art_box = the painted illustration ONLY, as FRACTIONS of image 2 (0..1). It MUST exclude \
+        EVERYTHING that is not painting: the title bar and any text above the art, the type/rules \
+        bars and text below it, mana symbols, set symbol, and the entire outer border/frame on all \
+        four sides. The TOP edge in particular must sit strictly BELOW the title bar — no metallic \
+        or coloured frame strip may remain. If you are unsure where the inner art edge is, crop \
+        TIGHTER (a little into the painting) rather than risk leaving any frame.";
     let body = json!({
         "model": "claude-opus-4-8",
         "max_tokens": 300,
@@ -500,15 +546,130 @@ fn img_b64_small(path: &Path, max: u32) -> Result<String> {
 }
 
 /// Crop `path` to the fractional box and save as PNG at `out`.
-fn crop_to(path: &Path, bx: [f64; 4], out: &Path) -> Result<()> {
+///
+/// A **safety inset** shaves a margin off the vision box so a slightly-loose crop
+/// can never leak the proxy's frame into our art window. It's invisible in the
+/// final card because the art window is `background-size:cover` (it crops to fill
+/// anyway). The top is shaved a touch harder — that's where the title bar lives.
+/// Crop the proxy to the art. `bx` is the LLM's art box; `art_aspect` is the TRUE
+/// art width/height from Scryfall's canonical art_crop. We trust the box's top, left
+/// and width, but DERIVE the height from `art_aspect` (anchored at the box top) — the
+/// LLM box height is unreliable and routinely ran into the proxy's type line, baking
+/// "Creature — …" + set symbol into our art window. Aspect-from-top kills that.
+fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()> {
+    const SIDE: f64 = 0.02; // shave a little off each side (stray frame edge)
+    const TOP: f64 = 0.02; //  shave a little off the top (stray title baseline)
+
     let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
     let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
-    let x = (bx[0] * iw).clamp(0.0, iw - 1.0) as u32;
-    let y = (bx[1] * ih).clamp(0.0, ih - 1.0) as u32;
-    let w = (bx[2] * iw).clamp(1.0, iw - f64::from(x)) as u32;
-    let h = (bx[3] * ih).clamp(1.0, ih - f64::from(y)) as u32;
+
+    let bx0 = (bx[0] + bx[2] * SIDE) * iw;
+    let by0 = (bx[1] + bx[3] * TOP) * ih;
+    let bw = bx[2] * (1.0 - 2.0 * SIDE) * iw;
+    // Height from the real art aspect, never past the image bottom.
+    let bh = (bw / art_aspect.max(0.1)).min(ih - by0);
+
+    let x = bx0.clamp(0.0, iw - 1.0) as u32;
+    let y = by0.clamp(0.0, ih - 1.0) as u32;
+    let w = bw.clamp(1.0, iw - f64::from(x)) as u32;
+    let h = bh.clamp(1.0, ih - f64::from(y)) as u32;
     img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
     Ok(())
+}
+
+/// width/height of an image, for aspect math.
+fn image_aspect(path: &Path) -> Option<f64> {
+    let img = image::open(path).ok()?;
+    let h = f64::from(img.height());
+    (h > 0.0).then(|| f64::from(img.width()) / h)
+}
+
+/// Locate the reference art (Scryfall art_crop) inside a full-card proxy by
+/// multi-scale **normalized cross-correlation** on greyscale — deterministic, no LLM.
+/// Returns (box as fractions of the proxy, score in -1..1). NCC is invariant to the
+/// brightness/contrast differences between a clean scan and a community proxy.
+///
+/// Search is bounded by how real cards are laid out: the art is horizontally near-
+/// centred and spans ~0.68–0.96 of the card width, with its top in the upper third.
+/// (Extended/borderless/full-art proxies are already filtered out before this runs;
+/// for those the art bleeds past the frame and template scale/answers are unreliable.)
+fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
+    use image::imageops::{resize, FilterType};
+    let refimg = image::open(ref_path).ok()?.to_luma8();
+    let proxy = image::open(proxy_path).ok()?.to_luma8();
+    let tpl_aspect = f64::from(refimg.width()) / f64::from(refimg.height()).max(1.0);
+
+    let pw: u32 = 256;
+    let ph = (f64::from(pw) * f64::from(proxy.height()) / f64::from(proxy.width())).round() as u32;
+    if ph < 16 {
+        return None;
+    }
+    let proxy = resize(&proxy, pw, ph, FilterType::Triangle);
+    let pf: Vec<f64> = proxy.pixels().map(|p| f64::from(p[0])).collect();
+
+    let mut best: Option<([f64; 4], f64)> = None;
+    for si in 0..=14 {
+        let s = 0.68 + 0.02 * f64::from(si); // art width as a fraction of card width
+        let tw = (s * f64::from(pw)).round() as u32;
+        let th = (f64::from(tw) / tpl_aspect).round() as u32;
+        if tw < 8 || th < 8 || tw >= pw || th >= ph {
+            continue;
+        }
+        let tpl = resize(&refimg, tw, th, FilterType::Triangle);
+        let tf: Vec<f64> = tpl.pixels().map(|p| f64::from(p[0])).collect();
+        let n = f64::from(tw * th);
+        let tmean = tf.iter().sum::<f64>() / n;
+        let tvar = tf.iter().map(|v| (v - tmean).powi(2)).sum::<f64>() / n;
+        if tvar < 1.0 {
+            continue;
+        }
+        let tstd = tvar.sqrt();
+
+        let xc = (pw - tw) / 2;
+        let xr = pw / 12;
+        let (xlo, xhi) = (xc.saturating_sub(xr), (xc + xr).min(pw - tw));
+        let ylo = (0.03 * f64::from(ph)) as u32;
+        let yhi = ((0.30 * f64::from(ph)) as u32).min(ph - th);
+
+        let mut y = ylo;
+        while y <= yhi {
+            let mut x = xlo;
+            while x <= xhi {
+                // window mean/std + cross term
+                let (mut sp, mut spp, mut spt) = (0.0, 0.0, 0.0);
+                for ty in 0..th {
+                    let row = (y + ty) * pw + x;
+                    let trow = ty * tw;
+                    for tx in 0..tw {
+                        let pv = pf[(row + tx) as usize];
+                        sp += pv;
+                        spp += pv * pv;
+                        spt += pv * tf[(trow + tx) as usize];
+                    }
+                }
+                let pmean = sp / n;
+                let pvar = (spp / n) - pmean * pmean;
+                if pvar > 1.0 {
+                    let cov = (spt / n) - pmean * tmean;
+                    let ncc = cov / (pvar.sqrt() * tstd);
+                    if best.map_or(true, |(_, b)| ncc > b) {
+                        best = Some((
+                            [
+                                f64::from(x) / f64::from(pw),
+                                f64::from(y) / f64::from(ph),
+                                f64::from(tw) / f64::from(pw),
+                                f64::from(th) / f64::from(ph),
+                            ],
+                            ncc,
+                        ));
+                    }
+                }
+                x += 2;
+            }
+            y += 2;
+        }
+    }
+    best
 }
 
 fn sanitize_bucket(b: &str) -> String {
@@ -539,18 +700,73 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Late-90s / early-00s Magic painters whose styles we offer per card.
-/// (artist name, style descriptor). The descriptor is a no-name fallback for
-/// when OpenAI's safety system rejects "in the style of <living artist>".
-pub const ARTISTS: &[(&str, &str)] = &[
-    ("John Avon", "luminous panoramic fantasy landscapes with soft atmospheric light"),
-    ("Christopher Rush", "classic early-1990s fantasy illustration, bold and iconic"),
-    ("Brom", "dark gothic oil-painted fantasy, moody and edgy"),
-    ("Rob Alexander", "atmospheric painted fantasy landscapes and architecture"),
-    ("Greg Staples", "bold dynamic comic-influenced fantasy painting"),
-    ("Donato Giancola", "classical realistic oil painting, Renaissance fine-art fantasy"),
-    ("Wayne Reynolds", "dynamic action-packed ink-and-paint fantasy with energetic linework"),
-    ("Rebecca Guay", "ethereal art-nouveau watercolor fantasy, flowing organic lines, soft luminous palette"),
+/// (real name, PRECISE signature, printed pseudonym). The signature names exactly
+/// what the artist is famous for — unmistakably *them*, never generic fantasy; it is
+/// also the no-name fallback when OpenAI's safety system rejects "in the style of
+/// <living artist>", so it must NOT contain the artist's name.
+///
+/// The REAL name is used only for our own bookkeeping (the `genai/<RealName>/` folders
+/// and the event log — a mark of respect). The PSEUDONYM — a tasteful play on words,
+/// never cringe, never mentioning AI — is what gets printed as the "Illus." credit and
+/// stored in the DB, so a machine-painted card never claims to be the master's own hand.
+pub const ARTISTS: &[(&str, &str, &str)] = &[
+    ("John Avon",
+     "luminous airbrushed skies and sweeping panoramic vistas; vast aerial scale, \
+      jewel-toned atmospheric gradients, dreamlike soft light, tiny figures dwarfed by \
+      enormous serene landscapes — the master of the horizon and the glowing sky",
+     "John Thames"),
+    ("Christopher Rush",
+     "bold, iconic earliest-Magic fantasy, painted with brush not ink: form is defined by \
+      VALUE and COLOUR CONTRAST and confident painted edges — NOT by black outlines. Do NOT \
+      put thick black ink lines, comic-style inking or a dark stroke around figures and \
+      objects; almost no outlining at all, just paint. Flat-ish saturated primaries, heraldic \
+      graphic clarity and a slightly naive storybook directness — the Alpha look (he painted \
+      the Black Lotus). The subject is a HIGH-CONTRAST foreground hero, sharply lit (contrast \
+      from light vs shadow, not from outlines); the background is ALWAYS a plain, simple, \
+      almost flat gradient fill — NEVER a detailed or busy background, never a rendered scene \
+      behind the subject",
+     "Chris Pace"),
+    ("Brom",
+     "dark erotic gothic horror in oils; sinewy leathery flesh, bone, spikes and \
+      bondage-leather, gaunt menacing figures lit by a single cold spotlight against \
+      murky earth-and-soot backgrounds shot with sickly green and blood red — brooding, \
+      fetishistic, dangerous",
+     "Brian Ohm"),
+    ("Rob Alexander",
+     "atmospheric naturalistic landscapes and weathered architecture; deep aerial \
+      perspective, soft diffused daylight, layered misty distance and meticulous \
+      painterly terrain — quiet grand environments, almost no people",
+     "Rob Macedon"),
+    ("Greg Staples",
+     "muscular British-comic dynamism (2000 AD / Judge Dredd); heavy theatrical \
+      chiaroscuro, gritty kinetic figures mid-action, bold confident paint strokes and \
+      high-contrast spotlit drama",
+     "Greg Mainstay"),
+    ("Donato Giancola",
+     "classical museum-grade realism; photoreal oil rendering, Renaissance/Caravaggio \
+      chiaroscuro, dignified noble figures, rich warm glazed light and fine-art gravitas — \
+      it should look like an Old Master canvas",
+     "Renato Colonna"),
+    ("Wayne Reynolds",
+     "kinetic ink-heavy action illustration; razor-sharp angular linework, extreme \
+      dramatic foreshortening and motion, snarling characters in elaborately detailed \
+      armour and gear, comic-book punch and energy",
+     "Wane Danger"),
+    ("Rebecca Guay",
+     "art-nouveau Mucha-esque watercolour and gouache; flowing organic linework, elongated \
+      graceful figures, soft luminous translucent washes, botanical detail and dreamlike \
+      romantic tenderness. CRITICAL: paint ONLY the actual subject(s) of the scene — \
+      absolutely NO decorative frames, borders, filigree, gold trim, panels, cartouches, \
+      art-deco/art-nouveau ornament or patterned edging anywhere in the finished image; \
+      the painting fills the whole image with the subject, nothing framing it",
+     "Reverie Quay"),
 ];
+
+/// The printed pseudonym for a real artist (falls back to the real name if unknown —
+/// only ever called with an ARTISTS entry, so the fallback is just defensive).
+fn pseudonym(real: &str) -> &str {
+    ARTISTS.iter().find(|(a, _, _)| *a == real).map_or(real, |(_, _, p)| *p)
+}
 
 fn short_hash(s: &str) -> String {
     let mut h = Sha256::new();
@@ -592,6 +808,48 @@ fn card_flavor(name: &str, art_dir: &Path) -> String {
         .to_string()
 }
 
+/// (set code, rarity) of the oldest printing — the print whose art we use, so the
+/// set symbol matches the illustration.
+fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
+    let meta = art_dir.join(format!("{}.json", sanitize(name)));
+    let Ok(txt) = fs::read_to_string(&meta) else { return (String::new(), String::new()) };
+    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return (String::new(), String::new()) };
+    let d = &v["data"][0];
+    (
+        d["set"].as_str().unwrap_or("").to_string(),
+        d["rarity"].as_str().unwrap_or("").to_string(),
+    )
+}
+
+/// Cache + return the Scryfall set-symbol SVG — a clean MONOCOLOUR silhouette.
+/// We colour it ourselves (solid rarity fill + thin perimeter bevel + thin white
+/// keyline), which is how real old-frame symbols are actually built — NOT the full
+/// metallic gradient hexproof bakes in.
+fn set_symbol_svg(set: &str, cache_dir: &Path) -> Option<PathBuf> {
+    if set.is_empty() {
+        return None;
+    }
+    let dir = cache_dir.join("sets");
+    let _ = fs::create_dir_all(&dir);
+    let dst = dir.join(format!("{set}.svg"));
+    let big_enough = |p: &Path| fs::metadata(p).map(|m| m.len() >= 64).unwrap_or(false);
+    if !big_enough(&dst) {
+        let _ = curl_to_file(&format!("https://svgs.scryfall.io/sets/{set}.svg"), &dst);
+    }
+    big_enough(&dst).then_some(dst)
+}
+
+/// Per-rarity MONOCOLOUR body fill for a set symbol (solid — the dark inner border
+/// that hugs the contour is a separate masked layer underneath, see build_html).
+fn rarity_fill(rarity: &str) -> &'static str {
+    match rarity {
+        "uncommon" => "#b3bbbf", // silver
+        "rare" => "#c9a23c",     // gold
+        "mythic" => "#d4501b",   // mythic orange-red
+        _ => "#0c0c0c",          // common / land / token: black
+    }
+}
+
 /// Ask Claude for the ART_DIRECTION_CARD_DESCRIPTION, reading the card's name,
 /// rules AND flavor so the scene reflects what the card is *about* (e.g. Beloved
 /// Chaplain is loved by beasts, not repelling them), not just the mechanics.
@@ -609,6 +867,46 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
          FLAVOR TEXT (and the feeling of its rules) — the picture must convey the card's MEANING, \
          not the literal rules. (e.g. a card called 'Beloved' whose flavor says beasts are charmed \
          by her shows animals lovingly drawn to her, not menacing her.)\n\n\
+         HARD BAN on Earth-Christian / Catholic and generic-angelic imagery: do NOT include \
+         angels, wings, halos, glowing divine auras, cathedrals, churches, chapels, crosses, \
+         crucifixes, bishops, popes, nuns, monks, friars, choir robes, censers or stained glass — \
+         NONE of it — UNLESS the card's name, type or rules text EXPLICITLY calls for it (e.g. the \
+         type line literally says 'Angel'). Otaria is NOT medieval Europe and NOT a church setting. \
+         Never write 'winged' for a non-Angel. Do NOT default human figures to priests or clergy; \
+         default them instead to the ACTUAL peoples of the Odyssey block listed below — \
+         especially NOMADS, BARBARIANS and CENTAURS.\n\n\
+         GROUND EVERY SCENE IN THE ODYSSEY BLOCK (the sets Odyssey / Torment / Judgment), set on \
+         the continent of OTARIA on Dominaria. The picture MUST read as belonging to this world, \
+         never as generic fantasy and never as another Magic plane. NEVER name or reference any \
+         OTHER plane or its factions — no Ravnica or its guilds (Azorius, Boros, Dimir, etc.), no \
+         Innistrad, Zendikar, Theros, Kamigawa, Mirrodin/Phyrexia, no planeswalkers, no \
+         guild/faction names from anywhere but Otaria, and no real-world Earth places or religions. \
+         Use ONLY the Odyssey-block places, peoples, factions and themes below:\n\
+         - The CABAL: sinister black-aligned cult behind the pit-fighting 'Games', dementia magic \
+         and necromancy; Cabal City and the rotting Aphetto swamps; led by the First (the \
+         Patriarch); figures such as Chainer, Braids, the scheming merfolk Laquatus, and Phage the \
+         Untouchable.\n\
+         - WHITE = NOMADS (the signature white people of the block): sun-weathered wandering \
+         Nomad clans of the plains and deserts — drifters, mystics, herders and mounted scouts — \
+         plus Aven bird-folk and rugged free soldiers/mercenaries who oppose the Cabal. Think \
+         travellers and tribes, NOT churchmen.\n\
+         - The KROSAN FOREST (green): vast primal wilds full of CENTAURS, druids, elves and \
+         enormous beasts; the centaur druid Seton; the barbarian Kamahl reborn as a druid.\n\
+         - The PARDIC MOUNTAINS (red): fierce BARBARIAN clans — Kamahl, the dwarf Balthor, Jeska — \
+         tattooed warriors, pit-fighters and mountain raiders.\n\
+         - The CEPHALID COAST & SEAS (blue): cephalid empire of Aboshan, merfolk, and the Riptide \
+         Project of wizards (Empress Llawan).\n\
+         - The CABAL (black): sinister cult behind the pit-fighting 'Games', dementia magic, \
+         zombies and necromancy; Cabal City and the rotting Aphetto swamps; the First (the \
+         Patriarch), Chainer, Braids, the scheming merfolk Laquatus, Phage the Untouchable.\n\
+         - The MIRARI: a coveted wish-granting orb whose corruption drives the whole saga.\n\
+         Themes to draw on: the Games and the graveyard/'threshold' (Odyssey), creeping darkness, \
+         madness and dementia-horror (Torment), and the return of light and the wild (Judgment). \
+         STRONGLY FAVOUR the block's signature peoples and creatures — NOMADS, BARBARIANS, \
+         CENTAURS, druids, giant Krosan beasts, cephalids and merfolk, dwarves, zombies and \
+         dementia-monsters, Aven and mercenaries — over knights, soldiers-in-plate or any clergy. \
+         Pick whatever single element best fits THIS card's colour, type and meaning, and stage the \
+         scene there so it unmistakably feels like Otaria.\n\n\
          Then OUTPUT ONLY these five fields, each on its own line, nothing before or after — this \
          is how real Magic art descriptions are written (vivid but open-ended, giving the artist \
          room to interpret):\n\
@@ -671,7 +969,8 @@ fn gen_art_openai(prompt: &str, out: &Path, key: &str) -> Result<()> {
     if let Some(p) = out.parent() {
         fs::create_dir_all(p)?;
     }
-    let body = json!({"model":"gpt-image-1","n":1,"size":"1536x1024","prompt":prompt});
+    // quality:"high" — max fidelity (gpt-image-1 defaults to "auto", which picks low/cheap).
+    let body = json!({"model":"gpt-image-1","n":1,"size":"1536x1024","quality":"high","prompt":prompt});
     let body_file = std::env::temp_dir().join("mtgbrain-openai.json");
     fs::write(&body_file, body.to_string())?;
     let resp = Command::new("curl")
@@ -718,7 +1017,7 @@ pub fn genai_options(
 
     let mut options = Vec::new();
     let mut errors = Vec::new();
-    for (artist, descriptor) in ARTISTS {
+    for (artist, signature, pseudo) in ARTISTS {
         // Stable per (artist, direction) regardless of which prompt variant succeeds.
         let h = short_hash(&format!("{artist}:{direction}"));
         let adir = genai_dir.join(sanitize_bucket(artist));
@@ -728,22 +1027,56 @@ pub fn genai_options(
                 errors.push(format!("{artist}: OPENAI_API_KEY not set"));
                 continue;
             };
+            // Per-artist medium: Rob Alexander famously works in GOUACHE, not oil.
+            let medium = if *artist == "Rob Alexander" {
+                "a janky, raw, deliberately UNPOLISHED GOUACHE painting (opaque watercolour, \
+                 matte chalky finish) worked wet-into-wet — visible bold brushwork, edges that \
+                 blur and bleed, broad masses and suggested forms, FEWER details not more. A real \
+                 gouache painting that is a loose FINAL DRAFT, NOT a clean, smooth, glossy, \
+                 fully-rendered gallery showpiece. Embrace happy accidents and imperfection."
+            } else {
+                "a janky, raw, deliberately UNPOLISHED wet-on-wet ALLA PRIMA oil — wet paint \
+                 dragged into wet paint, visible bold brushwork, edges that blur and bleed, broad \
+                 masses and suggested forms, FEWER details not more. A real painting that is a \
+                 loose FINAL DRAFT, NOT a clean, smooth, glossy, fully-rendered gallery showpiece. \
+                 Embrace happy accidents and imperfection."
+            };
+            // Universal: paint like a real artist using composition theory, not cram-it-all-in.
+            let composition =
+                "COMPOSITION (be brave): compose like a real painter using composition theory — \
+                 you do NOT have to fit the whole scene into the frame. Crop in close, pick one \
+                 strong focal point, use dramatic negative space, asymmetry, leading lines, an \
+                 off-centre subject or an unusual viewpoint. A confident, bold partial view beats \
+                 a timid wide shot that squeezes everything in. \
+                 FORBIDDEN: do NOT draw on Cubism or Constructivism in any way — no geometric \
+                 fragmentation, faceting, planar/angular abstraction, collage-like splitting or \
+                 constructivist poster style; keep forms representational and painterly. \
+                 PAINT ONLY WHAT IS DESCRIBED: do NOT add wings, halos, glowing auras, horns or \
+                 other angelic/demonic/divine features to any character unless the art direction \
+                 explicitly calls for them — an ordinary human is an ordinary wingless human.";
             let named = format!(
-                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
-                 Paint it ALLA PRIMA as a loose painterly oil study (an ébauche / working lay-in): \
-                 confident economical brushwork, broad masses and suggested forms, FEWER details — \
-                 a final draft in real paint, NOT a tight, glossy, fully-rendered gallery piece. \
-                 You need to make a card art for the following art direction:\n{direction}"
+                "Make Magic: the Gathering card art from the late-1990s / early-2000s era, \
+                 painted in the EXACT, unmistakable signature style of {artist}: {signature}. \
+                 The artist's hand is the WHOLE POINT — it must read instantly as {artist}, never \
+                 as generic fantasy art; lean hard into their famous traits even past tasteful.\n\n\
+                 MEDIUM (drive this hard): {medium}\n\n{composition}\n\n\
+                 The art direction below is LOOSE INSPIRATION ONLY — a mood, not a spec. Serve the \
+                 artist's signature style and one strong, bold image first; freely reinterpret, \
+                 simplify, or drop parts of it (rules are made to be broken). Do NOT, however, \
+                 contradict the direction just to be contradictory.\n\nART DIRECTION:\n{direction}"
             );
             let mut res = gen_art_openai(&named, &art_png, k);
-            // OpenAI rejects some living-artist names — retry with the style descriptor only.
+            // OpenAI rejects some living-artist names — retry with the signature only (no name).
             if res.as_ref().err().is_some_and(|e| e.to_string().contains("safety")) {
                 let styled = format!(
-                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}. \
-                     Paint it ALLA PRIMA as a loose painterly oil study (an ébauche / working lay-in): \
-                     confident economical brushwork, broad masses and suggested forms, FEWER details — \
-                     a final draft in real paint, NOT a tight, glossy, fully-rendered gallery piece. \
-                     You need to make a card art for the following art direction:\n{direction}"
+                    "Make Magic: the Gathering card art from the late-1990s / early-2000s era, \
+                     painted in this EXACT, unmistakable signature style: {signature}. \
+                     Lean hard into those specific traits — it must NOT read as generic fantasy art.\n\n\
+                     MEDIUM (drive this hard): {medium}\n\n{composition}\n\n\
+                     The art direction below is LOOSE INSPIRATION ONLY — a mood, not a spec. Serve the \
+                     style and one strong, bold image first; freely reinterpret, simplify, or drop \
+                     parts of it (rules are made to be broken), but never contradict it just to be \
+                     contradictory.\n\nART DIRECTION:\n{direction}"
                 );
                 res = gen_art_openai(&styled, &art_png, k);
             }
@@ -756,14 +1089,16 @@ pub fn genai_options(
             log_event(cache_dir, id, &card.name, crate::events::ART_GENERATED, Some(artist), Some(&h), Some(&direction), None);
         }
         let card_png = adir.join("card.png");
+        // Folder/tag keep the REAL name; the printed credit is the pseudonym.
         if let Err(e) = compose(
-            &card, &art_png, artist, &year, assets_dir, &frame_rel, false, &card_png, chrome,
+            &card, &art_png, pseudo, &year, assets_dir, &frame_rel, false, &card_png, chrome,
             &format!("genai-{id}-{}", sanitize_bucket(artist)),
+            set_symbol_svg(&card.set, cache_dir).as_deref(),
         ) {
             errors.push(format!("{artist} (render): {e}"));
             continue;
         }
-        options.push(json!({"artist": artist, "hash": h}));
+        options.push(json!({"artist": artist, "pseudonym": pseudo, "hash": h}));
     }
     Ok(json!({"direction": direction, "options": options, "errors": errors}))
 }
@@ -794,11 +1129,22 @@ pub fn genai_choose(
     }
     let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
         .map_or_else(|_| "2001".to_string(), |(_, _, y, _)| y);
+    // The printed credit is the pseudonym; the real name stays in the event log.
+    let pseudo = pseudonym(artist);
     fs::copy(&art, card_dir.join("art.png"))?;
     fs::write(
         card_dir.join("art.json"),
-        json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": artist, "year": year}).to_string(),
+        json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": pseudo, "year": year}).to_string(),
     )?;
+    // Persist the chosen illustrator into the DB (a dedicated column, NOT the overrides
+    // errata blob) so every render — preview and final — credits the pseudonym.
+    {
+        let w = Connection::open(editor_db)?;
+        let _ = w.execute(
+            "UPDATE cube_cards SET illustrator=?2, updated_at=datetime('now') WHERE id=?1",
+            params![id, pseudo],
+        );
+    }
     log_event(cache_dir, id, &card.name, crate::events::CHOSEN, Some(artist), Some(hash), None, None);
     Ok(())
 }
@@ -811,6 +1157,13 @@ pub fn genai_unchoose(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()>
     let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
     let _ = fs::remove_file(card_dir.join("art.json"));
     let _ = fs::remove_file(card_dir.join("art.png"));
+    {
+        let w = Connection::open(editor_db)?;
+        let _ = w.execute(
+            "UPDATE cube_cards SET illustrator='', updated_at=datetime('now') WHERE id=?1",
+            params![id],
+        );
+    }
     log_event(cache_dir, id, &card.name, crate::events::UNCHOSEN, None, None, None, None);
     Ok(())
 }
@@ -859,7 +1212,7 @@ pub fn genai_dashboard(editor_db: &Path, cache_dir: &Path) -> Result<Value> {
             json!({"id": id, "name": name, "status": s})
         })
         .collect();
-    Ok(json!({"cards": cards, "artists": ARTISTS.iter().map(|(a, _)| *a).collect::<Vec<_>>()}))
+    Ok(json!({"cards": cards, "artists": ARTISTS.iter().map(|(a, _, _)| *a).collect::<Vec<_>>()}))
 }
 
 /// Cached options for a card's CURRENT direction (no generation) — for the review
@@ -871,10 +1224,10 @@ pub fn genai_existing(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Val
     let direction = fs::read_to_string(genai_dir.join("direction.txt")).unwrap_or_default();
     let mut options = Vec::new();
     if !direction.is_empty() {
-        for (artist, _) in ARTISTS {
+        for (artist, _, pseudo) in ARTISTS {
             let h = short_hash(&format!("{artist}:{direction}"));
             if genai_dir.join(sanitize_bucket(artist)).join(format!("{h}.png")).exists() {
-                options.push(json!({"artist": artist, "hash": h}));
+                options.push(json!({"artist": artist, "pseudonym": pseudo, "hash": h}));
             }
         }
     }
@@ -894,7 +1247,8 @@ pub fn genai_pass(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome:
     let ids: Vec<(i64, String)> = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let mut stmt = db.prepare(
-            "SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 AND in_db_found=1 ORDER BY id",
+            "SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 AND in_db_found=1 \
+             AND COALESCE(genai_done,0)=0 ORDER BY id",
         )?;
         let mut v = Vec::new();
         let mut rows = stmt.query([])?;
@@ -928,7 +1282,7 @@ fn px(f: f64) -> String { format!("{}", (f * f64::from(FACE_H)) as u32) }
 
 const TEMPLATE: &str = include_str!("card_template.html");
 
-fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, foil: bool) -> String {
+fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, foil: bool, set_svg: Option<&Path>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -972,8 +1326,9 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // Pips share the TITLE's vertical band (MAY=TY, MAH=TH) and are centred in it,
         // so pip-centre == title-centre. (cardconjurer's literal mana y=0.0539 is offset
         // back up by its textSize*0.34 baseline math, which we don't replicate — using it
-        // raw dropped the pips a full box too low.)
-        ("MAX", pc(0.1067)), ("MAY", pc(0.0451)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
+        // raw dropped the pips a full box too low.) MAY tuned with tools/cardgeom
+        // `pip-align` (colour probe) so the pip TOPS line up with the title-text top.
+        ("MAX", pc(0.1067)), ("MAY", pc(0.0415)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
         ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
         ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
         ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
@@ -981,17 +1336,46 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PW", pc(0.1367)), ("PSZ", px(0.0429)),
         ("IY", pc(1908.0 / 2100.0)), ("ISZ", px(0.0172)),
         ("LY", pc(1940.0 / 2100.0)), ("LSZ", px(0.0143)),
+        // Set symbol: square box at the right end of the type line, vertically centred
+        // (centre ≈ 0.576). A touch smaller than the type height so big modern symbols
+        // don't crowd the frame borders. Monocolour mask + dark inner border + white key.
+        ("SSR", pc(0.088)), ("SSY", pc(0.5575)), ("SSW", pc(0.0535)), ("SSH", pc(0.0382)),
     ];
-    let content: [(&str, String); 9] = [
+    // Set-symbol element: the monocolour silhouette used as a MASK over a solid
+    // rarity fill (thin perimeter bevel via rarity_fill; thin white keyline in CSS).
+    // Mask is a data: URI so it loads in headless Chrome (file:// masks are blocked).
+    let setsym = set_svg
+        .and_then(|p| fs::read(p).ok())
+        .map(|bytes| {
+            let uri = format!(
+                "data:image/svg+xml;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(&bytes)
+            );
+            // Three layers, all using the same svg as a mask:
+            //  • wrapper  — carries the thin white keyline (drop-shadow on an UNmasked
+            //    parent, since CSS applies filter before mask and would clip it).
+            //  • setsym-edge — full-shape DARK fill = the inner border that hugs the
+            //    whole contour.
+            //  • setsym-i — the solid monocolour body, scaled slightly smaller so the
+            //    dark edge shows as a thin stripe all the way around.
+            let m = format!("-webkit-mask-image:url('{uri}');mask-image:url('{uri}')");
+            format!(
+                r#"<div class="setsym"><div class="setsym-edge" style="{m}"></div><div class="setsym-i" style="{m};background:{fill}"></div></div>"#,
+                fill = rarity_fill(&c.rarity),
+            )
+        })
+        .unwrap_or_default();
+    let content: [(&str, String); 10] = [
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("NAME", esc(&c.name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("RULES", rules_html(&c.oracle_text, &mana_base)),
+        ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
         ("PT", pt),
         ("ILLUS", illus),
         ("YEAR", year),
+        ("SETSYM", setsym),
     ];
     let foil_pair = [("FOIL", foil_layer)];
 
@@ -1003,12 +1387,19 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
 }
 
 /// Rules text → paragraphs, mana symbols inline, parenthetical reminder italic.
-fn rules_html(text: &str, mana_base: &str) -> String {
+fn rules_html(text: &str, flavor: &str, mana_base: &str) -> String {
     let mut s = String::new();
     for line in text.split('\n').filter(|l| !l.trim().is_empty()) {
         s.push_str("<p>");
         s.push_str(&reminder_italic(&manaify(line, mana_base)));
         s.push_str("</p>");
+    }
+    // Flavor text: italic, below the rules, separated by a thin divider (real old frame).
+    for (i, line) in flavor.split('\n').filter(|l| !l.trim().is_empty()).enumerate() {
+        if i == 0 {
+            s.push_str(r#"<div class="flavbar"></div>"#);
+        }
+        s.push_str(&format!(r#"<p class="flav">{}</p>"#, esc(line)));
     }
     s
 }
@@ -1087,7 +1478,7 @@ pub fn render_one(
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
-    let card = load_card(&db, id)?;
+    let mut card = load_card(&db, id)?;
 
     let frame_rel = assets_dir.join(frame_file(&card));
     if !frame_rel.exists() {
@@ -1095,27 +1486,42 @@ pub fn render_one(
     }
     let dir = cache_dir.join("cards").join(sanitize(&card.name));
     let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
-    let hash = card_hash(&card, &art.art_ref, &art.artist);
+    // Flavor text (italic, below rules) — from the cached Scryfall print metadata that
+    // acquire_art just settled. An "flavor" override wins if the editor set one.
+    if card.flavor.is_empty() {
+        card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
+    }
+    if card.set.is_empty() {
+        let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
+        card.set = set;
+        card.rarity = rarity;
+    }
+    // Printed credit: the editor-chosen illustrator (GenAI pseudonym) wins; otherwise
+    // the real historical illustrator from the oldest Scryfall printing.
+    let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let hash = card_hash(&card, &art.art_ref, &credit);
 
     let out = if foil { dir.join("foil").join(format!("{hash}.png")) } else { dir.join(format!("{hash}.png")) };
     if out.exists() && !force {
         return Ok(out);
     }
-    compose(&card, &art.path, &art.artist, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
-        &format!("{id}{}", u8::from(foil)))?;
+    let set_svg = set_symbol_svg(&card.set, cache_dir);
+    compose(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
+        &format!("{id}{}", u8::from(foil)), set_svg.as_deref())?;
     Ok(out)
 }
 
 /// Composite a full card: frame + given art + text, screenshot to `out`.
 #[allow(clippy::too_many_arguments)]
 fn compose(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, foil: bool, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+    frame_rel: &Path, foil: bool, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html(card, &frame_abs, &art_abs, &assets_abs, &art, foil);
+    let html = build_html(card, &frame_abs, &art_abs, &assets_abs, &art, foil, set_abs.as_deref());
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)

@@ -1,1 +1,0 @@
-/Users/sweater/Github/mtgbrain/tools/cardgeom/target/release/card-measure: /Users/sweater/Github/mtgbrain/tools/cardgeom/src/bin/card_measure.rs /Users/sweater/Github/mtgbrain/tools/cardgeom/src/lib.rs

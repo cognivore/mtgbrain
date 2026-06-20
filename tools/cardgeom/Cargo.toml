@@ -33,3 +33,7 @@ opt-level = 2
 [[bin]]
 name = "card-crop"
 path = "src/bin/card_crop.rs"
+
+[[bin]]
+name = "pip-align"
+path = "src/bin/pip_align.rs"

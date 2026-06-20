@@ -24,11 +24,14 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f9f7ef;
    text-shadow:%%SHX%%px %%SHY%%px 0 rgba(0,0,0,0.95); }
 .rules { left:%%RX%%%; top:%%RY%%%; width:%%RW%%%; height:%%RH%%%;
-   display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;
+   display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; color:#0a0a0a; }
 .rules p { margin:0 0 .42em; width:100%; }
 .rules p:last-child { margin-bottom:0; }
 .rules i { font-style:italic; }
+/* flavor: italic, below rules, with a faint divider rule (real old-frame look) */
+.rules .flav { font-style:italic; margin:.1em 0 .42em; }
+.rules .flavbar { width:100%; height:0; margin:.34em 0 0; }
 .pt { left:%%PX%%%; top:%%PY%%%; width:%%PW%%%; height:4.29%;
    display:flex; align-items:center; justify-content:center;
    font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1;
@@ -46,6 +49,21 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .manacost .ms-img { margin-left:0.07em; }
 .rules .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .foilstar { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+/* set symbol: monocolour silhouette (svg mask) over a solid rarity fill with a thin
+   perimeter bevel; a THIN white keyline around it (real old-frame look — not a thick
+   halo, not a full metallic gradient). */
+.setsym { position:absolute; right:%%SSR%%%; top:%%SSY%%%; width:%%SSW%%%; height:%%SSH%%%;
+   filter:
+     drop-shadow(2.6px 0 0 #fbfaf3) drop-shadow(-2.6px 0 0 #fbfaf3)
+     drop-shadow(0 2.6px 0 #fbfaf3) drop-shadow(0 -2.6px 0 #fbfaf3)
+     drop-shadow(1.9px 1.9px 0 #fbfaf3) drop-shadow(-1.9px 1.9px 0 #fbfaf3)
+     drop-shadow(1.9px -1.9px 0 #fbfaf3) drop-shadow(-1.9px -1.9px 0 #fbfaf3); }
+.setsym-edge, .setsym-i { position:absolute; inset:0;
+   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+   -webkit-mask-position:center; mask-position:center;
+   -webkit-mask-size:contain; mask-size:contain; }
+.setsym-edge { background:#15110d; }                          /* dark inner border (full shape) */
+.setsym-i { transform:scale(0.90); transform-origin:center; } /* monocolour body, shrunk */
 </style></head>
 <body>
   <div class="face">
@@ -54,6 +72,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
     <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
     <div class="box type" id="ty">%%TYPE%%</div>
+    %%SETSYM%%
     <div class="box rules" id="rules">%%RULES%%</div>
     %%PT%%
     %%ILLUS%%
