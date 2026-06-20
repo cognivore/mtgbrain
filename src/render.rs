@@ -585,15 +585,21 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
         format!("Flavor text: \"{flavor}\"")
     };
     let prompt = format!(
-        "Magic: the Gathering card.\nName: {}\nType: {}\nRules: {}\n{}\n\n\
-         Write the ART DIRECTION for this card's illustration in 1-2 vivid sentences. \
+        "You are a Magic: the Gathering ART DIRECTOR writing an art description to hand to an \
+         illustrator, in Wizards of the Coast's exact house format.\n\n\
+         Card.\nName: {}\nType: {}\nRules: {}\n{}\n\n\
          FIRST (internally) work out what the card is THEMATICALLY about by reading its NAME and \
-         FLAVOR TEXT (and the feeling of its rules) — connect the picture to the card's meaning, \
-         NOT just the literal mechanics. (For example, a card called 'Beloved' whose flavor says \
-         beasts are charmed by her should show animals lovingly drawn to her, not menacing her.) \
-         Then OUTPUT ONLY the final art direction: 1-2 vivid sentences describing one late-1990s \
-         traditional-fantasy oil-painting scene (subject, setting, action, mood). No headers, \
-         labels, or preamble; describe ONLY the painted scene — no card frame, border, title, or text.",
+         FLAVOR TEXT (and the feeling of its rules) — the picture must convey the card's MEANING, \
+         not the literal rules. (e.g. a card called 'Beloved' whose flavor says beasts are charmed \
+         by her shows animals lovingly drawn to her, not menacing her.)\n\n\
+         Then OUTPUT ONLY these five fields, each on its own line, nothing before or after — this \
+         is how real Magic art descriptions are written (vivid but open-ended, giving the artist \
+         room to interpret):\n\
+         Color: <the card's colour and kind, e.g. 'White creature' or 'Blue spell'>\n\
+         Location: <where the scene is; may be loose or 'unimportant' if it doesn't matter>\n\
+         Action: <1-3 sentences describing what is happening — a clear scene with room to interpret>\n\
+         Focus: <what the viewer's eye should land on>\n\
+         Mood: <one short evocative line capturing the feeling>",
         card.name, card.type_line, card.oracle_text, flavor_line
     );
     claude_text(key, &prompt)
@@ -693,15 +699,19 @@ pub fn genai_options(
                 continue;
             };
             let named = format!(
-                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
-                 You need to make a card art for the following art direction: {direction}"
+                "You are making Magic: the Gathering art from the late 1990s in the style of {artist}, \
+                 as a FINAL, HIGHLY DETAILED SKETCH (a finished concept/illustration sketch — \
+                 confident graphite-and-ink linework with tonal shading), NOT a polished, glossy or \
+                 fully-rendered painting. You need to make a card art for the following art direction:\n{direction}"
             );
             let mut res = gen_art_openai(&named, &art_png, k);
             // OpenAI rejects some living-artist names — retry with the style descriptor only.
             if res.as_ref().err().is_some_and(|e| e.to_string().contains("safety")) {
                 let styled = format!(
-                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}. \
-                     You need to make a card art for the following art direction: {direction}"
+                    "You are making Magic: the Gathering art from the late 1990s, {descriptor}, \
+                     as a FINAL, HIGHLY DETAILED SKETCH (a finished concept/illustration sketch — \
+                     confident graphite-and-ink linework with tonal shading), NOT a polished, glossy \
+                     or fully-rendered painting. You need to make a card art for the following art direction:\n{direction}"
                 );
                 res = gen_art_openai(&styled, &art_png, k);
             }
@@ -801,14 +811,19 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("W", W.to_string()), ("H", H.to_string()),
         ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        // All bounds/sizes are EXACT cardconjurer packSeventh.js values (fractions of the
+        // FACE). Font px = fraction * FACE_H. Shadows match CC: sharp black, no blur,
+        // offset (0.002*FACE_W, 0.0015*FACE_H).
         ("AX", pc(0.12)), ("AY", pc(0.0991)), ("AW", pc(0.7667)), ("AH", pc(0.4429)),
-        ("TX", pc(0.1067)), ("TY", pc(0.0481)), ("TW", pc(0.70)), ("TH", pc(0.05)),
-        ("MAR", pc(0.045)), ("MAY", pc(0.044)), ("MAH", pc(0.046)),
-        ("TSZ", px(0.041)), ("MSZ", px(72.0 / 2100.0)),
-        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYSZ", px(0.032)),
+        ("TX", pc(0.1134)), ("TY", pc(0.0481)), ("TW", pc(0.7734)), ("TH", pc(0.041)),
+        ("MAX", pc(0.1067)), ("MAY", pc(0.0539)), ("MAW", pc(0.8174)), ("MAH", px(72.0 / 2100.0)),
+        ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
+        ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
+        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
         ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
-        ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PSZ", px(0.0429)),
-        ("IY", pc(0.907)), ("LY", pc(0.930)),
+        ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PW", pc(0.1367)), ("PSZ", px(0.0429)),
+        ("IY", pc(1908.0 / 2100.0)), ("ISZ", px(0.0172)),
+        ("LY", pc(1940.0 / 2100.0)), ("LSZ", px(0.0143)),
     ];
     let content: [(&str, String); 9] = [
         ("ART", format!("file://{}", art_abs.display())),
