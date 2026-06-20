@@ -235,12 +235,36 @@ struct Art {
 fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&str>) -> Result<Art> {
     let art_dir = cache_root.join("art");
     fs::create_dir_all(&art_dir)?;
-    let (ref_path, artist, year, set) = scryfall_oldest(name, &art_dir)?;
+    fs::create_dir_all(card_dir)?;
 
+    // FAST PATH: once the MPCfill crop is chosen, it (and its metadata) is cached
+    // in art.json next to the crop. Re-render reuses it with NO network/Claude
+    // roundtrip (text/frame can change freely; the art is settled). Delete
+    // <card>/art.png + art.json to force re-picking the art.
+    let sidecar = card_dir.join("art.json");
+    let crop = card_dir.join("art.png");
+    if sidecar.exists() && crop.exists() {
+        if let Ok(v) = serde_json::from_str::<Value>(&fs::read_to_string(&sidecar)?) {
+            return Ok(Art {
+                path: crop,
+                art_ref: v["art_ref"].as_str().unwrap_or("mpcfill:cached").to_string(),
+                artist: v["artist"].as_str().unwrap_or("").to_string(),
+                year: v["year"].as_str().unwrap_or("2001").to_string(),
+            });
+        }
+    }
+
+    let (ref_path, artist, year, set) = scryfall_oldest(name, &art_dir)?;
     let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
     if let (Some(base), Some(key)) = (backend, key.as_deref()) {
         match mpcfill_pick(name, base, cache_root, card_dir, &ref_path, key) {
-            Ok(Some((path, art_ref))) => return Ok(Art { path, art_ref, artist, year }),
+            Ok(Some((path, art_ref))) => {
+                let _ = fs::write(
+                    &sidecar,
+                    json!({"art_ref": art_ref, "artist": artist, "year": year}).to_string(),
+                );
+                return Ok(Art { path, art_ref, artist, year });
+            }
             Ok(None) => eprintln!("  art: no MPCfill match for {name:?} — using Scryfall art_crop"),
             Err(e) => eprintln!("  art: MPCfill/Claude error ({e}) — using Scryfall art_crop"),
         }
@@ -250,12 +274,16 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
 
 /// Oldest paper printing's art_crop (authentic pre-modern art) + artist/year/set.
 fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, String, String)> {
-    let meta_url = format!(
-        "https://api.scryfall.com/cards/search?order=released&dir=asc&unique=prints&q={}",
-        percent(&format!("!\"{name}\" game:paper"))
-    );
     let meta_file = art_dir.join(format!("{}.json", sanitize(name)));
-    curl_to_file(&meta_url, &meta_file)?;
+    let dst = art_dir.join(format!("{}.jpg", sanitize(name)));
+    // Reuse cached Scryfall metadata + art_crop if already downloaded.
+    if !meta_file.exists() || !dst.exists() {
+        let meta_url = format!(
+            "https://api.scryfall.com/cards/search?order=released&dir=asc&unique=prints&q={}",
+            percent(&format!("!\"{name}\" game:paper"))
+        );
+        curl_to_file(&meta_url, &meta_file)?;
+    }
     let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
         .with_context(|| format!("parsing Scryfall metadata for {name}"))?;
     let first = v["data"]
@@ -265,12 +293,13 @@ fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
     let artist = first["artist"].as_str().unwrap_or("").to_string();
     let year = first["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
     let set = first["set"].as_str().unwrap_or("?").to_string();
-    let art_url = first["image_uris"]["art_crop"]
-        .as_str()
-        .or_else(|| first["card_faces"][0]["image_uris"]["art_crop"].as_str())
-        .with_context(|| format!("no art_crop for {name}"))?;
-    let dst = art_dir.join(format!("{}.jpg", sanitize(name)));
-    curl_to_file(art_url, &dst)?;
+    if !dst.exists() {
+        let art_url = first["image_uris"]["art_crop"]
+            .as_str()
+            .or_else(|| first["card_faces"][0]["image_uris"]["art_crop"].as_str())
+            .with_context(|| format!("no art_crop for {name}"))?;
+        curl_to_file(art_url, &dst)?;
+    }
     Ok((dst, artist, year, set))
 }
 
@@ -363,8 +392,12 @@ fn mpcfill_pick(
         pa.cmp(&pb).then(b.dpi.cmp(&a.dpi))
     });
 
-    // Verify art match + get crop box via Claude vision; take the first that matches.
-    for c in cands.iter().take(4) {
+    // Claude gives the crop box per candidate + whether the art matches the old
+    // reference. Prefer a confirmed art-match; if none confirm, still use the best
+    // (highest-DPI) candidate — never throw away high-DPI art for low-res Scryfall.
+    let out = card_dir.join("art.png");
+    let mut best_box: Option<(usize, [f64; 4])> = None;
+    for (i, c) in cands.iter().take(3).enumerate() {
         let file = card_dir
             .join("mpcfill")
             .join(sanitize_bucket(&c.bucket))
@@ -373,14 +406,25 @@ fn mpcfill_pick(
             continue;
         }
         match claude_match_and_box(key, ref_path, &file) {
-            Ok((true, bx)) => {
-                let out = card_dir.join("art.png");
-                crop_to(&file, bx, &out)?;
-                return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
+            Ok((same, bx)) => {
+                if same {
+                    crop_to(&file, bx, &out)?;
+                    return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
+                }
+                best_box.get_or_insert((i, bx));
             }
-            Ok((false, _)) => {}
             Err(e) => eprintln!("    (vision error) {e}"),
         }
+    }
+    // No confirmed match — use the top candidate with the box we already got.
+    if let Some((i, bx)) = best_box {
+        let c = &cands[i];
+        let file = card_dir
+            .join("mpcfill")
+            .join(sanitize_bucket(&c.bucket))
+            .join(format!("{}.{}", c.identifier, c.ext));
+        crop_to(&file, bx, &out)?;
+        return Ok(Some((out, format!("mpcfill:{}:dpi{}:unconfirmed", c.identifier, c.dpi))));
     }
     Ok(None)
 }

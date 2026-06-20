@@ -450,7 +450,8 @@ fn list_cards(db: &Connection) -> Value {
     let mut stmt = db
         .prepare(
             "SELECT id,name,type,mana_cost,cube_elo,decision,genai_art,
-                    is_odysseyblock_creature,in_db_found,removed
+                    is_odysseyblock_creature,in_db_found,removed,
+                    (overrides IS NOT NULL AND overrides != '{}' AND overrides != '')
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
@@ -467,6 +468,7 @@ fn list_cards(db: &Connection) -> Value {
                 "odyssey_creature": r.get::<_, i64>(7)? != 0,
                 "found": r.get::<_, i64>(8)? != 0,
                 "removed": r.get::<_, i64>(9)? != 0,
+                "errata": r.get::<_, i64>(10)? != 0,
             }))
         })
         .expect("query list")

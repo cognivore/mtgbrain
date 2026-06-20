@@ -13,17 +13,16 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .frame { background-size:100% 100%; }
 .box { position:absolute; color:#080808; }
 .titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%; display:flex; align-items:center; }
-/* Seventh: white fill + TIGHT black outline (engraved old look, readable on beige) */
+/* Seventh: white fill + GENTLE soft drop-shadow down-right (real 7ED look, ~1/3 kerning) */
 .titlerow .nm { font-family:'goudy'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap;
-   overflow:hidden; color:#f7f5ec;
-   text-shadow:-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000,0 -3px 0 #000,0 3px 0 #000,-3px 0 0 #000,3px 0 0 #000; }
+   overflow:hidden; color:#f9f7ef; text-shadow:3px 4px 3px rgba(0,0,0,0.55); }
 /* mana cost: its OWN box anchored to the real 7ED mana well (so pips don't overhang the title band) */
 .manacost { right:%%MAR%%%; top:%%MAY%%%; height:%%MAH%%%; font-size:%%MSZ%%px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
 .type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:4.6%;
    display:flex; align-items:center; font-family:'mplantin'; font-weight:bold;
-   font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f7f5ec;
-   text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000,0 -2px 0 #000,0 2px 0 #000,-2px 0 0 #000,2px 0 0 #000; }
+   font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f9f7ef;
+   text-shadow:2px 3px 2px rgba(0,0,0,0.5); }
 .rules { left:%%RX%%%; top:%%RY%%%; width:%%RW%%%; height:%%RH%%%;
    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.16; color:#0a0a0a; }
@@ -33,9 +32,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .pt { left:%%PX%%%; top:%%PY%%%; width:13.67%; height:4.6%;
    display:flex; align-items:center; justify-content:center;
    font-family:'mplantin'; font-weight:bold; font-size:%%PSZ%%px; line-height:1;
-   color:#f7f5ec; text-shadow:4px 5px 0 #000, 1px 1px 0 #000; }
-.info { position:absolute; left:8%; width:84%; text-align:center; color:#f7f5ec;
-   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:2px 3px 0 #000; }
+   color:#f9f7ef; text-shadow:3px 4px 3px rgba(0,0,0,0.55); }
+.info { position:absolute; left:8%; width:84%; text-align:center; color:#f9f7ef;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:1px 2px 2px rgba(0,0,0,0.55); }
 .illus { top:%%IY%%%; font-size:44px; }
 .legal { top:%%LY%%%; font-size:34px; letter-spacing:.02em; }
 /* mana pips are an icon font — NEVER italic (the <i> tag + .rules i would skew them) */

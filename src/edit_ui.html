@@ -196,6 +196,7 @@ function renderList() {
     const li = document.createElement("li");
     li.className = c.decision + (c.id === cur ? " sel" : "") + (c.removed ? " removed" : "");
     li.innerHTML = `<span class="dot"></span><span class="nm">${esc(c.name)}</span>` +
+                   (c.errata ? `<span class="art" title="has field errata" style="color:var(--amber)">✎</span>` : "") +
                    (c.removed ? `<span class="art" style="color:var(--red)">removed</span>` : c.genai_art ? `<span class="art">✦art</span>` : "");
     li.onclick = () => selectId(c.id);
     ul.appendChild(li);
@@ -232,7 +233,9 @@ function isOv(k){ return !!(C.overrides && C.overrides[k]!=null); }
 function ovmark(k){ return isOv(k) ? ` <span class="ov" title="errata">✎</span>` : ""; }
 function img(){
   const f = foilView ? 1 : 0;
-  const src = `/api/render/${C.id}?foil=${f}`;
+  // cache-bust on every edit (updated_at changes) so the preview reflects the new render
+  const v = encodeURIComponent(C.updated_at || "");
+  const src = `/api/render/${C.id}?foil=${f}&v=${v}`;
   return `<div class="imgwrap">
     <img class="cardimg" alt="old-frame render" src="${src}"
          onload="this.classList.add('loaded')"
