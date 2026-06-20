@@ -227,6 +227,38 @@ Keys: `a` accept · `e` edit fields · `g` toggle GenAI art · `j`/`k` next/prev
 (table `cube_cards` — query/export it with `sqlite3` like any other DB). Port is deliberately high
 (`49737`) to avoid clashes; change with `--port`.
 
+## Old-frame render (MPC-ready)
+
+Render the cube's cards as **print-ready Alpha/Beta/Unlimited old-frame** PNGs at the MakePlayingCards
+**800-DPI-with-bleed** target (2176×2960), using your **per-field errata** from the editor DB. No
+Adobe Photoshop: it builds an HTML card (cardconjurer's flat ABU frame art + old fonts, positioned by
+cardconjurer's exact ABU bounds, mana symbols via the OFL Mana font) and screenshots it with headless
+Google Chrome.
+
+```sh
+just render-assets                 # one-time: download frames/fonts/foil/mana into ./assets (gitignored)
+just render-card 0                 # render editor-DB card 0 -> render-cache/cards/<Name>/<hash>.png
+cargo run --release -- render card 0 --foil          # + falling-star foil variant
+cargo run --release -- render all --foil             # whole cube, normal + foil
+```
+
+In the **editor UI** the card preview is the live old-frame render (with a ✦ foil toggle, ↻ re-render,
+and ⤢ full-DPI link) instead of Scryfall.
+
+- **Caching is content-addressed.** The render-relevant fields (name, cost, type, oracle text, P/T,
+  loyalty, sorted colours, art ref) are canonicalised — sorted JSON keys *and* sorted arrays — and
+  hashed (SHA-256) into `render-cache/cards/<Card Name>/<hash>.png` (foil: `.../foil/<hash>.png`).
+  Change any field (or an errata) and the hash changes, so a stale image is simply a missing filename
+  → it regenerates; an unchanged card is served from cache.
+- **Art source.** By default the illustration comes from Scryfall `art_crop`. For true high-DPI art,
+  pass an **MPC-Autofill** community backend (the project is decentralised — paste your community's
+  server URL, same as the real tool): `--art-backend https://your-community-server`. It picks the
+  highest-DPI image for the card and pulls it from Google Drive. (Full-res Drive download may need a
+  Google service account; the no-auth path uses Drive thumbnails.)
+- **Chrome path** defaults to macOS Google Chrome; override with `--chrome` or `MTGBRAIN_CHROME`.
+- ⚠️ **Legal:** the frame art and the old fonts (MPlantin/Goudy/Matrix) are WotC-derived/proprietary —
+  fine for personal proxies, kept out of git (downloaded to `./assets`). Mana font is OFL.
+
 ## Rebuilding / updating
 
 `mtgbrain setup --force` re-downloads the latest MTGJSON and rebuilds the DB. The build drops

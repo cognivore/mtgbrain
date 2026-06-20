@@ -6,6 +6,7 @@ mod download;
 mod edit;
 mod model;
 mod query;
+mod render;
 
 use std::path::PathBuf;
 
@@ -99,6 +100,60 @@ enum Cmd {
         #[command(subcommand)]
         cmd: EditCmd,
     },
+    /// Render old-frame MPC-ready PNGs from the editor DB (overrides applied).
+    Render {
+        #[command(subcommand)]
+        cmd: RenderCmd,
+    },
+}
+
+#[derive(Args, Clone)]
+pub struct RenderCommon {
+    /// Editor DB to read cards + overrides from (read-only).
+    #[arg(long)]
+    db: Option<PathBuf>,
+    /// Directory holding downloaded frame/font assets.
+    #[arg(long, default_value = "assets")]
+    assets: PathBuf,
+    /// Output/cache directory for rendered cards + downloaded art.
+    #[arg(long, default_value = "render-cache")]
+    cache: PathBuf,
+    /// Path to the Chrome/Chromium binary used for headless screenshots.
+    #[arg(long, env = "MTGBRAIN_CHROME", default_value = render::CHROME_DEFAULT)]
+    chrome: String,
+    /// MPC-Autofill community backend URL for high-DPI art (else Scryfall art_crop).
+    #[arg(long)]
+    art_backend: Option<String>,
+    /// Also render the foil (falling-star) variant.
+    #[arg(long)]
+    foil: bool,
+    /// Re-render even if the cached hash file already exists.
+    #[arg(long)]
+    force: bool,
+}
+
+#[derive(Subcommand)]
+enum RenderCmd {
+    /// Download cardconjurer frame art, old fonts, foil overlay + mana font into ./assets.
+    Assets {
+        /// Re-download even if present.
+        #[arg(long)]
+        force: bool,
+        /// Assets directory.
+        #[arg(long, default_value = "assets")]
+        dir: PathBuf,
+    },
+    /// Render a single card by editor-DB id.
+    Card {
+        id: i64,
+        #[command(flatten)]
+        common: RenderCommon,
+    },
+    /// Render every card in the editor DB.
+    All {
+        #[command(flatten)]
+        common: RenderCommon,
+    },
 }
 
 #[derive(Subcommand)]
@@ -123,6 +178,18 @@ enum EditCmd {
         /// Port (deliberately high to avoid clashes).
         #[arg(long, default_value_t = 49737)]
         port: u16,
+        /// Assets dir for old-frame render.
+        #[arg(long, default_value = "assets")]
+        assets: PathBuf,
+        /// Render cache dir.
+        #[arg(long, default_value = "render-cache")]
+        cache: PathBuf,
+        /// Chrome binary for headless render.
+        #[arg(long, env = "MTGBRAIN_CHROME", default_value = render::CHROME_DEFAULT)]
+        chrome: String,
+        /// MPC-Autofill backend URL for high-DPI art (else Scryfall).
+        #[arg(long)]
+        art_backend: Option<String>,
     },
 }
 
@@ -212,11 +279,49 @@ fn main() -> Result<()> {
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 edit::seed(&db, list, &out, *force)
             }
-            EditCmd::Serve { db: edb, port } => {
+            EditCmd::Serve {
+                db: edb,
+                port,
+                assets,
+                cache,
+                chrome,
+                art_backend,
+            } => {
                 let edb = edb
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                edit::serve(&edb, *port)
+                let rc = edit::RenderCfg {
+                    assets: assets.clone(),
+                    cache: cache.clone(),
+                    chrome: chrome.clone(),
+                    backend: art_backend.clone(),
+                };
+                edit::serve(&edb, *port, &rc)
+            }
+        },
+        Cmd::Render { cmd } => match cmd {
+            RenderCmd::Assets { force, dir } => render::assets(dir, *force),
+            RenderCmd::Card { id, common } => {
+                let edb = common
+                    .db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let out = render::render_one(
+                    &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
+                    common.force, common.art_backend.as_deref(),
+                )?;
+                println!("{}", out.display());
+                Ok(())
+            }
+            RenderCmd::All { common } => {
+                let edb = common
+                    .db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                render::render_all(
+                    &edb, &common.assets, &common.cache, &common.chrome, common.foil,
+                    common.force, common.art_backend.as_deref(),
+                )
             }
         },
     }

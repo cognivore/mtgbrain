@@ -4,3 +4,5 @@
 /data
 .direnv/
 .DS_Store
+/assets
+/render-cache

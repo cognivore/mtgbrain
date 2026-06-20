@@ -50,6 +50,18 @@ edit-seed:
 edit PORT="49737":
     cargo run --release -- edit serve --port {{PORT}}
 
+# Download old-frame render assets (cardconjurer frames, old fonts, foil, mana font) -> ./assets.
+render-assets:
+    cargo run --release -- render assets
+
+# Render one card to a print-ready old-frame PNG by editor-DB id, e.g. just render-card 0
+render-card ID:
+    cargo run --release -- render card {{ID}}
+
+# Render every card (normal); add foil with: cargo run --release -- render all --foil
+render-all:
+    cargo run --release -- render all
+
 fmt:
     cargo fmt
 

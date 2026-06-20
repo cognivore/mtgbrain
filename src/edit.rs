@@ -255,8 +255,16 @@ INSERT INTO cube_cards (id,name,in_db_found,decision) VALUES (?1,?2,0,'pending')
 // serve
 // ---------------------------------------------------------------------------
 
+/// Render config the UI uses to produce on-demand card images.
+pub struct RenderCfg {
+    pub assets: PathBuf,
+    pub cache: PathBuf,
+    pub chrome: String,
+    pub backend: Option<String>,
+}
+
 /// Serve the editor UI on `127.0.0.1:port`.
-pub fn serve(editor_db: &Path, port: u16) -> Result<()> {
+pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     if !editor_db.exists() {
         bail!(
             "{} not found — run `mtgbrain edit seed` first",
@@ -297,6 +305,25 @@ pub fn serve(editor_db: &Path, port: u16) -> Result<()> {
                         Ok(Some(v)) => json_response(&v),
                         Ok(None) => not_found(),
                         Err(e) => json_response(&json!({"error": e.to_string()})),
+                    },
+                    None => not_found(),
+                }
+            }
+            // On-demand old-frame render (cached by content hash). ?foil=1, &force=1.
+            (Method::Get, p) if p.starts_with("/api/render/") => {
+                let foil = url.contains("foil=1");
+                let force = url.contains("force=1");
+                match id_from(p, "/api/render/") {
+                    Some(id) => match crate::render::render_one(
+                        editor_db, &rc.assets, &rc.cache, &rc.chrome, id, foil, force,
+                        rc.backend.as_deref(),
+                    ) {
+                        Ok(path) => match std::fs::read(&path) {
+                            Ok(bytes) => Response::from_data(bytes)
+                                .with_header(header("Content-Type", "image/png")),
+                            Err(_) => not_found(),
+                        },
+                        Err(e) => Response::from_string(e.to_string()).with_status_code(500),
                     },
                     None => not_found(),
                 }

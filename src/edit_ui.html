@@ -52,10 +52,20 @@
           padding:20px; max-width:1040px; }
   .cardwrap { display:flex; gap:24px; align-items:flex-start; }
   .cardmain { flex:1; min-width:0; }
-  .cardimg { width:300px; flex:none; border-radius:14px; border:1px solid var(--line);
-             background:var(--panel2); aspect-ratio:488/680; object-fit:contain;
+  .imgwrap { flex:none; width:320px; display:flex; flex-direction:column; gap:8px; }
+  .cardimg { width:320px; border-radius:14px; border:1px solid var(--line);
+             background:var(--panel2) url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22/>') center/40% no-repeat;
+             aspect-ratio:2176/2960; object-fit:contain; opacity:.25; transition:opacity .3s;
              box-shadow:0 6px 22px rgba(0,0,0,.45); }
-  @media (max-width:880px){ .cardwrap{ flex-direction:column-reverse; } .cardimg{ width:100%; max-width:340px; } }
+  .cardimg.loaded { opacity:1; }
+  .cardimg.err { opacity:1; border-color:var(--red); }
+  .imgctl { display:flex; gap:6px; }
+  .imgbtn { flex:1; text-align:center; text-decoration:none; font-size:12px; cursor:pointer;
+            background:var(--panel2); color:var(--dim); border:1px solid var(--line);
+            border-radius:6px; padding:5px 4px; }
+  .imgbtn.on { color:var(--blue); border-color:var(--blue); }
+  .imghint { color:var(--dim); font-size:11px; text-align:center; }
+  @media (max-width:880px){ .cardwrap{ flex-direction:column-reverse; } .imgwrap{ width:100%; max-width:340px; } .cardimg{ width:100%; } }
   .card h2 { margin:0 0 2px; font-size:22px; }
   .mc { color:var(--dim); font-size:13px; margin-bottom:12px; }
   .tl { font-weight:600; margin-bottom:10px; }
@@ -135,7 +145,7 @@
 </main>
 <script>
 let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "";
-let C = null, editMode = false;
+let C = null, editMode = false, foilView = false;
 
 async function loadList() {
   const r = await fetch("/api/cards");
@@ -203,9 +213,19 @@ function fval(k){ return (C.overrides && C.overrides[k]!=null) ? C.overrides[k] 
 function isOv(k){ return !!(C.overrides && C.overrides[k]!=null); }
 function ovmark(k){ return isOv(k) ? ` <span class="ov" title="errata">✎</span>` : ""; }
 function img(){
-  return `<img class="cardimg" alt="card image (Scryfall)" referrerpolicy="no-referrer"
-     src="https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(C.name)}"
-     onerror="this.style.visibility='hidden'">`;
+  const f = foilView ? 1 : 0;
+  const src = `/api/render/${C.id}?foil=${f}`;
+  return `<div class="imgwrap">
+    <img class="cardimg" alt="old-frame render" src="${src}"
+         onload="this.classList.add('loaded')"
+         onerror="this.classList.remove('loaded');this.classList.add('err')">
+    <div class="imgctl">
+      <button id="foiltog" class="imgbtn ${foilView?'on':''}">✦ foil</button>
+      <button id="rerender" class="imgbtn">↻ re-render</button>
+      <a class="imgbtn" href="${src}" target="_blank">⤢ full DPI</a>
+    </div>
+    <div class="imghint">old-frame · ${foilView?'foil':'normal'} · first render ~3s</div>
+  </div>`;
 }
 
 function renderCard(){
@@ -279,6 +299,11 @@ function editForm(){
 }
 
 function wire(){
+  const ft = document.getElementById("foiltog");
+  if (ft) ft.onclick = () => { foilView = !foilView; renderCard(); };
+  const rr = document.getElementById("rerender");
+  if (rr) rr.onclick = () => { const im=document.querySelector(".cardimg");
+    if(im){ im.classList.remove("loaded"); im.src = `/api/render/${C.id}?foil=${foilView?1:0}&force=1&t=${Date.now()}`; } };
   if (!editMode) {
     const g=document.getElementById("genai");
     if(g) g.onchange = e => save({ genai_art: e.target.checked }, false);
