@@ -161,6 +161,9 @@ struct Card {
     toughness: String,
     loyalty: String,
     colors: String,
+    /// WUBRG color identity (mana symbols in cost+rules). For LANDS (which have no
+    /// `colors`) this picks the single-colour 7ED land frame, e.g. U → ul.png.
+    color_identity: String,
     is_creature: bool,
     set: String,
     rarity: String,
@@ -168,6 +171,9 @@ struct Card {
     /// art). Empty for cards still using real Scryfall art (which credit the real
     /// historical illustrator). NOT part of the `overrides` errata blob.
     illustrator: String,
+    /// True when the card's printed text was changed for the cube (any `overrides`
+    /// field and/or `errata_text`). Drives the errata scroll overlay.
+    is_errata: bool,
 }
 
 type RawRow = (
@@ -195,20 +201,44 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
     let illustrator: String = db
         .query_row("SELECT COALESCE(illustrator,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
         .unwrap_or_default();
+    let errata_text: String = db
+        .query_row("SELECT COALESCE(errata_text,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .unwrap_or_default();
+    let color_identity: String = db
+        .query_row("SELECT COALESCE(color_identity,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .unwrap_or_default();
+    // Errata scroll: auto when the printed text actually differs (any override field
+    // besides the toggle itself, or an errata note), but a manual `errata_scroll`
+    // override ("on"/"off"/true/false) in the overrides blob forces it either way.
+    let scroll_override: Option<bool> = o.get("errata_scroll").and_then(|v| match v {
+        Value::Bool(b) => Some(*b),
+        Value::String(s) => match s.trim().to_lowercase().as_str() {
+            "on" | "true" | "1" | "yes" => Some(true),
+            "off" | "false" | "0" | "no" => Some(false),
+            _ => None,
+        },
+        _ => None,
+    });
+    let auto_errata = o.as_object().is_some_and(|m| m.keys().any(|k| k != "errata_scroll"))
+        || !errata_text.trim().is_empty();
+    let is_errata = scroll_override.unwrap_or(auto_errata);
     Ok(Card {
         name: pick("name", Some(name)),
         mana_cost: pick("mana_cost", mc),
         type_line: pick("type", tl),
         oracle_text: pick("oracle_text", ot),
-        flavor: String::new(), // filled from Scryfall in render_one (override key: "flavor")
+        // "flavor" override wins; if absent (empty), render_one fills it from Scryfall.
+        flavor: pick("flavor", None),
         power: pick("power", p),
         toughness: pick("toughness", t),
         loyalty: pick("loyalty", l),
         colors: pick("colors", colors),
+        color_identity,
         is_creature: is_cr != 0,
         set: String::new(),    // from Scryfall (oldest print) in render_one
         rarity: String::new(), // from Scryfall (oldest print) in render_one
         illustrator,
+        is_errata,
     })
 }
 
@@ -220,7 +250,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "name": c.name, "mana_cost": c.mana_cost, "type": c.type_line,
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "colors": colors, "is_creature": c.is_creature,
-        "set": c.set, "rarity": c.rarity,
+        "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
         "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 3,
     });
     let mut h = Sha256::new();
@@ -234,10 +264,14 @@ fn frame_file(c: &Card) -> &'static str {
     let is_artifact = t.contains("artifact");
     let cols: Vec<char> = c.colors.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
     if is_land {
-        return match cols.first() {
-            Some('W') => "frames/wl.png", Some('U') => "frames/ul.png",
-            Some('B') => "frames/bl.png", Some('R') => "frames/rl.png",
-            Some('G') => "frames/gl.png", _ => "frames/l.png",
+        // Lands have no `colors`; the single-colour 7ED land frame is chosen from the
+        // colour identity (the {U} in "Add {U}"). Only a MONO identity gets a tinted
+        // land frame; colourless or multi → the generic land frame.
+        let lc: Vec<char> = c.color_identity.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+        return match lc.as_slice() {
+            ['W'] => "frames/wl.png", ['U'] => "frames/ul.png",
+            ['B'] => "frames/bl.png", ['R'] => "frames/rl.png",
+            ['G'] => "frames/gl.png", _ => "frames/l.png",
         };
     }
     match cols.len() {
@@ -1417,6 +1451,11 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // (centre ≈ 0.576). A touch smaller than the type height so big modern symbols
         // don't crowd the frame borders. Monocolour mask + dark inner border + white key.
         ("SSR", pc(0.088)), ("SSY", pc(0.5575)), ("SSW", pc(0.0535)), ("SSH", pc(0.0382)),
+        // Errata scroll: a HORIZONTAL parchment banner wrapping around the LEFT edge of
+        // the frame (left fold off the card edge, rolled end resting on the art). Left-
+        // anchored (ESX=0); vertically centred at the GOLDEN-RATIO point of the art
+        // window (0.618 down → 0.373), lower than centre, toward the type line.
+        ("ESX", pc(0.035)), ("ESY", pc(0.3728 - 0.052 / 2.0)), ("ESW", pc(0.10)), ("ESH", pc(0.052)),
     ];
     // Set-symbol element: the monocolour silhouette used as a MASK over a solid
     // rarity fill (thin perimeter bevel via rarity_fill; thin white keyline in CSS).
@@ -1454,10 +1493,19 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("YEAR", year),
         ("SETSYM", setsym),
     ];
-    let foil_pair = [("FOIL", foil_layer)];
+    // Errata scroll overlay (only when the card's printed text was changed for the cube).
+    let scroll = if c.is_errata {
+        format!(
+            r#"<div class="errata-scroll" style="background-image:url('file://{}')"></div>"#,
+            assets_dir.join("overlays/errata-scroll.svg").display()
+        )
+    } else {
+        String::new()
+    };
+    let extra_pair = [("FOIL", foil_layer), ("SCROLL", scroll)];
 
     let mut html = TEMPLATE.to_string();
-    for (k, v) in pairs.iter().chain(content.iter()).chain(foil_pair.iter()) {
+    for (k, v) in pairs.iter().chain(content.iter()).chain(extra_pair.iter()) {
         html = html.replace(&format!("%%{k}%%"), v);
     }
     html

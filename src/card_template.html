@@ -64,6 +64,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    -webkit-mask-size:contain; mask-size:contain; }
 .setsym-edge { background:#15110d; }                          /* dark inner border (full shape) */
 .setsym-i { transform:scale(0.90); transform-origin:center; } /* monocolour body, shrunk */
+/* errata scroll: parchment overlay on the LEFT frame strip, golden-ratio-low */
+.errata-scroll { position:absolute; left:%%ESX%%%; top:%%ESY%%%; width:%%ESW%%%; height:%%ESH%%%;
+   background-repeat:no-repeat; background-position:left center; background-size:contain;
+   pointer-events:none; filter:drop-shadow(3px 4px 4px rgba(0,0,0,0.4)); }
 </style></head>
 <body>
   <div class="face">
@@ -77,6 +81,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     %%PT%%
     %%ILLUS%%
     <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; %%YEAR%% Wizards of the Coast, Inc.</span></div>
+    %%SCROLL%%
     %%FOIL%%
   </div>
 <script>
