@@ -112,6 +112,18 @@
   .b-remove { background:#3a1f1c; color:var(--red); border-color:#5a2a24; }
   .b-restore{ background:#1f2c3a; color:var(--blue); border-color:#2a4257; }
   ul#list li.removed .nm { text-decoration:line-through; color:var(--dim); }
+  .b-genai { background:#2a2440; color:#b9a6e8; border-color:#463a6b; }
+  .gallery { margin-top:18px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .galhead { color:var(--dim); font-size:13px; margin-bottom:12px; }
+  .galhead.err { color:var(--amber); }
+  .galgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+  .galcard { margin:0; cursor:pointer; border:2px solid transparent; border-radius:10px; padding:6px;
+             background:var(--panel2); transition:border-color .15s; }
+  .galcard:hover { border-color:var(--accent); }
+  .galcard img { width:100%; border-radius:8px; display:block; aspect-ratio:2176/2960; object-fit:contain; background:#000; }
+  .galcard figcaption { text-align:center; font-size:12px; color:var(--ink); padding-top:6px; }
+  .galcard .pick { color:var(--green); opacity:0; }
+  .galcard:hover .pick { opacity:1; }
   .saved { color:var(--green); font-size:12px; opacity:0; transition:opacity .2s; }
   .saved.show { opacity:1; }
   .keys { color:var(--dim); font-size:11px; margin-top:18px; }
@@ -151,6 +163,7 @@
       <span class="saved" id="saved">saved ✓</span>
     </div>
     <div class="card" id="card"><p class="pos">Loading…</p></div>
+    <div id="gallery" class="gallery" style="display:none"></div>
     <div class="keys">
       <kbd>a</kbd> accept &nbsp; <kbd>e</kbd> errata &nbsp; <kbd>g</kbd> toggle GenAI art &nbsp;
       <kbd>j</kbd>/<kbd>k</kbd> next/prev &nbsp; <kbd>n</kbd> next pending
@@ -291,6 +304,7 @@ function viewForm(){
         <button class="b-accept" id="b-accept">✓ Accept as-is (a)</button>
         <button class="b-errata" id="b-edit">✎ Edit fields (e)</button>
         <button class="b-reset" id="b-reset">↺ pending</button>
+        <button class="b-genai" id="b-genai">🎨 GenAI art options</button>
         ${C.removed
           ? `<button class="b-restore" id="b-restore">♻ Restore to cube</button>`
           : `<button class="b-remove" id="b-remove">🗑 Remove from cube</button>`}
@@ -333,6 +347,8 @@ function wire(){
     if(g) g.onchange = e => save({ genai_art: e.target.checked }, false);
     document.getElementById("b-accept").onclick = () => save({decision:"accepted"}, true);
     document.getElementById("b-edit").onclick = enterEdit;
+    const ga = document.getElementById("b-genai");
+    if (ga) ga.onclick = genaiOpen;
     const rm = document.getElementById("b-remove");
     if (rm) rm.onclick = async () => { await fetch("/api/remove/"+cur, {method:"POST"}); await loadList(); selectId(cur); };
     const rs = document.getElementById("b-restore");
@@ -398,6 +414,34 @@ document.querySelectorAll(".filter button").forEach(b =>
     document.querySelectorAll(".filter button").forEach(x=>x.classList.toggle("on", x===b));
     renderList(); });
 document.getElementById("search").oninput = e => { q = e.target.value.toLowerCase(); renderList(); };
+
+const sani = s => (s||"").replace(/[^A-Za-z0-9-]/g,"_");
+async function genaiOpen(){
+  const g = document.getElementById("gallery");
+  const id = cur;
+  g.style.display = "block";
+  g.innerHTML = `<div class="galhead">🎨 Generating GenAI art options (Claude direction → 8 artists)… this takes a while.</div>`;
+  let d;
+  try { d = await (await fetch(`/api/genai/${id}/generate`, {method:"POST"})).json(); }
+  catch(e){ g.innerHTML = `<div class="galhead err">request failed: ${e}</div>`; return; }
+  if (d.error){ g.innerHTML = `<div class="galhead err">${esc(d.error)}</div>`; return; }
+  let html = `<div class="galhead">Art direction: <i>${esc(d.direction||"")}</i></div>`;
+  if (d.errors && d.errors.length) html += `<div class="galhead err">${d.errors.map(esc).join("<br>")}</div>`;
+  html += `<div class="galgrid">`;
+  for (const o of (d.options||[])) {
+    html += `<figure class="galcard" data-artist="${esc(o.artist)}" data-hash="${esc(o.hash)}">
+      <img src="/api/genai/${id}/card/${sani(o.artist)}?t=${Date.now()}" loading="lazy">
+      <figcaption>${esc(o.artist)} <span class="pick">pick ✓</span></figcaption></figure>`;
+  }
+  html += `</div>`;
+  g.innerHTML = html;
+  g.querySelectorAll(".galcard").forEach(el => el.onclick = async () => {
+    await fetch(`/api/genai/${id}/choose`, {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({artist: el.dataset.artist, hash: el.dataset.hash})});
+    g.style.display = "none";
+    selectId(id);
+  });
+}
 
 async function addCard(){
   const inp = document.getElementById("addname");

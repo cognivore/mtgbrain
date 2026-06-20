@@ -518,6 +518,187 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
+// GenAI art (Claude art-direction -> OpenAI gpt-image-1, in chosen-artist styles)
+// ---------------------------------------------------------------------------
+
+/// Late-90s / early-00s Magic painters whose styles we offer per card.
+pub const ARTISTS: &[&str] = &[
+    "John Avon",
+    "Christopher Rush",
+    "Brom",
+    "Rob Alexander",
+    "Greg Staples",
+    "Donato Giancola",
+    "Wayne Reynolds",
+    "Rebecca Guay",
+];
+
+fn short_hash(s: &str) -> String {
+    let mut h = Sha256::new();
+    h.update(s.as_bytes());
+    format!("{:x}", h.finalize())[..16].to_string()
+}
+
+/// Generic Claude text call.
+fn claude_text(key: &str, prompt: &str) -> Result<String> {
+    let body = json!({
+        "model": "claude-opus-4-8", "max_tokens": 350,
+        "messages": [{"role":"user","content": prompt}]
+    });
+    let body_file = std::env::temp_dir().join("mtgbrain-claude-text.json");
+    fs::write(&body_file, body.to_string())?;
+    let out = Command::new("curl")
+        .args(["-sS", "--max-time", "90", "https://api.anthropic.com/v1/messages",
+            "-H", &format!("x-api-key: {key}"), "-H", "anthropic-version: 2023-06-01",
+            "-H", "content-type: application/json", "--data"])
+        .arg(format!("@{}", body_file.display()))
+        .output()
+        .context("curl claude")?;
+    let resp: Value = serde_json::from_slice(&out.stdout).context("claude response")?;
+    resp["content"][0]["text"]
+        .as_str()
+        .map(|s| s.trim().to_string())
+        .with_context(|| format!("claude returned no text: {}", String::from_utf8_lossy(&out.stdout)))
+}
+
+/// Claude's ART_DIRECTION_CARD_DESCRIPTION for a card (cached per card).
+fn art_direction(card: &Card, genai_dir: &Path, key: &str) -> Result<String> {
+    let f = genai_dir.join("direction.txt");
+    if f.exists() {
+        return Ok(fs::read_to_string(&f)?);
+    }
+    let prompt = format!(
+        "Magic: the Gathering card '{}' — {}. Rules text: {}.\n\nIn 1-2 vivid sentences write the \
+         ART DIRECTION for this card's illustration: the scene, subject, setting, action and mood. \
+         Describe ONLY the painted scene (no card frame, border, title, or text). Make it suitable \
+         for a late-1990s traditional-fantasy oil painting.",
+        card.name, card.type_line, card.oracle_text
+    );
+    let d = claude_text(key, &prompt)?;
+    fs::create_dir_all(genai_dir)?;
+    fs::write(&f, &d)?;
+    Ok(d)
+}
+
+/// Generate one artist's art via OpenAI gpt-image-1 (cached at `out`).
+fn gen_art_openai(prompt: &str, out: &Path, key: &str) -> Result<()> {
+    if let Some(p) = out.parent() {
+        fs::create_dir_all(p)?;
+    }
+    let body = json!({"model":"gpt-image-1","n":1,"size":"1536x1024","prompt":prompt});
+    let body_file = std::env::temp_dir().join("mtgbrain-openai.json");
+    fs::write(&body_file, body.to_string())?;
+    let resp = Command::new("curl")
+        .args(["-sS", "--max-time", "240", "https://api.openai.com/v1/images/generations",
+            "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json",
+            "--data"])
+        .arg(format!("@{}", body_file.display()))
+        .output()
+        .context("curl openai")?;
+    let v: Value = serde_json::from_slice(&resp.stdout).context("openai response")?;
+    if let Some(b64) = v["data"][0]["b64_json"].as_str() {
+        let bytes = base64::engine::general_purpose::STANDARD.decode(b64).context("decode image")?;
+        fs::write(out, bytes)?;
+        Ok(())
+    } else {
+        bail!("openai: {}", v["error"]["message"].as_str().unwrap_or("no image returned"));
+    }
+}
+
+/// Generate (or reuse) a GenAI art option per artist + render each into a FULL card.
+/// Reads ANTHROPIC_API_KEY (art direction) and OPENAI_API_KEY (image gen) from env.
+pub fn genai_options(
+    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64,
+) -> Result<Value> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    let claude = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
+    let openai = std::env::var("OPENAI_API_KEY").ok().filter(|k| !k.is_empty());
+    let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
+    let genai_dir = card_dir.join("genai");
+    let frame_rel = assets_dir.join(frame_file(&card));
+    let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
+        .map(|(_, _, y, _)| y)
+        .unwrap_or_else(|_| "2001".to_string());
+
+    let Some(ckey) = claude else {
+        bail!("ANTHROPIC_API_KEY not set (needed for the art direction)");
+    };
+    let direction = art_direction(&card, &genai_dir, &ckey)?;
+
+    let mut options = Vec::new();
+    let mut errors = Vec::new();
+    for artist in ARTISTS {
+        let prompt = format!(
+            "You are making Magic: the Gathering art from the late 1990s in the style of {artist}. \
+             You need to make a card art for the following art direction: {direction}"
+        );
+        let h = short_hash(&prompt);
+        let adir = genai_dir.join(sanitize_bucket(artist));
+        let art_png = adir.join(format!("{h}.png"));
+        if !art_png.exists() {
+            match &openai {
+                Some(k) => {
+                    if let Err(e) = gen_art_openai(&prompt, &art_png, k) {
+                        errors.push(format!("{artist}: {e}"));
+                        continue;
+                    }
+                }
+                None => {
+                    errors.push(format!("{artist}: OPENAI_API_KEY not set"));
+                    continue;
+                }
+            }
+        }
+        let card_png = adir.join("card.png");
+        if let Err(e) = compose(
+            &card, &art_png, artist, &year, assets_dir, &frame_rel, false, &card_png, chrome,
+            &format!("genai-{id}-{}", sanitize_bucket(artist)),
+        ) {
+            errors.push(format!("{artist} (render): {e}"));
+            continue;
+        }
+        options.push(json!({"artist": artist, "hash": h}));
+    }
+    Ok(json!({"direction": direction, "options": options, "errors": errors}))
+}
+
+/// Path to a rendered GenAI full-card option (for serving in the gallery).
+pub fn genai_card_path(cache_dir: &Path, card_name: &str, artist: &str) -> PathBuf {
+    cache_dir
+        .join("cards")
+        .join(sanitize(card_name))
+        .join("genai")
+        .join(sanitize_bucket(artist))
+        .join("card.png")
+}
+
+/// Choose a GenAI option: set it as the card's art (settles art.json/art.png).
+pub fn genai_choose(
+    editor_db: &Path, cache_dir: &Path, id: i64, artist: &str, hash: &str,
+) -> Result<()> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
+    let art = card_dir
+        .join("genai")
+        .join(sanitize_bucket(artist))
+        .join(format!("{hash}.png"));
+    if !art.exists() {
+        bail!("genai art not found for {artist}");
+    }
+    let year = scryfall_oldest(&card.name, &cache_dir.join("art"))
+        .map(|(_, _, y, _)| y)
+        .unwrap_or_else(|_| "2001".to_string());
+    fs::copy(&art, card_dir.join("art.png"))?;
+    fs::write(
+        card_dir.join("art.json"),
+        json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": artist, "year": year}).to_string(),
+    )?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // HTML (Seventh bounds; in-page auto-fit; reminder italics; white-star foil)
 // ---------------------------------------------------------------------------
 
@@ -686,15 +867,23 @@ pub fn render_one(
     if out.exists() && !force {
         return Ok(out);
     }
+    compose(&card, &art.path, &art.artist, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
+        &format!("{id}{}", u8::from(foil)))?;
+    Ok(out)
+}
+
+/// Composite a full card: frame + given art + text, screenshot to `out`.
+#[allow(clippy::too_many_arguments)]
+fn compose(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, foil: bool, out: &Path, chrome: &str, tag: &str) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
-
     let assets_abs = fs::canonicalize(assets_dir)?;
-    let frame_abs = fs::canonicalize(&frame_rel)?;
-    let art_abs = fs::canonicalize(&art.path)?;
-    let html = build_html(&card, &frame_abs, &art_abs, &assets_abs, &art, foil);
-    let html_path = std::env::temp_dir().join(format!("mtgbrain-render-{id}{}.html", u8::from(foil)));
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html(card, &frame_abs, &art_abs, &assets_abs, &art, foil);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-render-{tag}.html"));
     fs::write(&html_path, html)?;
-
     let status = Command::new(chrome)
         .args([
             "--headless", "--disable-gpu", "--hide-scrollbars",
@@ -711,7 +900,7 @@ pub fn render_one(
     if !status.success() || !out.exists() {
         bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
     }
-    Ok(out)
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]

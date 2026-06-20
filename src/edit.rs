@@ -416,6 +416,45 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 Some(id) => set_removed(&db, id, false).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
                 None => not_found(),
             },
+            // GenAI art gallery: generate options, serve option cards, choose one.
+            (_, p) if p.starts_with("/api/genai/") => {
+                let rest = p.strip_prefix("/api/genai/").unwrap_or("");
+                let segs: Vec<&str> = rest.split('/').collect();
+                let gid = segs.first().and_then(|s| s.parse::<i64>().ok());
+                match (&method, segs.as_slice(), gid) {
+                    (Method::Post, [_, "generate"], Some(gid)) => match crate::render::genai_options(
+                        editor_db, &rc.assets, &rc.cache, &rc.chrome, gid,
+                    ) {
+                        Ok(v) => json_response(&v),
+                        Err(e) => json_response(&json!({"error": e.to_string()})),
+                    },
+                    (Method::Get, [_, "card", bucket], Some(gid)) => {
+                        let nm = db
+                            .query_row("SELECT name FROM cube_cards WHERE id=?1", params![gid], |r| {
+                                r.get::<_, String>(0)
+                            })
+                            .unwrap_or_default();
+                        let path = crate::render::genai_card_path(&rc.cache, &nm, bucket);
+                        match std::fs::read(&path) {
+                            Ok(bytes) => Response::from_data(bytes)
+                                .with_header(header("Content-Type", "image/png")),
+                            Err(_) => not_found(),
+                        }
+                    }
+                    (Method::Post, [_, "choose"], Some(gid)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let v: Value = serde_json::from_str(&body).unwrap_or(json!({}));
+                        let artist = v["artist"].as_str().unwrap_or("");
+                        let hash = v["hash"].as_str().unwrap_or("");
+                        match crate::render::genai_choose(editor_db, &rc.cache, gid, artist, hash) {
+                            Ok(()) => json_response(&json!({"ok": true})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    _ => not_found(),
+                }
+            }
             // On-demand old-frame render (cached by content hash). ?foil=1, &force=1.
             (Method::Get, p) if p.starts_with("/api/render/") => {
                 let foil = url.contains("foil=1");

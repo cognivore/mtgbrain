@@ -65,6 +65,15 @@ render-all:
 # Claude key (artwork match + crop) pulled from rageveil at run time.
 mpc_key := "rageveil show geosurge.ai/api.anthropic.com/onehr-cellvm/pool"
 
+# OpenAI key (GenAI art) from rageveil.
+openai_key := "rageveil show platform.openai.com/api"
+
+# Editor with live art: MPCfill high-DPI preview + GenAI gallery (both keys from rageveil).
+edit-art PORT="49737":
+    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
+    OPENAI_API_KEY="$({{openai_key}} | head -1)" \
+      cargo run --release -- edit serve --port {{PORT}} --art-backend https://mpcfill.com
+
 # Render ONE card with MPCfill high-DPI art + foil, e.g. just render-mpc 2
 render-mpc ID:
     ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
