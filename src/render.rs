@@ -288,7 +288,21 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
         }
     }
 
-    let (ref_path, artist, year, set) = scryfall_oldest(name, &art_dir)?;
+    let (mut ref_path, mut artist, mut year, set) = scryfall_oldest(name, &art_dir)?;
+    // Optional per-render art-source override: MTGBRAIN_ART_SET=<setcode> matches the
+    // MPCfill art against THAT printing's art_crop instead of the oldest one (the set
+    // symbol still comes from the oldest printing). Used to pick a reprint's art.
+    if let Some(s) = std::env::var("MTGBRAIN_ART_SET").ok().filter(|s| !s.is_empty()) {
+        match scryfall_printing(name, &s, &art_dir) {
+            Ok((p, a, y)) => {
+                ref_path = p;
+                artist = a;
+                year = y;
+                eprintln!("  art: using {s} printing's art for {name:?} (override)");
+            }
+            Err(e) => eprintln!("  art: MTGBRAIN_ART_SET={s} failed ({e}) — using oldest"),
+        }
+    }
     let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
     if let (Some(base), Some(key)) = (backend, key.as_deref()) {
         match mpcfill_pick(name, base, cache_root, card_dir, &ref_path, key) {
@@ -335,6 +349,36 @@ fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
         curl_to_file(art_url, &dst)?;
     }
     Ok((dst, artist, year, set))
+}
+
+/// art_crop of a SPECIFIC printing (set code) — used to override which printing's
+/// art we match against, e.g. to pull a reprint's illustration instead of the
+/// oldest one. Cached separately (`<name>__<set>.jpg`) so it never clobbers the
+/// oldest-printing metadata used for the set symbol.
+fn scryfall_printing(name: &str, set: &str, art_dir: &Path) -> Result<(PathBuf, String, String)> {
+    let tag = format!("{}__{}", sanitize(name), set);
+    let meta_file = art_dir.join(format!("{tag}.json"));
+    let dst = art_dir.join(format!("{tag}.jpg"));
+    if !meta_file.exists() || !dst.exists() {
+        let url = format!(
+            "https://api.scryfall.com/cards/named?exact={}&set={}",
+            percent(name),
+            percent(set)
+        );
+        curl_to_file(&url, &meta_file)?;
+    }
+    let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
+        .with_context(|| format!("parsing Scryfall printing {name} [{set}]"))?;
+    let artist = v["artist"].as_str().unwrap_or("").to_string();
+    let year = v["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+    if !dst.exists() {
+        let art_url = v["image_uris"]["art_crop"]
+            .as_str()
+            .or_else(|| v["card_faces"][0]["image_uris"]["art_crop"].as_str())
+            .with_context(|| format!("no art_crop for {name} [{set}]"))?;
+        curl_to_file(art_url, &dst)?;
+    }
+    Ok((dst, artist, year))
 }
 
 struct McCand {
@@ -557,17 +601,23 @@ fn img_b64_small(path: &Path, max: u32) -> Result<String> {
 /// LLM box height is unreliable and routinely ran into the proxy's type line, baking
 /// "Creature — …" + set symbol into our art window. Aspect-from-top kills that.
 fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()> {
-    const SIDE: f64 = 0.02; // shave a little off each side (stray frame edge)
-    const TOP: f64 = 0.02; //  shave a little off the top (stray title baseline)
+    // Insets (fractions of the art region) shave the proxy's thin art-window border
+    // lines off every edge — a bit more at the BOTTOM where the inner pinline + the
+    // type bar sit. The art window is `cover`, so this slight zoom is invisible.
+    const SIDE: f64 = 0.022;
+    const TOP: f64 = 0.03;
+    const BOT: f64 = 0.055;
 
     let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
     let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
 
-    let bx0 = (bx[0] + bx[2] * SIDE) * iw;
-    let by0 = (bx[1] + bx[3] * TOP) * ih;
-    let bw = bx[2] * (1.0 - 2.0 * SIDE) * iw;
-    // Height from the real art aspect, never past the image bottom.
-    let bh = (bw / art_aspect.max(0.1)).min(ih - by0);
+    let bw_full = bx[2] * iw;
+    let ah = bw_full / art_aspect.max(0.1); // full art height from the true aspect
+
+    let bx0 = bx[0] * iw + bw_full * SIDE;
+    let by0 = bx[1] * ih + ah * TOP;
+    let bw = bw_full * (1.0 - 2.0 * SIDE);
+    let bh = (ah * (1.0 - TOP - BOT)).min(ih - by0);
 
     let x = bx0.clamp(0.0, iw - 1.0) as u32;
     let y = by0.clamp(0.0, ih - 1.0) as u32;
@@ -575,6 +625,24 @@ fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()>
     let h = bh.clamp(1.0, ih - f64::from(y)) as u32;
     img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
     Ok(())
+}
+
+/// Per-pixel gradient magnitude (central differences) of a greyscale image, row-major.
+/// Edges are 0. Used so template matching keys on structure, not flat brightness.
+fn grad_mag(img: &image::GrayImage, w: u32, h: u32) -> Vec<f64> {
+    let g = |x: u32, y: u32| f64::from(img.get_pixel(x, y)[0]);
+    let mut out = vec![0.0; (w * h) as usize];
+    if w < 3 || h < 3 {
+        return out;
+    }
+    for y in 1..h - 1 {
+        for x in 1..w - 1 {
+            let gx = g(x + 1, y) - g(x - 1, y);
+            let gy = g(x, y + 1) - g(x, y - 1);
+            out[(y * w + x) as usize] = gx.hypot(gy);
+        }
+    }
+    out
 }
 
 /// width/height of an image, for aspect math.
@@ -605,7 +673,10 @@ fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
         return None;
     }
     let proxy = resize(&proxy, pw, ph, FilterType::Triangle);
-    let pf: Vec<f64> = proxy.pixels().map(|p| f64::from(p[0])).collect();
+    // Match on EDGE (gradient) magnitude, not raw intensity: uniform regions (sky,
+    // title bar, borders) have ~0 gradient, so a light art-top can't correlate with a
+    // light title bar and shift the match up. Localises the art sharply.
+    let pf = grad_mag(&proxy, pw, ph);
 
     let mut best: Option<([f64; 4], f64)> = None;
     for si in 0..=14 {
@@ -616,7 +687,7 @@ fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
             continue;
         }
         let tpl = resize(&refimg, tw, th, FilterType::Triangle);
-        let tf: Vec<f64> = tpl.pixels().map(|p| f64::from(p[0])).collect();
+        let tf = grad_mag(&tpl, tw, th);
         let n = f64::from(tw * th);
         let tmean = tf.iter().sum::<f64>() / n;
         let tvar = tf.iter().map(|v| (v - tmean).powi(2)).sum::<f64>() / n;
@@ -628,8 +699,12 @@ fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
         let xc = (pw - tw) / 2;
         let xr = pw / 12;
         let (xlo, xhi) = (xc.saturating_sub(xr), (xc + xr).min(pw - tw));
-        let ylo = (0.03 * f64::from(ph)) as u32;
-        let yhi = ((0.30 * f64::from(ph)) as u32).min(ph - th);
+        // The art top is physically constrained: it sits below the title bar and never
+        // above ~0.10 of the card, nor below ~0.24. Bounding the vertical search here
+        // stops a tall template from scoring well while shifted UP into the title bar
+        // (which baked the proxy's own title into the crop).
+        let ylo = (0.10 * f64::from(ph)) as u32;
+        let yhi = ((0.24 * f64::from(ph)) as u32).min(ph - th);
 
         let mut y = ylo;
         while y <= yhi {
@@ -1331,7 +1406,9 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("MAX", pc(0.1067)), ("MAY", pc(0.0415)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
         ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
         ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
-        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.7852)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
+        // Type width stops short of the set symbol (~0.858) so a long type line
+        // auto-fits/shrinks instead of overlapping the symbol.
+        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.74)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
         ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
         ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PW", pc(0.1367)), ("PSZ", px(0.0429)),
         ("IY", pc(1908.0 / 2100.0)), ("ISZ", px(0.0172)),
