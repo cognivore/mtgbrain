@@ -260,7 +260,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 6,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 7,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -1034,6 +1034,73 @@ fn set_symbol_svg(set: &str, cache_dir: &Path) -> Option<PathBuf> {
 
 /// Per-rarity MONOCOLOUR body fill for a set symbol (solid — the dark inner border
 /// that hugs the contour is a separate masked layer underneath, see build_html).
+/// Rasterise a set-symbol SVG, trim to the tight INK bounding box, and return
+/// `(png_bytes, ink_aspect)`. Scryfall set SVGs pad the artwork inside a SQUARE
+/// 1024×1024 viewBox, so the viewBox aspect lies (a wide broom reads as 1.0). We
+/// measure the real ink: render to a bitmap, find the non-transparent bbox, crop to
+/// it. The padding-free PNG then fills the placement box and the aspect is honest,
+/// so the WIDE/SQUARE two-mode logic works for Nemesis, M10, M11, etc.
+fn set_symbol_ink(svg_bytes: &[u8]) -> Option<(Vec<u8>, f64)> {
+    let tree = resvg::usvg::Tree::from_data(svg_bytes, &resvg::usvg::Options::default()).ok()?;
+    let size = tree.size();
+    let scale = 512.0 / size.width().max(size.height());
+    let pw = (size.width() * scale).ceil() as u32;
+    let ph = (size.height() * scale).ceil() as u32;
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(pw, ph)?;
+    resvg::render(&tree, resvg::tiny_skia::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+    let data = pixmap.data();
+    let (mut minx, mut miny, mut maxx, mut maxy) = (pw, ph, 0u32, 0u32);
+    for y in 0..ph {
+        for x in 0..pw {
+            if data[((y * pw + x) * 4 + 3) as usize] > 12 {
+                minx = minx.min(x);
+                maxx = maxx.max(x);
+                miny = miny.min(y);
+                maxy = maxy.max(y);
+            }
+        }
+    }
+    if maxx < minx || maxy < miny {
+        return None;
+    }
+    let (bw, bh) = (maxx - minx + 1, maxy - miny + 1);
+    let rect = resvg::tiny_skia::IntRect::from_xywh(minx as i32, miny as i32, bw, bh)?;
+    let png = pixmap.clone_rect(rect)?.encode_png().ok()?;
+    Some((png, f64::from(bw) / f64::from(bh)))
+}
+
+/// Width/height aspect of an SVG, read from its `viewBox` (falling back to width/height
+/// attributes, then 1.0). Drives the set symbol's two placement modes.
+#[allow(dead_code)]
+fn svg_aspect(bytes: &[u8]) -> f64 {
+    let s = String::from_utf8_lossy(bytes);
+    let attr_quoted = |key: &str| -> Option<String> {
+        let i = s.find(key)?;
+        let rest = &s[i + key.len()..];
+        let q = rest.find(['"', '\''])?;
+        let after = &rest[q + 1..];
+        let e = after.find(['"', '\''])?;
+        Some(after[..e].to_string())
+    };
+    if let Some(vb) = attr_quoted("viewBox") {
+        let nums: Vec<f64> = vb
+            .split([' ', ','])
+            .filter(|t| !t.is_empty())
+            .filter_map(|t| t.parse().ok())
+            .collect();
+        if nums.len() == 4 && nums[2] > 0.0 && nums[3] > 0.0 {
+            return nums[2] / nums[3];
+        }
+    }
+    let dim = |k: &str| attr_quoted(k).and_then(|v| v.trim_end_matches("px").parse::<f64>().ok());
+    if let (Some(w), Some(h)) = (dim("width="), dim("height=")) {
+        if h > 0.0 {
+            return w / h;
+        }
+    }
+    1.0
+}
+
 fn rarity_fill(rarity: &str) -> &'static str {
     match rarity {
         "uncommon" => "#b3bbbf", // silver
@@ -1567,16 +1634,39 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     // box's own px size so the filter radii read as pixels; xMaxYMid right-anchors it.
     let setsym = set_svg
         .and_then(|p| fs::read(p).ok())
-        .map(|bytes| {
+        .and_then(|bytes| set_symbol_ink(&bytes))
+        .map(|(png, ink_aspect)| {
             let uri = format!(
-                "data:image/svg+xml;base64,{}",
-                base64::engine::general_purpose::STANDARD.encode(&bytes)
+                "data:image/png;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(&png)
             );
-            let bw = (0.062 * f64::from(FACE_W)) as i32; // box px (must match SSW/SSH)
-            let bh = (0.0382 * f64::from(FACE_H)) as i32;
+            // TWO PLACEMENT MODES keyed on the symbol's true INK aspect (set_symbol_ink
+            // measures it; Scryfall's square viewBox can't be trusted):
+            //  • WIDE / rectangular (aspect ≥ 1.45, e.g. Nemesis, M10, M11): bind on WIDTH
+            //    — fill a generous width and let height follow → WIDE but SHORT.
+            //  • SQUARE / TALL (aspect < 1.45, e.g. Odyssey): bind on a HEIGHT cap — so it
+            //    just FITS the type bar instead of ballooning.
+            // We size the <svg> element itself to those exact px so it never letterboxes;
+            // the filter radii are in the same px space → a constant keyline everywhere.
+            let aspect = ink_aspect.clamp(0.25, 6.0);
+            let (w_px, h_px) = if aspect >= 1.45 {
+                let mut w = 250.0_f64;
+                let mut h = w / aspect;
+                if h > 92.0 {
+                    h = 92.0;
+                    w = h * aspect;
+                }
+                (w, h)
+            } else {
+                let h = 100.0_f64;
+                (h * aspect, h)
+            };
+            let w_frac = w_px / f64::from(FACE_W) * 100.0;
+            let h_frac = h_px / f64::from(FACE_H) * 100.0;
+            let top = 57.57 - h_frac / 2.0; // vertically centred on the type bar (≈0.576)
             format!(
-                r##"<svg class="setsym" viewBox="0 0 {bw} {bh}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg">
-<defs><filter id="ss" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+                r##"<svg class="setsym" style="width:{w_frac:.3}%;height:{h_frac:.3}%;top:{top:.3}%;right:8.8%" viewBox="0 0 {w_px:.1} {h_px:.1}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="ss" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
 <feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
 <feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
 <feFlood flood-color="{fill}"/><feComposite in2="SourceAlpha" operator="in" result="body"/>
@@ -1585,7 +1675,7 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
 <feComponentTransfer in="ir" result="inner"><feFuncA type="linear" slope="1.35"/></feComponentTransfer>
 <feMerge><feMergeNode in="key"/><feMergeNode in="body"/><feMergeNode in="inner"/></feMerge>
 </filter></defs>
-<image href="{uri}" width="{bw}" height="{bh}" preserveAspectRatio="xMaxYMid meet" filter="url(#ss)"/>
+<image href="{uri}" width="{w_px:.1}" height="{h_px:.1}" preserveAspectRatio="xMidYMid meet" filter="url(#ss)"/>
 </svg>"##,
                 fill = rarity_fill(&c.rarity),
             )
