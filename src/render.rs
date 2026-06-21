@@ -260,7 +260,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 7,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 8,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -357,6 +357,17 @@ struct Art {
     year: String,
 }
 
+/// A settled MPCfill art choice: the cropped output plus everything needed to
+/// RE-CROP it in place later (proxy source + box + aspect) without re-picking — so
+/// crop-inset tweaks apply on the next render with no CV/Claude/network roundtrip.
+struct Pick {
+    out: PathBuf,
+    art_ref: String,
+    proxy: PathBuf,
+    bx: [f64; 4],
+    aspect: f64,
+}
+
 /// Acquire art: oldest Scryfall printing as reference+fallback (+artist/year); if a
 /// MPC-Autofill `backend` and `ANTHROPIC_API_KEY` are present, pull all high-DPI
 /// candidates (cached per bucket), pick the highest-DPI one whose illustration
@@ -366,20 +377,39 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
     fs::create_dir_all(&art_dir)?;
     fs::create_dir_all(card_dir)?;
 
-    // FAST PATH: once the MPCfill crop is chosen, it (and its metadata) is cached
-    // in art.json next to the crop. Re-render reuses it with NO network/Claude
-    // roundtrip (text/frame can change freely; the art is settled). Delete
-    // <card>/art.png + art.json to force re-picking the art.
+    let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
+    let can_repick = backend.is_some() && key.is_some();
+
+    // FAST PATH: once the MPCfill crop is chosen, art.json records the source proxy +
+    // crop box + aspect. Re-render then RE-CROPS in place from that box (a cheap local
+    // crop, NO network/CV/Claude) so crop-inset changes apply without re-picking. If the
+    // sidecar predates box-recording, we re-pick (CV on cached downloads) when a backend
+    // is available, else just reuse the cached crop. Delete art.png + art.json to force a
+    // full re-pick.
     let sidecar = card_dir.join("art.json");
     let crop = card_dir.join("art.png");
-    if sidecar.exists() && crop.exists() {
+    if sidecar.exists() {
         if let Ok(v) = serde_json::from_str::<Value>(&fs::read_to_string(&sidecar)?) {
-            return Ok(Art {
-                path: crop,
-                art_ref: v["art_ref"].as_str().unwrap_or("mpcfill:cached").to_string(),
-                artist: v["artist"].as_str().unwrap_or("").to_string(),
-                year: v["year"].as_str().unwrap_or("2001").to_string(),
+            let art_ref = v["art_ref"].as_str().unwrap_or("mpcfill:cached").to_string();
+            let artist = v["artist"].as_str().unwrap_or("").to_string();
+            let year = v["year"].as_str().unwrap_or("2001").to_string();
+            let bx = v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
+                let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+                [g(0), g(1), g(2), g(3)]
             });
+            let proxy = v["proxy"].as_str().map(PathBuf::from);
+            // In-place re-crop from the stored proxy + box (picks up inset changes).
+            if let (Some(bx), Some(proxy), Some(asp)) = (bx, &proxy, v["art_aspect"].as_f64()) {
+                if proxy.exists() {
+                    crop_to(proxy, bx, &crop, asp)?;
+                    return Ok(Art { path: crop, art_ref, artist, year });
+                }
+            }
+            // No stored box: reuse the cached crop unless we can cheaply re-pick.
+            if crop.exists() && !can_repick {
+                return Ok(Art { path: crop, art_ref, artist, year });
+            }
+            // else fall through → re-pick (will write a box-bearing sidecar).
         }
     }
 
@@ -398,15 +428,18 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
             Err(e) => eprintln!("  art: MTGBRAIN_ART_SET={s} failed ({e}) — using oldest"),
         }
     }
-    let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
     if let (Some(base), Some(key)) = (backend, key.as_deref()) {
         match mpcfill_pick(name, base, cache_root, card_dir, &ref_path, key) {
-            Ok(Some((path, art_ref))) => {
+            Ok(Some(p)) => {
                 let _ = fs::write(
                     &sidecar,
-                    json!({"art_ref": art_ref, "artist": artist, "year": year}).to_string(),
+                    json!({
+                        "art_ref": p.art_ref, "artist": artist, "year": year,
+                        "proxy": p.proxy.to_string_lossy(), "box": p.bx, "art_aspect": p.aspect,
+                    })
+                    .to_string(),
                 );
-                return Ok(Art { path, art_ref, artist, year });
+                return Ok(Art { path: p.out, art_ref: p.art_ref, artist, year });
             }
             Ok(None) => eprintln!("  art: no MPCfill match for {name:?} — using Scryfall art_crop"),
             Err(e) => eprintln!("  art: MPCfill/Claude error ({e}) — using Scryfall art_crop"),
@@ -508,7 +541,7 @@ fn mpcfill_pick(
     card_dir: &Path,
     ref_path: &Path,
     key: &str,
-) -> Result<Option<(PathBuf, String)>> {
+) -> Result<Option<Pick>> {
     let base = base.trim_end_matches('/');
     let sources = mpcfill_sources(base, cache_root)?;
     // editorSearch
@@ -592,7 +625,13 @@ fn mpcfill_pick(
         if let Some((bx, score)) = cv_art_box(ref_path, &file) {
             if score >= CV_OK {
                 crop_to(&file, bx, &out, art_aspect)?;
-                return Ok(Some((out, format!("mpcfill:{}:dpi{}:cv{:.2}", c.identifier, c.dpi, score))));
+                return Ok(Some(Pick {
+                    out: out.clone(),
+                    art_ref: format!("mpcfill:{}:dpi{}:cv{:.2}", c.identifier, c.dpi, score),
+                    proxy: file,
+                    bx,
+                    aspect: art_aspect,
+                }));
             }
             if best_cv.map_or(true, |(_, _, b)| score > b) {
                 best_cv = Some((i, bx, score));
@@ -630,17 +669,38 @@ fn mpcfill_pick(
     }
     if let Some((i, bx)) = best_match {
         let c = &cands[i];
-        crop_to(&path_of(c), bx, &out, art_aspect)?;
-        return Ok(Some((out, format!("mpcfill:{}:dpi{}", c.identifier, c.dpi))));
+        let proxy = path_of(c);
+        crop_to(&proxy, bx, &out, art_aspect)?;
+        return Ok(Some(Pick {
+            out: out.clone(),
+            art_ref: format!("mpcfill:{}:dpi{}", c.identifier, c.dpi),
+            proxy,
+            bx,
+            aspect: art_aspect,
+        }));
     }
     // Last resort: the best CV box (even if below threshold) beats an unverified guess.
     if let Some((i, bx, score)) = best_cv {
-        crop_to(&path_of(&cands[i]), bx, &out, art_aspect)?;
-        return Ok(Some((out, format!("mpcfill:{}:dpi{}:cv{:.2}", cands[i].identifier, cands[i].dpi, score))));
+        let proxy = path_of(&cands[i]);
+        crop_to(&proxy, bx, &out, art_aspect)?;
+        return Ok(Some(Pick {
+            out: out.clone(),
+            art_ref: format!("mpcfill:{}:dpi{}:cv{:.2}", cands[i].identifier, cands[i].dpi, score),
+            proxy,
+            bx,
+            aspect: art_aspect,
+        }));
     }
     if let Some((i, bx)) = best_box {
-        crop_to(&path_of(&cands[i]), bx, &out, art_aspect)?;
-        return Ok(Some((out, format!("mpcfill:{}:dpi{}:unconfirmed", cands[i].identifier, cands[i].dpi))));
+        let proxy = path_of(&cands[i]);
+        crop_to(&proxy, bx, &out, art_aspect)?;
+        return Ok(Some(Pick {
+            out: out.clone(),
+            art_ref: format!("mpcfill:{}:dpi{}:unconfirmed", cands[i].identifier, cands[i].dpi),
+            proxy,
+            bx,
+            aspect: art_aspect,
+        }));
     }
     Ok(None)
 }
@@ -719,9 +779,12 @@ fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()>
     // Insets (fractions of the art region) shave the proxy's thin art-window border
     // lines off every edge — a bit more at the BOTTOM where the inner pinline + the
     // type bar sit. The art window is `cover`, so this slight zoom is invisible.
-    const SIDE: f64 = 0.022;
-    const TOP: f64 = 0.03;
-    const BOT: f64 = 0.04;
+    // Bias HARD toward cropping into the painting rather than ever leaving a sliver of
+    // the proxy's frame: it's invisible (the art window is `cover`) and a stray frame
+    // line at the art edge is far more jarring than losing a few px of art.
+    const SIDE: f64 = 0.030;
+    const TOP: f64 = 0.052;
+    const BOT: f64 = 0.050;
 
     let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
     let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
@@ -1135,6 +1198,14 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
          Never write 'winged' for a non-Angel. Do NOT default human figures to priests or clergy; \
          default them instead to the ACTUAL peoples of the Odyssey block listed below — \
          especially NOMADS, BARBARIANS and CENTAURS.\n\n\
+         WRITE LIKE A PROFESSIONAL, TASTEFUL ART DIRECTOR, NOT A VFX ARTIST. Describe a grounded, \
+         real-painting scene. NEVER ask for: glowing auras, glowing eyes, wisps or tendrils of \
+         magic/smoke/shadow, ethereal mist-energy, floating particles/sparkles, literal sound-waves \
+         or sound-rings or shockwave rings or 'rings of distorted air', concentric energy ripples, \
+         radiating lines, neon/digital glow, or any CGI/video-game effect. Convey action, sound and \
+         magic through POSTURE, EXPRESSION, gesture, body language, light and shadow and composition \
+         — a shrieking creature is shown shrieking by its gaping jaws and strained body, NOT by \
+         drawn sound-rings. Keep it understated and painterly.\n\n\
          GROUND EVERY SCENE IN THE ODYSSEY BLOCK (the sets Odyssey / Torment / Judgment), set on \
          the continent of OTARIA on Dominaria. The picture MUST read as belonging to this world, \
          never as generic fantasy and never as another Magic plane. NEVER name or reference any \
@@ -1311,9 +1382,19 @@ pub fn genai_options(
                  FORBIDDEN: do NOT draw on Cubism or Constructivism in any way — no geometric \
                  fragmentation, faceting, planar/angular abstraction, collage-like splitting or \
                  constructivist poster style; keep forms representational and painterly. \
-                 PAINT ONLY WHAT IS DESCRIBED: do NOT add wings, halos, glowing auras, horns or \
-                 other angelic/demonic/divine features to any character unless the art direction \
-                 explicitly calls for them — an ordinary human is an ordinary wingless human.";
+                 PAINT ONLY WHAT IS DESCRIBED: do NOT add wings, halos, horns or other \
+                 angelic/demonic/divine features to any character unless the art direction \
+                 explicitly calls for them — an ordinary human is an ordinary wingless human. \
+                 HARD BAN — NO CGI / VIDEO-GAME / VFX LOOK: this is a PROFESSIONAL traditional \
+                 painting (oil or gouache) from the late-90s/early-2000s, with real-paint surface \
+                 and grounded, tasteful realism. Absolutely NO glowing auras, NO wisps or tendrils \
+                 of magic/smoke/shadow, NO ethereal mist-energy, NO floating particles or sparkles, \
+                 NO literal sound-waves, sound-rings, shockwave rings or 'visible rings of distorted \
+                 air', NO concentric energy ripples or radiating-line effects, NO neon/digital glow, \
+                 NO lens flares. Convey action, sound and magic through POSTURE, EXPRESSION, gesture, \
+                 light and shadow and composition — exactly as a master illustrator would — NOT \
+                 through glowing CGI overlays. A shrieking creature is shown shrieking by its body \
+                 and gaping jaws, not by cartoon sound-rings.";
             let named = format!(
                 "Make Magic: the Gathering card art from the late-1990s / early-2000s era, \
                  painted in the EXACT, unmistakable signature style of {artist}: {signature}. \
