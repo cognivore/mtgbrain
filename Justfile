@@ -50,6 +50,16 @@ edit-seed:
 edit PORT="49737":
     cargo run --release -- edit serve --port {{PORT}}
 
+# Recompute color_identity from each card's effective (override-applied) mana cost
+# + rules-text mana symbols, and write it back. Add --dry-run to preview.
+recolor *FLAGS:
+    cargo run --release -- edit recolor {{FLAGS}}
+
+# Export the CubeCobra bulk-import CSV (custom S3 image URLs + recomputed colours)
+# -> data/odyssey2026_cubecobra.csv. Paste into the cube's "Replace from CSV".
+cubecobra-csv *FLAGS:
+    cargo run --release -- edit cubecobra-csv {{FLAGS}}
+
 # Download old-frame render assets (cardconjurer frames, old fonts, foil, mana font) -> ./assets.
 render-assets:
     cargo run --release -- render assets
@@ -61,6 +71,11 @@ render-card ID:
 # Render every card (normal); add foil with: cargo run --release -- render all --foil
 render-all:
     cargo run --release -- render all
+
+# Build the Scryfall-format "selfhost" image (cropped, rounded, 745x1040) for every
+# card from its forefront MPC render. No Chrome/network needed.
+selfhost:
+    cargo run --release -- render selfhost
 
 # Claude key (artwork match + crop) pulled from rageveil at run time.
 mpc_key := "rageveil show geosurge.ai/api.anthropic.com/onehr-cellvm/pool"
@@ -92,6 +107,21 @@ render-regression:
 render-cube:
     ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
       cargo run --release -- render all --art-backend https://mpcfill.com --foil
+
+# FULL pipeline: render the cube, then build all selfhost images, then publish.
+# `*FLAGS` are forwarded to `render all` (e.g. `--force`, `--foil`).
+render-publish *FLAGS:
+    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
+      cargo run --release -- render all --art-backend https://mpcfill.com {{FLAGS}}
+    cargo run --release -- render selfhost
+    just publish-selfhost
+
+# Upload selfhost.png files to the bucket. TODO(jm): fill in once the mechanism is
+# confirmed — rclone remote vs aws s3 sync (see `cubecobra-csv --base`). Until then
+# this is a no-op that prints what it WOULD sync so nothing silently breaks.
+publish-selfhost:
+    @echo "TODO: upload render-cache/cards/*/selfhost.png -> s3://social-doma-dev-media/odyssey2026/"
+    @echo "  ($(find render-cache/cards -name selfhost.png | wc -l | tr -d ' ') images ready)"
 
 fmt:
     cargo fmt
