@@ -147,6 +147,45 @@
   .rev-hist { font-size:12px; color:var(--dim); margin-top:18px; max-width:760px; }
   .rev-hist .ev { padding:3px 0; border-bottom:1px solid #241f18; }
   .rev-hist a { color:var(--blue); cursor:pointer; }
+  /* ===== per-card crop editor (reposition the underlying art) ===== */
+  .cropmodal { position:fixed; inset:0; z-index:50; display:flex; align-items:center;
+               justify-content:center; background:rgba(0,0,0,.72); }
+  .cropdlg { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+             width:min(1120px,95vw); max-height:93vh; display:flex; flex-direction:column;
+             overflow:hidden; box-shadow:0 18px 60px rgba(0,0,0,.6); }
+  .crophead { display:flex; align-items:center; gap:12px; padding:11px 16px;
+              border-bottom:1px solid var(--line); background:var(--panel);
+              position:relative; z-index:3; }
+  .crophead b { color:var(--accent); font-size:14px; }
+  .crophint { color:var(--dim); font-size:11px; }
+  .crophint kbd { background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  .cropclose { margin-left:auto; background:var(--panel2); color:var(--ink);
+               border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }
+  .cropbody { display:flex; gap:18px; padding:16px; overflow:auto; }
+  .cropstageWrap { flex:1; min-width:0; display:flex; align-items:flex-start; justify-content:center; }
+  .cropstage { position:relative; display:inline-block; line-height:0; }
+  #cropimg { display:block; max-width:min(58vw,720px); max-height:72vh; background:#000;
+             user-select:none; -webkit-user-drag:none; }
+  .cropbox { position:absolute; box-sizing:border-box; border:2px solid var(--accent);
+             box-shadow:0 0 0 100vmax rgba(0,0,0,.55); cursor:move; }
+  .cropbox .ch { position:absolute; width:16px; height:16px; background:var(--accent);
+                 border:1px solid #000; border-radius:3px; }
+  .cropbox .nw { left:-9px; top:-9px;  cursor:nwse-resize; }
+  .cropbox .ne { right:-9px; top:-9px; cursor:nesw-resize; }
+  .cropbox .sw { left:-9px; bottom:-9px; cursor:nesw-resize; }
+  .cropbox .se { right:-9px; bottom:-9px; cursor:nwse-resize; }
+  .cropside { flex:none; width:300px; display:flex; flex-direction:column; gap:8px;
+              position:relative; z-index:3; background:var(--panel); }
+  .croplabel { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-top:6px; }
+  .croplive { border:1px solid var(--line); border-radius:6px; background:#000 no-repeat; align-self:flex-start; }
+  .cropsrc { width:100%; padding:7px 8px; background:var(--panel2); color:var(--ink);
+             border:1px solid var(--line); border-radius:6px; }
+  .cropmsg { color:var(--dim); font-size:12px; min-height:16px; line-height:1.4; }
+  .cropmsg b { color:var(--ink); }
+  .cropactions { display:flex; gap:8px; margin-top:auto; flex-wrap:wrap; }
+  .cropactions button { padding:9px 14px; border-radius:7px; border:1px solid var(--line);
+                        cursor:pointer; font-weight:600; }
+  .cropactions button:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -192,6 +231,38 @@
   <aside class="rev-list" id="revlist"><p class="pos" style="padding:12px">Loading…</p></aside>
   <section class="rev-detail" id="revdetail"><p class="pos" style="padding:20px">← pick a card to review its GenAI options.</p></section>
 </div>
+<div id="cropmodal" class="cropmodal" style="display:none">
+  <div class="cropdlg">
+    <div class="crophead">
+      <b id="croptitle">Adjust crop</b>
+      <span class="crophint">drag box to move · corners resize · arrows nudge (⇧ = bigger) · <kbd>Enter</kbd> save · <kbd>Esc</kbd> close</span>
+      <button id="cropx" class="cropclose">✕ close</button>
+    </div>
+    <div class="cropbody">
+      <div class="cropstageWrap">
+        <div id="cropstage" class="cropstage">
+          <img id="cropimg" alt="underlying art">
+          <div id="cropbox" class="cropbox">
+            <span class="ch nw"></span><span class="ch ne"></span>
+            <span class="ch sw"></span><span class="ch se"></span>
+          </div>
+        </div>
+      </div>
+      <div class="cropside">
+        <div class="croplabel">Live preview — exactly what the card art window shows</div>
+        <div id="croplive" class="croplive"></div>
+        <div class="croplabel">Underlying source image</div>
+        <select id="cropsrc" class="cropsrc"></select>
+        <div class="cropmsg" id="cropmsg"></div>
+        <div class="cropactions">
+          <button class="b-accept" id="cropsave">✓ Save crop</button>
+          <button class="b-reset"  id="cropreset">↺ Reset to auto</button>
+          <button class="b-reset"  id="cropcancel">✕ Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "";
 let C = null, editMode = false, foilView = false;
@@ -203,7 +274,7 @@ async function loadList() {
   renderCounts(); renderList();
   if (cur === null && CARDS.length) selectId(firstPendingId() ?? CARDS[0].id);
 }
-function firstPendingId() { return CARDS.find(c => c.decision === "pending")?.id ?? null; }
+function firstPendingId() { return CARDS.find(c => c.decision === "pending" && !c.removed)?.id ?? null; }
 function renderCounts() {
   document.getElementById("counts").innerHTML =
     `<span>total <b>${COUNTS.total}</b></span>
@@ -280,6 +351,9 @@ function img(){
       <button id="rerender" class="imgbtn">↻ re-render</button>
       <a class="imgbtn" href="${src}" target="_blank">⤢ full DPI</a>
     </div>
+    <div class="imgctl">
+      <button id="cropbtn" class="imgbtn" title="Reposition the underlying art (fix a bad crop)">🎯 adjust crop</button>
+    </div>
     <div class="imghint">old-frame · ${foilView?'foil':'normal'} · first render ~3s</div>
   </div>`;
 }
@@ -295,7 +369,14 @@ function viewForm(){
   const stats = C.is_creature && (fval("power")!=="")
     ? `<div><b>P/T</b> ${esc(fval("power"))}/${esc(fval("toughness"))}${ovmark("power")}${ovmark("toughness")}</div>` : "";
   const loy = (fval("loyalty")!=="") ? `<div><b>loyalty</b> ${esc(fval("loyalty"))}${ovmark("loyalty")}</div>` : "";
-  const nOv = C.overrides ? Object.keys(C.overrides).length : 0;
+  const ov = C.overrides || {};
+  const nOv = Object.keys(ov).filter(k => k !== "errata_scroll").length;
+  // Errata ribbon: forced by overrides.errata_scroll, else auto (any field errata or notes).
+  const ribbonAuto = nOv > 0 || !!(C.notes && C.notes.trim());
+  const rsv = ov.errata_scroll;
+  const ribbonOn = (rsv===true||rsv==="on"||rsv==="true"||rsv===1||rsv==="1"||rsv==="yes") ? true
+                 : (rsv===false||rsv==="off"||rsv==="false"||rsv===0||rsv==="0"||rsv==="no") ? false
+                 : ribbonAuto;
   return `
   <div class="cardwrap"><div class="cardmain">
     <h2>${esc(fval("name"))}${ovmark("name")}</h2>
@@ -313,7 +394,7 @@ function viewForm(){
       ${C.printings?`<div><b>printings</b> ${esc(C.printings)}</div>`:""}
     </div>
     <div class="badges">
-      <span class="badge ${C.decision==='accepted'?'on':''} ${C.decision==='errata'?'er':''}">decision: ${C.decision}</span>
+      <span class="badge ${C.decision==='accepted'?'on':''} ${C.decision==='errata'?'er':''}" ${C.decision==='removed'?'style="color:var(--red)"':''}>decision: ${C.decision}</span>
       ${nOv?`<span class="badge er">${nOv} field errata</span>`:""}
       ${C.notes?`<span class="badge">has notes</span>`:""}
       ${C.odyssey_creature?`<span class="badge on">Odyssey-block creature</span>`:""}
@@ -322,6 +403,8 @@ function viewForm(){
     <div class="editbox">
       <label class="chk"><input type="checkbox" id="genai" ${C.genai_art?"checked":""}>
         GenAI new art in the style of Odyssey-block <i>Magic: the Gathering</i> artists?</label>
+      <label class="chk"><input type="checkbox" id="ribbon" ${ribbonOn?"checked":""}>
+        Show errata ribbon on the rendered card${rsv===undefined?" (auto)":""}</label>
       <div class="actions">
         <button class="b-accept" id="b-accept">✓ Accept as-is (a)</button>
         <button class="b-errata" id="b-edit">✎ Edit fields (e)</button>
@@ -364,9 +447,13 @@ function wire(){
   const rr = document.getElementById("rerender");
   if (rr) rr.onclick = () => { const im=document.querySelector(".cardimg");
     if(im){ im.classList.remove("loaded"); im.src = `/api/render/${C.id}?foil=${foilView?1:0}&force=1&t=${Date.now()}`; } };
+  const cropBtn = document.getElementById("cropbtn");
+  if (cropBtn) cropBtn.onclick = () => openCrop(C.id);
   if (!editMode) {
     const g=document.getElementById("genai");
     if(g) g.onchange = e => save({ genai_art: e.target.checked }, false);
+    const rb=document.getElementById("ribbon");
+    if(rb) rb.onchange = e => { const o=Object.assign({}, C.overrides||{}); o.errata_scroll=e.target.checked; save({ overrides:o }, false); };
     document.getElementById("b-accept").onclick = () => save({decision:"accepted"}, true);
     document.getElementById("b-edit").onclick = enterEdit;
     const ga = document.getElementById("b-genai");
@@ -423,7 +510,7 @@ function step(delta) {
 function nextCard(){ step(1); }
 function nextPending() {
   const idx = CARDS.findIndex(c => c.id === cur);
-  for (let i = idx+1; i < CARDS.length; i++) if (CARDS[i].decision==="pending") return selectId(CARDS[i].id);
+  for (let i = idx+1; i < CARDS.length; i++) if (CARDS[i].decision==="pending" && !CARDS[i].removed) return selectId(CARDS[i].id);
   const p = firstPendingId(); if (p!==null) selectId(p);
 }
 
@@ -509,6 +596,7 @@ async function openReview(){
   el.innerHTML = `<p class="pos" style="padding:12px">Loading…</p>`;
   const d = await (await fetch("/api/genai/dashboard")).json();
   if (d.error){ el.innerHTML = `<p class="pos" style="padding:12px;color:var(--red)">${esc(d.error)}</p>`; return; }
+  window.REVCARDS = d.cards || [];
   el.innerHTML = (d.cards||[]).map(c => {
     const s = c.status||{}; const gen = s.generated||0;
     const tag = s.chosen_artist ? `<span class="badge2" style="color:var(--green)">✓ ${esc(s.chosen_artist)}</span>`
@@ -521,6 +609,26 @@ async function openReview(){
     loadReviewCard(+x.dataset.id, x.querySelector(".nm").textContent);
   });
 }
+// After a choice, jump to the next GenAI card that still needs one (forward, then wrap).
+async function reviewAdvance(curId){
+  const oldList = window.REVCARDS || [];
+  const pos = oldList.findIndex(c => c.id === curId);
+  await openReview();                       // refresh list + statuses
+  const list = window.REVCARDS || [];
+  const order = [];
+  for (let i = pos + 1; i < list.length; i++) order.push(list[i]);
+  for (let i = 0; i <= pos && i < list.length; i++) order.push(list[i]);
+  const next = order.find(c => !(c.status && c.status.chosen_artist));
+  if (next){
+    const elx = document.querySelector(`.rcard[data-id="${next.id}"]`);
+    document.querySelectorAll(".rcard").forEach(y => y.classList.remove("sel"));
+    if (elx){ elx.classList.add("sel"); elx.scrollIntoView({block:"nearest"}); }
+    loadReviewCard(next.id, next.name);
+  } else {
+    document.getElementById("revdetail").innerHTML =
+      `<p class="pos" style="padding:20px;color:var(--green)">✓ Every GenAI card has a choice. Done.</p>`;
+  }
+}
 async function loadReviewCard(id, name){
   const det = document.getElementById("revdetail");
   det.innerHTML = `<div class="galhead">Loading ${esc(name)}…</div>`;
@@ -528,14 +636,26 @@ async function loadReviewCard(id, name){
     (await fetch(`/api/genai/${id}/options`)).json(),
     (await fetch(`/api/genai/${id}/history`)).json(),
   ]);
+  // "Original art" is only a valid choice once a gallery exists (else marking it would
+  // settle the card and the pass would skip it, so it'd never get art generated).
+  const hasGallery = (opt.options||[]).length > 0 || !!opt.chosen;
   let html = `<h2 style="margin:0 0 10px">${esc(name)}</h2>
     <div class="galhead">Art direction (edit, then generate):</div>
     <textarea id="rdir" class="gdir">${esc(opt.direction||"")}</textarea>
     <div class="actions" style="margin:10px 0">
       <button class="b-accept" id="rgen">🎨 Generate / regenerate (~$1)</button>
+      ${hasGallery ? `<button class="b-reset" id="roriginal">🖼 Use original art</button>` : ``}
       <button class="b-reset" id="runchoose">✕ clear choice</button>
     </div>
     <div class="galgrid">`;
+  // First option: the REAL/base art, so the operator can see and vote for it — but only
+  // once the card has a generated gallery to compare against.
+  if (hasGallery) {
+    const baseChosen = opt.chosen === "Original art";
+    html += `<figure class="galcard base${baseChosen?' chosen':''}" id="basecard">
+      <img src="/api/genai/${id}/base-card?t=${Date.now()}" loading="lazy">
+      <figcaption>Original art${baseChosen?' ✓':''} <span class="pick">pick</span></figcaption></figure>`;
+  }
   for (const o of (opt.options||[])) {
     const ch = opt.chosen===o.artist;
     html += `<figure class="galcard${ch?' chosen':''}" data-artist="${esc(o.artist)}" data-hash="${esc(o.hash)}">
@@ -559,9 +679,17 @@ async function loadReviewCard(id, name){
     loadReviewCard(id, name); openReview();
   };
   document.getElementById("runchoose").onclick = async () => { await fetch(`/api/genai/${id}/unchoose`,{method:"POST"}); loadReviewCard(id,name); openReview(); };
-  det.querySelectorAll(".galcard").forEach(el => el.onclick = async () => {
+  const useOriginal = async () => {
+    await fetch(`/api/genai/${id}/original`,{method:"POST"});
+    reviewAdvance(id);   // settled on original art → on to the next card
+  };
+  const ro = document.getElementById("roriginal"); if (ro) ro.onclick = useOriginal;
+  const bc = document.getElementById("basecard"); if (bc) bc.onclick = useOriginal;  // vote for base art
+  // ONLY the AI option cards (they carry data-artist) — never the base card, which has
+  // its own handler above. (A bare `.galcard` selector would hijack the base card.)
+  det.querySelectorAll(".galcard[data-artist]").forEach(el => el.onclick = async () => {
     await fetch(`/api/genai/${id}/choose`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({artist:el.dataset.artist,hash:el.dataset.hash})});
-    loadReviewCard(id,name); openReview();
+    reviewAdvance(id);   // chosen → auto-advance to the next card to pick
   });
   det.querySelectorAll(".reprompt").forEach(a => a.onclick = async () => {
     const r = await (await fetch(`/api/genai/${id}/reprompt`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_id:+a.dataset.ev})})).json();
@@ -586,6 +714,7 @@ document.getElementById("addbtn").onclick = addCard;
 document.getElementById("addname").addEventListener("keydown", e => { if (e.key === "Enter") addCard(); });
 
 document.addEventListener("keydown", e => {
+  if (cropOpen) return;            // the crop modal owns the keyboard while open
   // Edit-mode global keys work even while focused in a field.
   if (editMode) {
     if (e.key==="Escape") { editMode=false; renderCard(); e.preventDefault(); }
@@ -600,6 +729,187 @@ document.addEventListener("keydown", e => {
   else if (e.key==="k") step(-1);
   else if (e.key==="n") nextPending();
 });
+
+// ---- per-card crop editor (reposition the underlying MPCfill/Scryfall art) ----
+// The auto crop is right most of the time but "slightly off" for some cards. Here the
+// operator drags a box — LOCKED to the card's art-window aspect — over the underlying
+// art; the boxed region is exactly what the card shows (WYSIWYG). Saving writes a manual
+// crop that every later render uses; "reset to auto" restores the heuristic pick.
+let cropOpen = false, cropMeta = null, cropAspect = 1.236, cropR = 1, cropDrag = null;
+let cb = { x:0.1, y:0.12, w:0.78, h:0.5 };   // current box, fractions of the source image
+const clmp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+async function openCrop(id){
+  let meta;
+  try { meta = await (await fetch(`/api/art/${id}`)).json(); }
+  catch(e){ alert("Crop editor: "+e); return; }
+  if (meta.error){ alert("Crop editor: "+meta.error); return; }
+  cropMeta = meta;
+  cropAspect = meta.window_aspect || 1.236;
+  document.getElementById("croptitle").textContent = "Adjust crop — " + (meta.name||"");
+  const sel = document.getElementById("cropsrc");
+  const sources = meta.sources || [];
+  const curRel = meta.current_rel || (sources[0] && sources[0].rel) || "@scryfall";
+  sel.innerHTML = sources.map(s =>
+    `<option value="${esc(s.rel)}"${s.rel===curRel?" selected":""}>${esc(s.label)}${s.kind==='mpcfill'?' · MPCfill':''}</option>`
+  ).join("");
+  const msg = document.getElementById("cropmsg");
+  const saveB = document.getElementById("cropsave");
+  if (meta.genai){
+    msg.innerHTML = "This card uses <b>GenAI art</b> — repositioning isn't available here "+
+      "(the art is the generated image itself, not a crop of a proxy).";
+    saveB.disabled = true;
+  } else {
+    msg.textContent = meta.manual ? "Manually cropped. Drag to refine, then Save."
+      : (meta.has_sidecar ? "Auto-cropped. Drag to fix the framing, then Save."
+                          : "No crop yet — position the box over the art, then Save.");
+    saveB.disabled = false;
+  }
+  document.getElementById("cropmodal").style.display = "flex";
+  cropOpen = true;
+  loadCropSource(curRel, meta.box);
+  sel.onchange = () => loadCropSource(sel.value, null);
+}
+
+function loadCropSource(rel, box){
+  const img = document.getElementById("cropimg");
+  img.onload = () => {
+    cropR = img.clientWidth / img.clientHeight;       // display pixel aspect (= natural)
+    if (box && box.length === 4){
+      // Normalise the stored box to the window aspect, keeping its centre.
+      let [x,y,w,h] = box;
+      const h2 = w * cropR / cropAspect;
+      cb = clampBox({ x, y: y + (h - h2)/2, w, h: h2 });
+    } else {
+      let w = 0.86, h = w * cropR / cropAspect;
+      if (h > 0.94){ h = 0.94; w = h * cropAspect / cropR; }
+      cb = clampBox({ x:(1-w)/2, y:(1-h)/2, w, h });
+    }
+    drawCrop();
+  };
+  img.onerror = () => { document.getElementById("cropmsg").textContent = "Couldn't load that source image."; };
+  img.src = `/api/art/${cropMeta.id}/img?rel=${encodeURIComponent(rel)}&t=${Date.now()}`;
+}
+
+// Keep w,h ≤ 1 at the locked aspect, then clamp x,y so the box stays on the image.
+function clampBox(b){
+  let { x, y, w, h } = b;
+  w = clmp(w, 0.04, 1); h = w * cropR / cropAspect;
+  if (h > 1){ h = 1; w = h * cropAspect / cropR; }
+  x = clmp(x, 0, 1 - w); y = clmp(y, 0, 1 - h);
+  return { x, y, w, h };
+}
+
+function drawCrop(){
+  const img = document.getElementById("cropimg"), box = document.getElementById("cropbox");
+  const iw = img.clientWidth, ih = img.clientHeight;
+  box.style.left = (cb.x*iw)+"px"; box.style.top = (cb.y*ih)+"px";
+  box.style.width = (cb.w*iw)+"px"; box.style.height = (cb.h*ih)+"px";
+  // Live preview: paint exactly the boxed sub-rectangle into a window-aspect tile.
+  const live = document.getElementById("croplive");
+  const Wp = 264, Hp = Math.round(Wp / cropAspect);
+  live.style.width = Wp+"px"; live.style.height = Hp+"px";
+  live.style.backgroundImage = `url("${img.src}")`;
+  live.style.backgroundSize = `${Wp/cb.w}px ${Hp/cb.h}px`;
+  live.style.backgroundPosition = `${-cb.x*Wp/cb.w}px ${-cb.y*Hp/cb.h}px`;
+}
+
+function cropStartMove(e){
+  e.preventDefault(); e.stopPropagation();
+  const r = document.getElementById("cropimg").getBoundingClientRect();
+  cropDrag = { mode:"move", sx:e.clientX, sy:e.clientY, ox:cb.x, oy:cb.y, r };
+}
+function cropStartResize(e, corner){
+  e.preventDefault(); e.stopPropagation();
+  const r = document.getElementById("cropimg").getBoundingClientRect();
+  cropDrag = { mode:"resize", corner,
+    ax: corner.includes("e") ? cb.x : cb.x + cb.w,   // anchor = the OPPOSITE corner
+    ay: corner.includes("s") ? cb.y : cb.y + cb.h, r };
+}
+function cropOnMove(e){
+  if (!cropDrag) return;
+  const r = cropDrag.r;
+  if (cropDrag.mode === "move"){
+    const dx = (e.clientX-cropDrag.sx)/r.width, dy = (e.clientY-cropDrag.sy)/r.height;
+    cb.x = clmp(cropDrag.ox+dx, 0, 1-cb.w);
+    cb.y = clmp(cropDrag.oy+dy, 0, 1-cb.h);
+  } else {
+    const px = clmp((e.clientX-r.left)/r.width, 0, 1);
+    const py = clmp((e.clientY-r.top)/r.height, 0, 1);
+    // Width implied by either axis (aspect-locked) — take the larger so dragging
+    // horizontally OR vertically grows the box naturally.
+    const wX = Math.abs(px - cropDrag.ax);
+    const wY = Math.abs(py - cropDrag.ay) * cropAspect / cropR;
+    let w = Math.max(wX, wY);
+    const roomX = cropDrag.corner.includes("e") ? 1-cropDrag.ax : cropDrag.ax;
+    const roomY = cropDrag.corner.includes("s") ? 1-cropDrag.ay : cropDrag.ay;
+    w = Math.min(w, roomX); let h = w * cropR / cropAspect;
+    if (h > roomY){ h = roomY; w = h * cropAspect / cropR; }
+    w = Math.max(w, 0.04); h = w * cropR / cropAspect;
+    cb = { x: cropDrag.corner.includes("e") ? cropDrag.ax : cropDrag.ax - w,
+           y: cropDrag.corner.includes("s") ? cropDrag.ay : cropDrag.ay - h, w, h };
+  }
+  drawCrop();
+}
+function cropEndDrag(){ cropDrag = null; }
+
+async function cropSave(){
+  if (document.getElementById("cropsave").disabled) return;
+  const rel = document.getElementById("cropsrc").value;
+  const id = cropMeta.id;
+  let r;
+  try {
+    r = await (await fetch(`/api/art/${id}`, { method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ rel, box:[cb.x, cb.y, cb.w, cb.h] }) })).json();
+  } catch(e){ document.getElementById("cropmsg").textContent = "Save failed: "+e; return; }
+  if (r.error){ document.getElementById("cropmsg").textContent = "Save failed: "+r.error; return; }
+  closeCrop(); selectId(id);                 // updated_at bumped → preview re-renders
+}
+async function cropResetAuto(){
+  const id = cropMeta.id;
+  let r;
+  try { r = await (await fetch(`/api/art/${id}/reset`, { method:"POST" })).json(); }
+  catch(e){ document.getElementById("cropmsg").textContent = "Reset failed: "+e; return; }
+  if (r.error){ document.getElementById("cropmsg").textContent = "Reset failed: "+r.error; return; }
+  closeCrop(); selectId(id);
+}
+function closeCrop(){
+  document.getElementById("cropmodal").style.display = "none";
+  cropOpen = false; cropDrag = null;
+}
+
+// Wire the crop modal once (its DOM is static).
+(function wireCrop(){
+  document.getElementById("cropbox").addEventListener("pointerdown", cropStartMove);
+  document.querySelectorAll("#cropbox .ch").forEach(h =>
+    h.addEventListener("pointerdown", e => cropStartResize(e, h.classList[1])));
+  document.addEventListener("pointermove", cropOnMove);
+  document.addEventListener("pointerup", cropEndDrag);
+  document.getElementById("cropsave").onclick = cropSave;
+  document.getElementById("cropreset").onclick = cropResetAuto;
+  document.getElementById("cropcancel").onclick = closeCrop;
+  document.getElementById("cropx").onclick = closeCrop;
+  document.getElementById("cropmodal").addEventListener("mousedown", e => {
+    if (e.target.id === "cropmodal") closeCrop();   // click backdrop to dismiss
+  });
+  // Capture phase: the modal owns the keyboard while open.
+  document.addEventListener("keydown", e => {
+    if (!cropOpen) return;
+    if (e.key === "Escape"){ closeCrop(); e.preventDefault(); return; }
+    if (e.key === "Enter"){ cropSave(); e.preventDefault(); return; }
+    const step = e.shiftKey ? 0.01 : 0.002;
+    let moved = true;
+    if (e.key === "ArrowLeft")  cb.x = clmp(cb.x-step, 0, 1-cb.w);
+    else if (e.key === "ArrowRight") cb.x = clmp(cb.x+step, 0, 1-cb.w);
+    else if (e.key === "ArrowUp")    cb.y = clmp(cb.y-step, 0, 1-cb.h);
+    else if (e.key === "ArrowDown")  cb.y = clmp(cb.y+step, 0, 1-cb.h);
+    else moved = false;
+    if (moved){ drawCrop(); e.preventDefault(); }
+  }, true);
+  // Re-place the box if the window resizes while open (display dims change).
+  window.addEventListener("resize", () => { if (cropOpen) drawCrop(); });
+})();
 
 loadList();
 </script>

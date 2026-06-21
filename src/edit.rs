@@ -236,6 +236,8 @@ CREATE TABLE cube_cards (
     in_db_found     INTEGER NOT NULL DEFAULT 1,
     overrides       TEXT NOT NULL DEFAULT '{}',  -- JSON: per-field errata {field: new value}
     removed         INTEGER NOT NULL DEFAULT 0,  -- soft-delete: kept for history, hidden from cube
+    illustrator     TEXT NOT NULL DEFAULT '',     -- printed Illus. credit (GenAI artist pseudonym)
+    genai_done      INTEGER NOT NULL DEFAULT 0,    -- gallery fully generated + accepted; pass skips it
     updated_at      TEXT
 );
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -329,9 +331,12 @@ fn remove_from_list(path: &str, name: &str) -> Result<()> {
 
 /// Mark a card removed (1) or restored (0), keeping the row, and sync the list file.
 fn set_removed(db: &Connection, id: i64, removed: bool) -> Result<Option<Value>> {
+    // Removing a card sets its verdict to 'removed'; restoring sends it back to 'pending'
+    // (a restored card is re-reviewed from scratch).
+    let decision = if removed { "removed" } else { "pending" };
     db.execute(
-        "UPDATE cube_cards SET removed=?2, updated_at=datetime('now') WHERE id=?1",
-        params![id, i64::from(removed)],
+        "UPDATE cube_cards SET removed=?2, decision=?3, updated_at=datetime('now') WHERE id=?1",
+        params![id, i64::from(removed), decision],
     )?;
     if let (Ok(list_path), Ok(name)) = (
         db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0)),
@@ -356,8 +361,10 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     }
     let db =
         Connection::open(editor_db).with_context(|| format!("opening {}", editor_db.display()))?;
-    // Non-destructive migration for older editor DBs: add `removed` if missing.
+    // Non-destructive migrations for older editor DBs (ignore "duplicate column" errors).
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN removed INTEGER NOT NULL DEFAULT 0", []);
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''", []);
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0", []);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let server = Server::http(addr).map_err(|e| anyhow::anyhow!("starting server: {e}"))?;
@@ -463,6 +470,14 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
                     }
+                    // Choose the card's ORIGINAL (real) art — recorded as a decision so the
+                    // card STAYS in the Review list marked "✓ Original art" (genai flag kept).
+                    (Method::Post, [_, "original"], Some(gid)) => {
+                        match crate::render::genai_choose_original(editor_db, &rc.cache, gid) {
+                            Ok(()) => json_response(&json!({"ok": true})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
                     // Art direction: fetch (cached/Claude) or regenerate; user edits before generating.
                     (Method::Post, [_, "direction"], Some(gid)) => {
                         let mut body = String::new();
@@ -502,6 +517,17 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                             Err(_) => not_found(),
                         }
                     }
+                    // Render + serve the REAL-art preview (the "Original art" gallery option).
+                    (Method::Get, [_, "base-card"], Some(gid)) => {
+                        match crate::render::genai_base_card(editor_db, &rc.assets, &rc.cache, &rc.chrome, gid) {
+                            Ok(path) => match std::fs::read(&path) {
+                                Ok(bytes) => Response::from_data(bytes)
+                                    .with_header(header("Content-Type", "image/png")),
+                                Err(_) => not_found(),
+                            },
+                            Err(_) => not_found(),
+                        }
+                    }
                     (Method::Post, [_, "choose"], Some(gid)) => {
                         let mut body = String::new();
                         req.as_reader().read_to_string(&mut body).ok();
@@ -509,6 +535,59 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                         let artist = v["artist"].as_str().unwrap_or("");
                         let hash = v["hash"].as_str().unwrap_or("");
                         match crate::render::genai_choose(editor_db, &rc.cache, gid, artist, hash) {
+                            Ok(()) => json_response(&json!({"ok": true})),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    _ => not_found(),
+                }
+            }
+            // Per-card crop editor: reposition the underlying MPCfill/Scryfall art.
+            (_, p) if p.starts_with("/api/art/") => {
+                let rest = p.strip_prefix("/api/art/").unwrap_or("");
+                let segs: Vec<&str> = rest.split('/').collect();
+                let aid = segs.first().and_then(|s| s.parse::<i64>().ok());
+                match (&method, segs.as_slice(), aid) {
+                    // Metadata: current box + every selectable source + window aspect.
+                    (Method::Get, [_], Some(id)) => {
+                        match crate::render::art_meta(editor_db, &rc.cache, id) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    // Serve a source image (the underlying card/art the user crops over).
+                    (Method::Get, [_, "img"], Some(id)) => {
+                        let rel = query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
+                        match crate::render::art_image_path(editor_db, &rc.cache, id, &rel) {
+                            Ok(path) => match std::fs::read(&path) {
+                                Ok(bytes) => Response::from_data(bytes)
+                                    .with_header(header("Content-Type", mime_of(&path))),
+                                Err(_) => not_found(),
+                            },
+                            Err(_) => not_found(),
+                        }
+                    }
+                    // Save a hand-placed crop: {rel, box:[x,y,w,h]}.
+                    (Method::Post, [_], Some(id)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
+                        let rel = v["rel"].as_str().unwrap_or("@current").to_string();
+                        let bx = v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
+                            let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+                            [g(0), g(1), g(2), g(3)]
+                        });
+                        match bx {
+                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, &rel, bx) {
+                                Ok(()) => json_response(&json!({"ok": true})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            },
+                            None => json_response(&json!({"error": "missing or malformed box"})),
+                        }
+                    }
+                    // Reset to the automatic crop (restores the stashed auto pick if any).
+                    (Method::Post, [_, "reset"], Some(id)) => {
+                        match crate::render::art_reset(editor_db, &rc.cache, id) {
                             Ok(()) => json_response(&json!({"ok": true})),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
@@ -580,7 +659,7 @@ fn list_cards(db: &Connection) -> Value {
             "SELECT
                 SUM(removed=0),
                 SUM(decision='accepted' AND removed=0),
-                SUM(decision='errata' AND removed=0),
+                SUM((overrides IS NOT NULL AND overrides != '{}' AND overrides != '') AND removed=0),
                 SUM(decision='pending' AND removed=0),
                 SUM(genai_art AND removed=0),
                 SUM(removed)
@@ -675,12 +754,33 @@ fn save_card(db: &Connection, id: i64, body: &str) -> Result<Option<Value>> {
         )?;
     }
     if let Some(o) = v.get("overrides") {
-        if !o.is_object() {
+        let Some(incoming) = o.as_object() else {
             bail!("overrides must be a JSON object");
+        };
+        let mut merged = incoming.clone();
+        // The editor UI only manages the card FIELDS (name/cost/type/text/PT/colors). Keys
+        // it doesn't surface — `flavor` and `errata_scroll` — must NOT be dropped when a
+        // field edit is saved. Preserve them from the existing overrides unless the payload
+        // explicitly carries them.
+        let existing: Value = db
+            .query_row(
+                "SELECT overrides FROM cube_cards WHERE id=?1",
+                params![id],
+                |r| r.get::<_, String>(0),
+            )
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_else(|| json!({}));
+        for key in ["flavor", "errata_scroll"] {
+            if !merged.contains_key(key) {
+                if let Some(val) = existing.get(key) {
+                    merged.insert(key.to_string(), val.clone());
+                }
+            }
         }
         db.execute(
             "UPDATE cube_cards SET overrides=?2, updated_at=datetime('now') WHERE id=?1",
-            params![id, o.to_string()],
+            params![id, Value::Object(merged).to_string()],
         )?;
     }
     Ok(get_card(db, id))
@@ -707,9 +807,255 @@ fn not_found() -> Response<std::io::Cursor<Vec<u8>>> {
     Response::from_string("not found").with_status_code(404)
 }
 
+/// Read one query-string parameter (percent-decoded) from a request URL.
+fn query_param(url: &str, key: &str) -> Option<String> {
+    let q = url.split('?').nth(1)?;
+    q.split('&').find_map(|kv| {
+        let (k, v) = kv.split_once('=').unwrap_or((kv, ""));
+        (k == key).then(|| percent_decode(v))
+    })
+}
+
+/// Minimal `application/x-www-form-urlencoded` decode (`%XX` escapes, `+` → space).
+fn percent_decode(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'%' if i + 2 < b.len() => {
+                let hex = |c: u8| (c as char).to_digit(16);
+                if let (Some(hi), Some(lo)) = (hex(b[i + 1]), hex(b[i + 2])) {
+                    out.push((hi * 16 + lo) as u8);
+                    i += 3;
+                    continue;
+                }
+                out.push(b'%');
+                i += 1;
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            c => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Content-Type for a served image, by extension (defaults to octet-stream).
+fn mime_of(path: &Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        _ => "application/octet-stream",
+    }
+}
+
 // Default DB path next to the source list.
 pub fn default_editor_db(data_dir: &Path) -> PathBuf {
     data_dir.join("cube_editor.sqlite")
+}
+
+// ---------------------------------------------------------------------------
+// cubecobra-csv — export a CubeCobra import CSV (custom image URL + colours)
+// ---------------------------------------------------------------------------
+
+/// CubeCobra's "Color Category" bucket for a card, from its type + color identity.
+fn color_category(type_line: &str, ci_letters: &[char]) -> &'static str {
+    if type_line.to_lowercase().contains("land") {
+        return "Lands";
+    }
+    match ci_letters {
+        [] => "Colorless",
+        ['W'] => "White",
+        ['U'] => "Blue",
+        ['B'] => "Black",
+        ['R'] => "Red",
+        ['G'] => "Green",
+        _ => "Multicolored",
+    }
+}
+
+/// Minimal CSV field quoting (wrap in quotes + double any inner quotes).
+fn csv_field(s: &str) -> String {
+    if s.contains([',', '"', '\n']) {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+/// Whether a card shows the errata ribbon — MUST match `render.rs::load_card`: a
+/// manual `errata_scroll` override forces it on/off, otherwise it auto-trips on any
+/// FUNCTIONAL field override or a non-empty errata note (cosmetic overrides like
+/// `name`/`flavor` never trip it).
+fn errata_ribbon(overrides: &Value, errata_text: &str) -> bool {
+    const FUNCTIONAL: &[&str] =
+        &["mana_cost", "type", "oracle_text", "power", "toughness", "loyalty", "colors"];
+    let scroll_override = overrides.get("errata_scroll").and_then(|v| match v {
+        Value::Bool(b) => Some(*b),
+        Value::String(s) => match s.trim().to_lowercase().as_str() {
+            "on" | "true" | "1" | "yes" => Some(true),
+            "off" | "false" | "0" | "no" => Some(false),
+            _ => None,
+        },
+        _ => None,
+    });
+    let auto = overrides
+        .as_object()
+        .is_some_and(|m| m.keys().any(|k| FUNCTIONAL.contains(&k.as_str())))
+        || !errata_text.trim().is_empty();
+    scroll_override.unwrap_or(auto)
+}
+
+/// Write a CubeCobra bulk-import CSV for every active card: the real card name
+/// (so CubeCobra resolves the card), a custom `Image URL` pointing at the card's
+/// uploaded selfhost render (`<base>/<sanitized-name>.png` — the same `sanitize`
+/// the renderer uses for cache dirs / S3 keys), and the recomputed colour
+/// identity as `Color`/`Color Category`. Paste the result into the cube's
+/// "Replace from CSV" on CubeCobra.
+pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
+    let base = base.trim_end_matches('/');
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening {}", editor_db.display()))?;
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String)> = {
+        let mut stmt = db.prepare(
+            "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,'')
+             FROM cube_cards WHERE removed=0 ORDER BY id",
+        )?;
+        let v = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+            .collect::<std::result::Result<_, _>>()?;
+        v
+    };
+    let mut w = String::from(
+        "Name,CMC,Type,Color,Set,Collector Number,Rarity,Color Category,Status,Finish,Maybeboard,Image URL,Image Back URL,Tags,Notes,MTGO ID\n",
+    );
+    let mut n = 0usize;
+    for (name, mv, ty, ci, ov, errata_text) in rows {
+        let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
+        let type_line = o.get("type").and_then(Value::as_str).map(ToString::to_string)
+            .or(ty).unwrap_or_default();
+        let cmc = o.get("mana_value").and_then(Value::as_f64).or(mv).unwrap_or(0.0);
+        let cmc = if cmc.fract() == 0.0 { format!("{}", cmc as i64) } else { format!("{cmc}") };
+        let letters: Vec<char> =
+            ci.unwrap_or_default().chars().filter(|c| "WUBRG".contains(*c)).collect();
+        let color: String = letters.iter().collect();
+        let cat = color_category(&type_line, &letters);
+        let url = format!("{base}/{}.png", crate::render::sanitize(&name));
+        // Tag ONLY the errata-ribbon cards (same rule as the renderer: a manual
+        // `errata_scroll` override forces it, else any FUNCTIONAL field override or an
+        // errata note auto-trips it). No blanket tag — non-errata cards get no tag.
+        let tags = if errata_ribbon(&o, &errata_text) { "Errata" } else { "" };
+        w.push_str(&format!(
+            "{},{cmc},{},{color},,,,{cat},Owned,Non-foil,false,{},,{},,\n",
+            csv_field(&name),
+            csv_field(&type_line),
+            csv_field(&url),
+            csv_field(tags),
+        ));
+        n += 1;
+    }
+    if let Some(p) = out.parent() {
+        fs::create_dir_all(p)?;
+    }
+    fs::write(out, w)?;
+    println!("cubecobra-csv: {n} cards -> {}", out.display());
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// recolor — recompute color identity from the effective mana cost + rules text
+// ---------------------------------------------------------------------------
+
+/// A card's color identity = every WUBRG letter appearing in any `{..}` mana
+/// symbol of its mana cost OR its rules text (hybrid/Phyrexian symbols count each
+/// colour; `{C}`/generic/`{T}` contribute nothing), sorted WUBRG and joined as
+/// `"W, U"` to match the seeded format. Colour *words* in rules text never count —
+/// only mana symbols, exactly as the Comprehensive Rules define colour identity.
+fn color_identity_of(mana_cost: &str, oracle_text: &str) -> String {
+    let mut set: Vec<char> = Vec::new();
+    for src in [mana_cost, oracle_text] {
+        let mut chars = src.chars();
+        while let Some(ch) = chars.next() {
+            if ch == '{' {
+                let mut sym = String::new();
+                for c2 in chars.by_ref() {
+                    if c2 == '}' {
+                        break;
+                    }
+                    sym.push(c2);
+                }
+                for k in sym.chars().filter(|k| "WUBRG".contains(*k)) {
+                    if !set.contains(&k) {
+                        set.push(k);
+                    }
+                }
+            }
+        }
+    }
+    const ORDER: &str = "WUBRG";
+    set.sort_by_key(|c| ORDER.find(*c).unwrap_or(9));
+    set.iter().map(char::to_string).collect::<Vec<_>>().join(", ")
+}
+
+/// Recompute `color_identity` for every active card from its effective (override-
+/// applied) mana cost + rules text, and write it back. The DB mana cost (with the
+/// `overrides` blob applied) is the source of truth — this is what re-aligns the
+/// colour-shifted lock pieces. Prints every change; `dry_run` writes nothing.
+pub fn recolor(editor_db: &Path, dry_run: bool) -> Result<()> {
+    let mut db = Connection::open(editor_db)
+        .with_context(|| format!("opening {}", editor_db.display()))?;
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(i64, String, Option<String>, Option<String>, Option<String>, String)> = {
+        let mut stmt = db.prepare(
+            "SELECT id,name,mana_cost,oracle_text,color_identity,COALESCE(overrides,'{}')
+             FROM cube_cards WHERE removed=0 ORDER BY id",
+        )?;
+        let v = stmt
+            .query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+            })?
+            .collect::<std::result::Result<_, _>>()?;
+        v
+    };
+    let mut updates: Vec<(i64, String)> = Vec::new();
+    for (id, name, mc, ot, ci_old, ov) in rows {
+        let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
+        let pick = |k: &str, base: Option<String>| {
+            o.get(k).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
+        };
+        let mana = pick("mana_cost", mc);
+        let oracle = pick("oracle_text", ot);
+        let ci = color_identity_of(&mana, &oracle);
+        let ci_old = ci_old.unwrap_or_default();
+        if ci != ci_old {
+            let show = |s: &str| if s.is_empty() { "—".to_string() } else { s.to_string() };
+            println!("  {name}: [{}] -> [{}]", show(&ci_old), show(&ci));
+            updates.push((id, ci));
+        }
+    }
+    if dry_run {
+        println!("recolor (dry-run): {} card(s) would change", updates.len());
+        return Ok(());
+    }
+    let tx = db.transaction()?;
+    for (id, ci) in &updates {
+        tx.execute(
+            "UPDATE cube_cards SET color_identity=?1, updated_at=datetime('now') WHERE id=?2",
+            params![ci, id],
+        )?;
+    }
+    tx.commit()?;
+    println!("recolor: {} card(s) updated", updates.len());
+    Ok(())
 }
 
 const INDEX_HTML: &str = include_str!("edit_ui.html");

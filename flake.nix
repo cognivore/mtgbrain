@@ -26,6 +26,7 @@
             jq
             just
             sqlite
+            awscli2
           ];
           # curl in the dev shell needs an explicit CA bundle.
           shellHook = ''

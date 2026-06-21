@@ -149,7 +149,6 @@ Ad Nauseam
 Bond of Agony
 Raven's Crime
 Chain of Smog
-Collective Brutality
 Infernal Tutor
 Sickening Dreams
 Doomsday
@@ -158,7 +157,6 @@ Tendrils of Agony
 The Last Ride
 Pact Weapon
 Font of Agonies
-Quest for the Nihil Stone
 Shrieking Affliction
 Blight Mound
 Faith of the Devoted
@@ -171,7 +169,6 @@ Gibbering Descent
 Goblin Welder
 Grim Lavamancer
 Jackal Pup
-Spark Mage
 Spikeshot Elder
 Minotaur Explorer
 Balthor the Stout
@@ -252,15 +249,11 @@ Call of the Herd
 Acorn Harvest
 Grizzly Fate
 Roar of the Wurm
-Carpet of Flowers
 Cocoon
-Utopia Sprawl
-Wild Growth
 Druid's Call
 Nylea's Presence
 Prismatic Omen
 By Gnome Means
-Nantuko Shrine
 Squirrel Nest
 Saproling Burst
 Leveler
@@ -277,7 +270,6 @@ The Rack
 Anvil of Bogardan
 Coldsteel Heart
 Contagion Clasp
-Cursed Totem
 Damping Sphere
 Defense Grid
 Ebony Owl Netsuke
@@ -300,14 +292,11 @@ Ensnaring Bridge
 Iron Maiden
 Misers' Cage
 Monument to Endurance
-Pristine Talisman
 Static Orb
 Storage Matrix
 Tangle Wire
 Temple Bell
-Worn Powerstone
 Cursed Rack
-Darksteel Reactor
 Empowered Autogenerator
 Font of Mythos
 Giant Fan
@@ -328,7 +317,6 @@ Enchanted Evening
 Teferi's Moat
 Dovescape
 Iridescent Angel
-Glimpse the Unthinkable
 Shadowmage Infiltrator
 Soul Manipulation
 Balshan Collaborator
@@ -390,3 +378,55 @@ Seafloor Debris
 Secluded Steppe
 Tranquil Thicket
 Spin into Myth
+Mirari
+Mirari's Wake
+Psychotic Haze
+Brain Gorgers
+Chainer's Edict
+Embolden
+Dematerialize
+Deep Reconnaissance
+Hollow One
+Darkblast
+Grave-Shell Scarab
+Demonic Counsel
+Sire of Insanity
+Abandoned Outpost
+Bog Wreckage
+Ravaged Highlands
+Timberland Ruins
+Muscle Burst
+Rites of Spring
+Sphere of Duty
+Sphere of Law
+Cognivore
+Magnivore
+Cantivore
+Terravore
+Innocent Blood
+Syncopate
+Circular Logic
+Mindslicer
+Shelter
+Consider
+Psychatog
+Avalanche Riders
+Extract
+Time Stretch
+Vexing Arcanix
+Sadistic Hypnotist
+Shower of Coals
+Kirtar's Wrath
+Yawgmoth Demon
+Glimpse the Unthinkable
+Rain of Filth
+Compulsion
+Obsessive Search
+Ray of Revelation
+Dire-Strain Rampage
+Ancient Grudge
+Naturalize
+Feed the Swarm
+Chaos Warp
+Vampire Hexmage
+Tranquility

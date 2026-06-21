@@ -11,6 +11,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .art { position:absolute; left:%%AX%%%; top:%%AY%%%; width:%%AW%%%; height:%%AH%%%;
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
+/* coloured-artifact text box: the colour frame, clipped to the text-box rectangle,
+   over the brown artifact base. Sits above the base frame, below the text. */
+.framebox { background-size:100% 100%; -webkit-clip-path:inset(60.3% 7.5% 9.7% 7.5%);
+   clip-path:inset(60.3% 7.5% 9.7% 7.5%); }
 .box { position:absolute; color:#080808; }
 /* ===== cardconjurer packSeventh.js exact bounds; SHARP black shadow (no blur) ===== */
 .titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%; display:flex; align-items:center; }
@@ -65,6 +69,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
   <div class="face">
     <div class="art" style="background-image:url('%%ART%%')"></div>
     <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
+    %%FRAMEBOX%%
     <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
     <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
     <div class="box type" id="ty">%%TYPE%%</div>

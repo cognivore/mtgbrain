@@ -42,6 +42,19 @@ const H: u32 = 2960;
 const FACE_W: u32 = 2000;
 const FACE_H: u32 = 2800;
 
+/// On-card art window (the `.art` box) as fractions of the FACE: [x, y, w, h].
+/// These are cardconjurer's packSeventh art bounds; they MUST stay in lock-step with
+/// the AX/AY/AW/AH fed to `build_html` and with the frame PNG's transparent art hole.
+/// A MANUAL crop is locked to this window's ASPECT so the boxed region maps 1:1 into
+/// the art hole: `.art` paints with `background-size:cover`, and a matching aspect
+/// means cover adds no further cropping — true WYSIWYG between editor box and card.
+const ART_WINDOW_FRAC: [f64; 4] = [0.12, 0.0991, 0.7667, 0.4429];
+
+/// Aspect (w/h) of the on-card art window — what a hand-positioned crop box locks to.
+pub fn art_window_aspect() -> f64 {
+    (ART_WINDOW_FRAC[2] * f64::from(FACE_W)) / (ART_WINDOW_FRAC[3] * f64::from(FACE_H))
+}
+
 // ---------------------------------------------------------------------------
 // assets
 // ---------------------------------------------------------------------------
@@ -161,6 +174,9 @@ struct Card {
     type_line: String,
     oracle_text: String,
     flavor: String,
+    /// True when the editor set a `flavor` override (even to empty). An explicit empty
+    /// override SUPPRESSES flavor entirely; absence falls back to the Scryfall flavor.
+    flavor_overridden: bool,
     power: String,
     toughness: String,
     loyalty: String,
@@ -238,8 +254,10 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
         mana_cost: pick("mana_cost", mc),
         type_line: pick("type", tl),
         oracle_text: pick("oracle_text", ot),
-        // "flavor" override wins; if absent (empty), render_one fills it from Scryfall.
+        // "flavor" override wins; if the key is ABSENT, render_one fills from Scryfall.
+        // An explicit empty override suppresses flavor (flavor_overridden gates the fill).
         flavor: pick("flavor", None),
+        flavor_overridden: o.get("flavor").is_some(),
         power: pick("power", p),
         toughness: pick("toughness", t),
         loyalty: pick("loyalty", l),
@@ -393,20 +411,56 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
             let art_ref = v["art_ref"].as_str().unwrap_or("mpcfill:cached").to_string();
             let artist = v["artist"].as_str().unwrap_or("").to_string();
             let year = v["year"].as_str().unwrap_or("2001").to_string();
+            // A MANUAL crop (operator hand-positioned the box in the editor) is sticky.
+            let manual = v["manual"].as_bool().unwrap_or(false);
+            // A GenAI choice is DELIBERATE — never re-pick/clobber it. Self-heal the crop
+            // from the genai source (genai/<artist>/<hash>.png) if it has gone missing.
+            if let Some(rest) = art_ref.strip_prefix("genai:") {
+                if !crop.exists() {
+                    if let Some((a, h)) = rest.rsplit_once(':') {
+                        let src = card_dir.join("genai").join(sanitize_bucket(a)).join(format!("{h}.png"));
+                        if src.exists() {
+                            fs::copy(&src, &crop)?;
+                        }
+                    }
+                }
+                if crop.exists() {
+                    return Ok(Art { path: crop, art_ref, artist, year });
+                }
+            }
             let bx = v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
                 let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
                 [g(0), g(1), g(2), g(3)]
             });
             let proxy = v["proxy"].as_str().map(PathBuf::from);
-            // In-place re-crop from the stored proxy + box (picks up inset changes).
+            // MANUAL crop FIRST: crop the source EXACTLY (no safety insets, no aspect
+            // re-derivation) — the operator already positioned a window-aspect box by hand,
+            // so it maps 1:1 into the art hole. The crop signature in art_ref makes the
+            // render cache key move whenever the box moves (never reuse a stale crop).
+            if manual {
+                if let (Some(bx), Some(proxy)) = (bx, &proxy) {
+                    if proxy.exists() {
+                        crop_exact(proxy, bx, &crop)?;
+                        let asp = v["art_aspect"].as_f64().unwrap_or_else(art_window_aspect);
+                        let art_ref = format!("{art_ref}#{}", crop_sig(proxy, &bx, asp, true));
+                        return Ok(Art { path: crop, art_ref, artist, year });
+                    }
+                }
+            }
+            // In-place re-crop from the stored proxy + box (picks up inset changes). The
+            // crop signature is folded into art_ref so an auto re-pick that moves the box
+            // produces a distinct cached render too.
             if let (Some(bx), Some(proxy), Some(asp)) = (bx, &proxy, v["art_aspect"].as_f64()) {
                 if proxy.exists() {
                     crop_to(proxy, bx, &crop, asp)?;
+                    let art_ref = format!("{art_ref}#{}", crop_sig(proxy, &bx, asp, false));
                     return Ok(Art { path: crop, art_ref, artist, year });
                 }
             }
-            // No stored box: reuse the cached crop unless we can cheaply re-pick.
-            if crop.exists() && !can_repick {
+            // Any SETTLED crop is reused — do NOT re-pick and clobber a deliberate choice
+            // (manual swap, reprint pick, etc.). Only the legacy boxless auto-cache
+            // ("mpcfill:cached") is upgraded to a box-bearing pick when we can re-pick.
+            if crop.exists() && !(can_repick && art_ref == "mpcfill:cached") {
                 return Ok(Art { path: crop, art_ref, artist, year });
             }
             // else fall through → re-pick (will write a box-bearing sidecar).
@@ -431,6 +485,9 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
     if let (Some(base), Some(key)) = (backend, key.as_deref()) {
         match mpcfill_pick(name, base, cache_root, card_dir, &ref_path, key) {
             Ok(Some(p)) => {
+                // Sidecar keeps the BASE art_ref; the returned art_ref carries the crop
+                // signature so the render cache key tracks the actual box (see crop_sig).
+                let art_ref = format!("{}#{}", p.art_ref, crop_sig(&p.proxy, &p.bx, p.aspect, false));
                 let _ = fs::write(
                     &sidecar,
                     json!({
@@ -439,7 +496,7 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
                     })
                     .to_string(),
                 );
-                return Ok(Art { path: p.out, art_ref: p.art_ref, artist, year });
+                return Ok(Art { path: p.out, art_ref, artist, year });
             }
             Ok(None) => eprintln!("  art: no MPCfill match for {name:?} — using Scryfall art_crop"),
             Err(e) => eprintln!("  art: MPCfill/Claude error ({e}) — using Scryfall art_crop"),
@@ -633,7 +690,7 @@ fn mpcfill_pick(
                     aspect: art_aspect,
                 }));
             }
-            if best_cv.map_or(true, |(_, _, b)| score > b) {
+            if best_cv.is_none_or(|(_, _, b)| score > b) {
                 best_cv = Some((i, bx, score));
             }
         }
@@ -659,7 +716,7 @@ fn mpcfill_pick(
                 if std::env::var("MTGBRAIN_DEBUG_PICK").is_ok() {
                     eprintln!("  claude cand[{i}] {} same={same} box={bx:?}", c.bucket);
                 }
-                if same && best_match.map_or(true, |(_, b)| bordered(&bx) > bordered(&b)) {
+                if same && best_match.is_none_or(|(_, b)| bordered(&bx) > bordered(&b)) {
                     best_match = Some((i, bx));
                 }
                 best_box.get_or_insert((i, bx));
@@ -808,6 +865,37 @@ fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()>
     Ok(())
 }
 
+/// Crop `path` to EXACTLY the fractional box (clamped to the image), with NO safety
+/// insets and NO aspect re-derivation — for a MANUAL crop the operator positioned by
+/// hand in the editor. The box is already locked to the art-window aspect, so the
+/// result drops straight into the card's art hole (`background-size:cover`, matching
+/// aspect ⇒ no further crop). Contrast `crop_to`, which shaves insets + caps height by
+/// the reference aspect to hide an AUTO pick's frame leakage.
+fn crop_exact(path: &Path, bx: [f64; 4], out: &Path) -> Result<()> {
+    let img = image::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let (iw, ih) = (f64::from(img.width()), f64::from(img.height()));
+    let x = (bx[0] * iw).clamp(0.0, iw - 1.0) as u32;
+    let y = (bx[1] * ih).clamp(0.0, ih - 1.0) as u32;
+    let w = (bx[2] * iw).clamp(1.0, iw - f64::from(x)) as u32;
+    let h = (bx[3] * ih).clamp(1.0, ih - f64::from(y)) as u32;
+    img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
+    Ok(())
+}
+
+/// A short, stable signature of a SETTLED crop — proxy file + box + aspect (+ a manual
+/// flag) — folded into `art_ref` so the render cache key (`card_hash`) changes the
+/// instant the crop box moves. Without this, a repositioned box keeps the same hash and
+/// a stale cached render is served; with it, every distinct crop yields its own render
+/// and a plain `render all` (no --force) is always correct.
+fn crop_sig(proxy: &Path, bx: &[f64; 4], aspect: f64, manual: bool) -> String {
+    let name = proxy.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let s = format!(
+        "{name}|{:.5},{:.5},{:.5},{:.5}|{aspect:.5}|{manual}",
+        bx[0], bx[1], bx[2], bx[3]
+    );
+    short_hash(&s)
+}
+
 /// Per-pixel gradient magnitude (central differences) of a greyscale image, row-major.
 /// Edges are 0. Used so template matching keys on structure, not flat brightness.
 fn grad_mag(img: &image::GrayImage, w: u32, h: u32) -> Vec<f64> {
@@ -908,7 +996,7 @@ fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
                 if pvar > 1.0 {
                     let cov = (spt / n) - pmean * tmean;
                     let ncc = cov / (pvar.sqrt() * tstd);
-                    if best.map_or(true, |(_, b)| ncc > b) {
+                    if best.is_none_or(|(_, b)| ncc > b) {
                         best = Some((
                             [
                                 f64::from(x) / f64::from(pw),
@@ -952,6 +1040,239 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
+// manual art crop (per-card editor: reposition the underlying MPCfill/Scryfall art)
+// ---------------------------------------------------------------------------
+//
+// The auto crop (CV / Claude vision in mpcfill_pick) is right most of the time but
+// "slightly off" for some cards (Narset, Jace, …). Rather than chase it with more
+// heuristics, the editor lets the operator drag a window-aspect box over the underlying
+// art and save it. That writes a `manual` sidecar (proxy = the chosen source image, box
+// = the hand-placed rectangle); `acquire_art` then crops it EXACTLY on every render. The
+// prior auto pick is stashed under `auto` so "reset to auto" is free (no re-pick).
+
+/// Parse a card dir's `art.json` sidecar, if present.
+fn read_sidecar(card_dir: &Path) -> Option<Value> {
+    serde_json::from_str(&fs::read_to_string(card_dir.join("art.json")).ok()?).ok()
+}
+
+/// Look up a card's ORIGINAL name (the art/render addressing key) by editor-DB id.
+fn card_name(db: &Connection, id: i64) -> Result<String> {
+    db.query_row("SELECT name FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .with_context(|| format!("no card id {id} in editor DB"))
+}
+
+/// The current crop box `[x,y,w,h]` (fractions of the source image), if the sidecar has one.
+fn sidecar_box(v: &Value) -> Option<[f64; 4]> {
+    v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
+        let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+        [g(0), g(1), g(2), g(3)]
+    })
+}
+
+/// Metadata for the per-card crop editor: the current box + source, every selectable
+/// source image (Scryfall art_crop + each cached MPCfill proxy), and the art-window
+/// aspect the box is locked to. `genai` cards can't be repositioned here (their art is
+/// the generated image itself, not a sub-crop of a proxy) — the UI disables editing.
+pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let name = card_name(&db, id)?;
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let mpc_dir = card_dir.join("mpcfill");
+    let art_dir = cache_dir.join("art");
+    let side = read_sidecar(&card_dir);
+    let art_ref = side.as_ref().and_then(|v| v["art_ref"].as_str()).unwrap_or("");
+    let manual = side.as_ref().and_then(|v| v["manual"].as_bool()).unwrap_or(false);
+    let is_genai = art_ref.starts_with("genai:") && !manual;
+    let proxy = side.as_ref().and_then(|v| v["proxy"].as_str()).map(PathBuf::from);
+
+    // `rel` token for a source path under the card dir (forward slashes for the URL).
+    let rel_of = |p: &Path| -> Option<String> {
+        p.strip_prefix(&card_dir).ok().map(|r| r.to_string_lossy().replace('\\', "/"))
+    };
+
+    // Sources: Scryfall art (always offerable) + every cached MPCfill proxy.
+    let mut sources: Vec<Value> =
+        vec![json!({"rel": "@scryfall", "label": "Scryfall (original art)", "kind": "scryfall"})];
+    if let Ok(rd) = fs::read_dir(&mpc_dir) {
+        let mut buckets: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
+        buckets.sort();
+        for b in &buckets {
+            let bucket = b.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+            if let Ok(files) = fs::read_dir(b) {
+                let mut fl: Vec<PathBuf> = files.flatten().map(|e| e.path()).filter(|p| p.is_file()).collect();
+                fl.sort();
+                for f in &fl {
+                    if let Some(rel) = rel_of(f) {
+                        sources.push(json!({"rel": rel, "label": bucket, "kind": "mpcfill"}));
+                    }
+                }
+            }
+        }
+    }
+
+    // Which source is the current crop taken from?
+    let current_rel = match &proxy {
+        Some(p) if p.starts_with(&mpc_dir) => rel_of(p),
+        Some(p) if p.starts_with(&art_dir) => Some("@scryfall".to_string()),
+        Some(_) => Some("@current".to_string()),
+        None => None,
+    };
+
+    Ok(json!({
+        "id": id,
+        "name": name,
+        "window_aspect": art_window_aspect(),
+        "box": sidecar_box(side.as_ref().unwrap_or(&json!({}))),
+        "art_aspect": side.as_ref().and_then(|v| v["art_aspect"].as_f64()),
+        "manual": manual,
+        "genai": is_genai,
+        "current_rel": current_rel,
+        "artist": side.as_ref().and_then(|v| v["artist"].as_str()).unwrap_or(""),
+        "sources": sources,
+        "has_sidecar": side.is_some(),
+    }))
+}
+
+/// Resolve a source `rel` token to a real, existing image path (validated to stay
+/// inside the card's cache dir). `@scryfall` downloads the art_crop on demand;
+/// `@current` is the sidecar's current source; `mpcfill/<bucket>/<file>` is a cached proxy.
+pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, rel: &str) -> Result<PathBuf> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let name = card_name(&db, id)?;
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    match rel {
+        "@scryfall" => {
+            let (p, _, _, _) = scryfall_oldest(&name, &cache_dir.join("art"))?;
+            Ok(p)
+        }
+        "@current" => read_sidecar(&card_dir)
+            .and_then(|v| v["proxy"].as_str().map(PathBuf::from))
+            .filter(|p| p.exists())
+            .context("no current source image for this card"),
+        r if r.starts_with("mpcfill/") => {
+            if r.contains("..") {
+                bail!("invalid source path");
+            }
+            let p = card_dir.join(r);
+            // Canonicalize and confirm it stays under cards/<Name>/mpcfill (no escape).
+            let mpc = card_dir.join("mpcfill");
+            let base = fs::canonicalize(&mpc).unwrap_or(mpc);
+            let cp = fs::canonicalize(&p).with_context(|| format!("no such source: {r}"))?;
+            if !cp.starts_with(&base) {
+                bail!("source path escapes the card dir");
+            }
+            Ok(p)
+        }
+        _ => bail!("unknown source token: {rel}"),
+    }
+}
+
+/// Save a MANUAL crop: write a `manual` sidecar (source + hand-placed box) and re-crop
+/// `art.png` immediately so the change shows even without a fresh render. The crop box is
+/// in fractions of the source image and is expected to already carry the art-window
+/// aspect (the editor locks it). Bumps `updated_at` so the editor preview cache-busts.
+pub fn art_save_crop(
+    editor_db: &Path, cache_dir: &Path, id: i64, rel: &str, bx: [f64; 4],
+) -> Result<()> {
+    let name = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        card_name(&db, id)?
+    };
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    fs::create_dir_all(&card_dir)?;
+    let source = art_image_path(editor_db, cache_dir, id, rel)?;
+    if !source.exists() {
+        bail!("source image missing: {}", source.display());
+    }
+
+    let prev = read_sidecar(&card_dir);
+    // Keep the credit/year (from the prior sidecar, else the oldest Scryfall printing).
+    let (artist, year) = match (
+        prev.as_ref().and_then(|v| v["artist"].as_str()).map(str::to_string),
+        prev.as_ref().and_then(|v| v["year"].as_str()).map(str::to_string),
+    ) {
+        (Some(a), Some(y)) => (a, y),
+        _ => scryfall_oldest(&name, &cache_dir.join("art"))
+            .map_or_else(|_| (String::new(), "2001".to_string()), |(_, a, y, _)| (a, y)),
+    };
+    // Stash the prior AUTO pick so "reset to auto" is free (no re-pick / CV / Claude).
+    let auto = prev.as_ref().and_then(|v| {
+        if v["manual"].as_bool().unwrap_or(false) {
+            v.get("auto").cloned() // already manual: carry forward the original auto
+        } else if v.get("box").is_some() && v.get("proxy").is_some() {
+            Some(json!({
+                "art_ref": v["art_ref"], "box": v["box"],
+                "proxy": v["proxy"], "art_aspect": v["art_aspect"],
+            }))
+        } else {
+            None
+        }
+    });
+
+    let mut side = json!({
+        "art_ref": format!("manual:{rel}"),
+        "artist": artist,
+        "year": year,
+        "proxy": source.to_string_lossy(),
+        "box": bx,
+        "art_aspect": art_window_aspect(),
+        "manual": true,
+        "source_rel": rel,
+    });
+    if let Some(a) = auto {
+        side["auto"] = a;
+    }
+    fs::write(card_dir.join("art.json"), side.to_string())?;
+    crop_exact(&source, bx, &card_dir.join("art.png"))?;
+
+    let w = Connection::open(editor_db)?;
+    let _ = w.execute(
+        "UPDATE cube_cards SET updated_at=datetime('now') WHERE id=?1",
+        params![id],
+    );
+    Ok(())
+}
+
+/// Reset a card's crop to AUTOMATIC. If the stashed auto pick is present, restore it for
+/// free (re-crop with the inset logic); otherwise drop the sidecar so the next render
+/// re-picks from scratch. Bumps `updated_at` so the editor preview refreshes.
+pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
+    let name = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        card_name(&db, id)?
+    };
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let prev = read_sidecar(&card_dir);
+    if let Some(auto) = prev.as_ref().and_then(|v| v.get("auto")).cloned() {
+        let artist = prev.as_ref().and_then(|v| v["artist"].as_str()).unwrap_or("");
+        let year = prev.as_ref().and_then(|v| v["year"].as_str()).unwrap_or("2001");
+        let side = json!({
+            "art_ref": auto["art_ref"], "artist": artist, "year": year,
+            "proxy": auto["proxy"], "box": auto["box"], "art_aspect": auto["art_aspect"],
+        });
+        fs::write(card_dir.join("art.json"), side.to_string())?;
+        if let (Some(p), Some(b), Some(a)) = (
+            auto["proxy"].as_str().map(PathBuf::from),
+            sidecar_box(&auto),
+            auto["art_aspect"].as_f64(),
+        ) {
+            if p.exists() {
+                crop_to(&p, b, &card_dir.join("art.png"), a)?;
+            }
+        }
+    } else {
+        let _ = fs::remove_file(card_dir.join("art.json"));
+        let _ = fs::remove_file(card_dir.join("art.png"));
+    }
+    let w = Connection::open(editor_db)?;
+    let _ = w.execute(
+        "UPDATE cube_cards SET updated_at=datetime('now') WHERE id=?1",
+        params![id],
+    );
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // GenAI art (Claude art-direction -> OpenAI gpt-image-1, in chosen-artist styles)
 // ---------------------------------------------------------------------------
 
@@ -983,10 +1304,13 @@ pub const ARTISTS: &[(&str, &str, &str)] = &[
       behind the subject",
      "Chris Pace"),
     ("Brom",
-     "dark erotic gothic horror in oils; sinewy leathery flesh, bone, spikes and \
-      bondage-leather, gaunt menacing figures lit by a single cold spotlight against \
-      murky earth-and-soot backgrounds shot with sickly green and blood red — brooding, \
-      fetishistic, dangerous",
+     "dark gothic oil-painting STYLE ONLY — this is a way of PAINTING, not a fixed subject. \
+      Rich low-key chiaroscuro, a single cold raking light out of deep shadow, a murky \
+      earth-and-soot palette shot with sickly green and dull blood-red, sinewy texture on \
+      leathery, weathered surfaces, a brooding fine-art horror atmosphere. CRITICAL: paint \
+      THE CARD'S OWN SUBJECT (whatever the art direction describes) in this style — do NOT \
+      default to a gaunt menacing humanoid; the recurring-dark-figure habit is banned. The \
+      subject must match this specific card, only the rendering is Brom's",
      "Brian Ohm"),
     ("Rob Alexander",
      "atmospheric naturalistic landscapes and weathered architecture; deep aerial \
@@ -1509,6 +1833,34 @@ pub fn genai_unchoose(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()>
     Ok(())
 }
 
+/// Choose the card's ORIGINAL (real) art as a deliberate decision: clear any GenAI
+/// sidecar (so the card renders its real art) and record a CHOSEN event crediting
+/// "Original art" — so the card stays in the Review list, marked decided. The genai_art
+/// flag is kept ON so it remains visible/auditable there.
+pub fn genai_choose_original(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let card = load_card(&db, id)?;
+    // GUARD: never mark "Original art" for a card with no GenAI generation yet — that would
+    // settle it as decided and the pass would skip it, so it'd never get a gallery to review.
+    let store = crate::events::open(cache_dir)?;
+    if !crate::events::has_generated(&store, id)? {
+        bail!("{}: generate the GenAI gallery before choosing Original art", card.name);
+    }
+    let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
+    let _ = fs::remove_file(card_dir.join("art.json")); // → render falls back to the real art
+    let _ = fs::remove_file(card_dir.join("art.png"));
+    {
+        let w = Connection::open(editor_db)?;
+        let _ = w.execute(
+            "UPDATE cube_cards SET illustrator='', updated_at=datetime('now') WHERE id=?1",
+            params![id],
+        );
+    }
+    log_event(cache_dir, id, &card.name, crate::events::CHOSEN,
+        Some("Original art"), Some(""), None, Some("original"));
+    Ok(())
+}
+
 /// History of GenAI events for a card (for the review UI / time-travel).
 pub fn genai_history(cache_dir: &Path, id: i64) -> Result<Value> {
     let db = crate::events::open(cache_dir)?;
@@ -1600,7 +1952,17 @@ pub fn genai_pass(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome:
     };
     let total = ids.len();
     println!("GenAI full pass: {total} flagged cards");
+    let store = crate::events::open(cache_dir).ok();
     for (i, (id, name)) in ids.iter().enumerate() {
+        // Respect ANY settled decision (an artist pick OR "Original art") — never regenerate.
+        let decided = store
+            .as_ref()
+            .and_then(|s| crate::events::current_choice(s, *id).ok().flatten())
+            .is_some();
+        if decided {
+            println!("[{}/{total}] {name}: skip (already decided)", i + 1);
+            continue;
+        }
         match genai_options(editor_db, assets_dir, cache_dir, chrome, *id, None) {
             Ok(v) => {
                 let ok = v["options"].as_array().map_or(0, Vec::len);
@@ -1668,7 +2030,8 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // All bounds/sizes are EXACT cardconjurer packSeventh.js values (fractions of the
         // FACE). Font px = fraction * FACE_H. Shadows match CC: sharp black, no blur,
         // offset (0.002*FACE_W, 0.0015*FACE_H).
-        ("AX", pc(0.12)), ("AY", pc(0.0991)), ("AW", pc(0.7667)), ("AH", pc(0.4429)),
+        ("AX", pc(ART_WINDOW_FRAC[0])), ("AY", pc(ART_WINDOW_FRAC[1])),
+        ("AW", pc(ART_WINDOW_FRAC[2])), ("AH", pc(ART_WINDOW_FRAC[3])),
         ("TX", pc(0.1134)), ("TY", pc(0.0481)), ("TW", pc(0.7734)), ("TH", pc(0.041)),
         // Pips share the TITLE's vertical band (MAY=TY, MAH=TH) and are centred in it,
         // so pip-centre == title-centre. (cardconjurer's literal mana y=0.0539 is offset
@@ -1895,7 +2258,9 @@ pub fn render_one(
     let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
     // Flavor text (italic, below rules) — from the cached Scryfall print metadata that
     // acquire_art just settled. An "flavor" override wins if the editor set one.
-    if card.flavor.is_empty() {
+    // Fall back to the Scryfall flavor only when the editor set NO flavor override.
+    // An explicit (even empty) override suppresses flavor — printing none.
+    if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
     if card.set.is_empty() {
@@ -1915,6 +2280,36 @@ pub fn render_one(
     let set_svg = set_symbol_svg(&card.set, cache_dir);
     compose(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
         &format!("{id}{}", u8::from(foil)), set_svg.as_deref())?;
+    Ok(out)
+}
+
+/// Render a preview of the card with its REAL (Scryfall) art — the "Original art" option
+/// shown in the Review tab so the operator can SEE and vote for the base art. Rendered
+/// into an isolated `genai/_base/` dir so it never touches a chosen-art sidecar; credits
+/// the real historical illustrator. Always re-rendered (cheap; cached art crop).
+pub fn genai_base_card(
+    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64,
+) -> Result<PathBuf> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let mut card = load_card(&db, id)?;
+    let frame_rel = assets_dir.join(frame_file(&card));
+    let base_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai").join("_base");
+    fs::create_dir_all(&base_dir)?;
+    // Acquire the REAL art into the ISOLATED base dir (Scryfall, fast/free — same
+    // illustration MPCfill would pick, just lower-res; enough to vote on).
+    let art = acquire_art(&card.name, cache_dir, &base_dir, None)?;
+    if card.flavor.is_empty() && !card.flavor_overridden {
+        card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
+    }
+    if card.set.is_empty() {
+        let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
+        card.set = set;
+        card.rarity = rarity;
+    }
+    let out = base_dir.join("card.png");
+    let set_svg = set_symbol_svg(&card.set, cache_dir);
+    compose(&card, &art.path, &art.artist, &art.year, assets_dir, &frame_rel, false, &out, chrome,
+        &format!("base-{id}"), set_svg.as_deref())?;
     Ok(out)
 }
 
@@ -1987,6 +2382,114 @@ pub fn render_all(
 pub fn sanitize(name: &str) -> String {
     name.chars().map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' })
         .collect::<String>().trim_matches('_').to_string()
+}
+
+// ---------------------------------------------------------------------------
+// selfhost — Scryfall-format derivative of the forefront MPC render
+// ---------------------------------------------------------------------------
+
+/// Scryfall's `png` image size (what cards.scryfall.io serves at /png/).
+const SELFHOST_W: u32 = 745;
+const SELFHOST_H: u32 = 1040;
+/// MPC bleed per side as a fraction of the full canvas (the face is centered).
+const BLEED_FRAC_X: f64 = (W - FACE_W) as f64 / (2.0 * W as f64); // 88/2176
+const BLEED_FRAC_Y: f64 = (H - FACE_H) as f64 / (2.0 * H as f64); // 80/2960
+/// Card corner radius as a fraction of card width (≈2.5 mm on a 63 mm card).
+const CORNER_FRAC: f64 = 0.0397;
+
+/// The forefront (latest) MPC render in a card dir: the most-recently-written
+/// top-level `<hash>.png`, excluding the art crop and any prior selfhost output.
+fn forefront_render(card_dir: &Path) -> Option<PathBuf> {
+    let mut best: Option<(std::time::SystemTime, PathBuf)> = None;
+    for entry in fs::read_dir(card_dir).ok()?.flatten() {
+        let p = entry.path();
+        if !p.is_file() || p.extension().and_then(|e| e.to_str()) != Some("png") {
+            continue;
+        }
+        match p.file_name().and_then(|n| n.to_str()) {
+            Some("art.png" | "selfhost.png") | None => continue,
+            _ => {}
+        }
+        let Ok(m) = entry.metadata().and_then(|md| md.modified()) else { continue };
+        if best.as_ref().is_none_or(|(bm, _)| m > *bm) {
+            best = Some((m, p));
+        }
+    }
+    best.map(|(_, p)| p)
+}
+
+/// Zero the alpha outside a rounded rectangle (1px coverage AA on the arc).
+fn round_corners(img: &mut image::RgbaImage, frac: f64) {
+    let (w, h) = (img.width(), img.height());
+    let r = (frac * w as f64).round() as i32;
+    if r <= 0 {
+        return;
+    }
+    let rf = r as f64;
+    for y in 0..h as i32 {
+        for x in 0..w as i32 {
+            // Snap to the nearest corner-arc center; if either axis is in the
+            // straight middle, that axis contributes 0 (edges stay square).
+            let cx = if x < r { r } else if x >= w as i32 - r { w as i32 - 1 - r } else { x };
+            let cy = if y < r { r } else if y >= h as i32 - r { h as i32 - 1 - r } else { y };
+            if cx == x || cy == y {
+                continue; // on a straight edge/interior, not a corner arc
+            }
+            let d = (((x - cx) as f64).powi(2) + ((y - cy) as f64).powi(2)).sqrt();
+            if d > rf {
+                img.get_pixel_mut(x as u32, y as u32)[3] = 0;
+            } else if d > rf - 1.0 {
+                let px = img.get_pixel_mut(x as u32, y as u32);
+                px[3] = (f64::from(px[3]) * (rf - d).clamp(0.0, 1.0)) as u8;
+            }
+        }
+    }
+}
+
+/// Build `cards/<Name>/selfhost.png` from the card's forefront MPC render: crop
+/// the printable face out of the bleed canvas, downscale to Scryfall's 745×1040,
+/// and round the corners (transparent outside the radius). `Ok(None)` if the card
+/// has no render yet.
+pub fn selfhost_one(card_dir: &Path) -> Result<Option<PathBuf>> {
+    let Some(src) = forefront_render(card_dir) else {
+        return Ok(None);
+    };
+    let img = image::open(&src).with_context(|| format!("opening {}", src.display()))?;
+    let (w, h) = (img.width(), img.height());
+    let cx = (f64::from(w) * BLEED_FRAC_X).round() as u32;
+    let cy = (f64::from(h) * BLEED_FRAC_Y).round() as u32;
+    let face = img.crop_imm(cx, cy, w.saturating_sub(2 * cx), h.saturating_sub(2 * cy));
+    let resized = face.resize_exact(SELFHOST_W, SELFHOST_H, image::imageops::FilterType::Lanczos3);
+    let mut rgba = resized.to_rgba8();
+    round_corners(&mut rgba, CORNER_FRAC);
+    let out = card_dir.join("selfhost.png");
+    rgba.save(&out).with_context(|| format!("saving {}", out.display()))?;
+    Ok(Some(out))
+}
+
+/// Generate the selfhost image for every active card in the editor DB. Reports
+/// how many were written and which cards still lack a render.
+pub fn render_selfhost(editor_db: &Path, cache_dir: &Path) -> Result<()> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening {}", editor_db.display()))?;
+    let names: Vec<String> = {
+        let mut stmt = db.prepare("SELECT name FROM cube_cards WHERE removed=0 ORDER BY id")?;
+        let v = stmt.query_map([], |r| r.get(0))?.collect::<std::result::Result<_, _>>()?;
+        v
+    };
+    let (mut done, mut missing) = (0usize, Vec::new());
+    for name in &names {
+        let dir = cache_dir.join("cards").join(sanitize(name));
+        match selfhost_one(&dir)? {
+            Some(_) => done += 1,
+            None => missing.push(name.clone()),
+        }
+    }
+    println!("selfhost: {done} written, {} missing a render", missing.len());
+    for m in &missing {
+        println!("  (no render) {m}");
+    }
+    Ok(())
 }
 
 fn percent(s: &str) -> String {

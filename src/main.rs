@@ -155,6 +155,12 @@ enum RenderCmd {
         #[command(flatten)]
         common: RenderCommon,
     },
+    /// Build the Scryfall-format "selfhost" image (cropped, rounded, 745×1040) for
+    /// every card from its forefront MPC render. No Chrome/network needed.
+    Selfhost {
+        #[command(flatten)]
+        common: RenderCommon,
+    },
     /// Async full pass: generate the GenAI art gallery for every genai-flagged card
     /// (idempotent/resumable; logs every action to the event store). Run in the
     /// background, then review/choose in the editor's "Review GenAI" tab.
@@ -177,6 +183,31 @@ enum EditCmd {
         /// Overwrite an existing editor DB (discards saved decisions).
         #[arg(long)]
         force: bool,
+    },
+    /// Recompute color_identity for every card from its effective (override-applied)
+    /// mana cost + rules-text mana symbols, and write it back to the editor DB.
+    Recolor {
+        /// Editor DB (default: <data-dir>/cube_editor.sqlite).
+        #[arg(long = "editor-db")]
+        editor_db: Option<PathBuf>,
+        /// Print the changes without writing them.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Export a CubeCobra bulk-import CSV (custom image URLs + recomputed colours).
+    CubecobraCsv {
+        /// Editor DB (default: <data-dir>/cube_editor.sqlite).
+        #[arg(long = "editor-db")]
+        editor_db: Option<PathBuf>,
+        /// Public base URL the selfhost images were uploaded under.
+        #[arg(
+            long,
+            default_value = "https://s3.us-east-1.amazonaws.com/social-doma-dev-media/odyssey2026"
+        )]
+        base: String,
+        /// Output CSV path (default: <data-dir>/odyssey2026_cubecobra.csv).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     /// Serve the review UI on a local port.
     Serve {
@@ -287,6 +318,21 @@ fn main() -> Result<()> {
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 edit::seed(&db, list, &out, *force)
             }
+            EditCmd::Recolor { editor_db, dry_run } => {
+                let edb = editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                edit::recolor(&edb, *dry_run)
+            }
+            EditCmd::CubecobraCsv { editor_db, base, out } => {
+                let edb = editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let out = out
+                    .clone()
+                    .unwrap_or_else(|| cli.data_dir.join("odyssey2026_cubecobra.csv"));
+                edit::cubecobra_csv(&edb, base, &out)
+            }
             EditCmd::Serve {
                 editor_db,
                 port,
@@ -331,6 +377,13 @@ fn main() -> Result<()> {
                     &edb, &common.assets, &common.cache, &common.chrome, common.foil,
                     common.force, common.art_backend.as_deref(),
                 )
+            }
+            RenderCmd::Selfhost { common } => {
+                let edb = common
+                    .editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                render::render_selfhost(&edb, &common.cache)
             }
             RenderCmd::GenaiPass { common } => {
                 let edb = common

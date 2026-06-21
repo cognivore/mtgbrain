@@ -103,6 +103,18 @@ pub fn current_choice(db: &Connection, card_id: i64) -> Result<Option<(String, S
     })
 }
 
+/// True if the card has ever had GenAI art generated (≥1 `art_generated` event).
+/// Choosing "Original art" is only valid once a gallery exists — otherwise the card
+/// would be marked decided and skipped by the pass, never getting any art generated.
+pub fn has_generated(db: &Connection, card_id: i64) -> Result<bool> {
+    let n: i64 = db.query_row(
+        "SELECT count(*) FROM events WHERE card_id=?1 AND action=?2",
+        params![card_id, ART_GENERATED],
+        |r| r.get(0),
+    )?;
+    Ok(n > 0)
+}
+
 /// Full ordered history for a card (for the review UI / time-travel).
 pub fn history(db: &Connection, card_id: i64) -> Result<Vec<Value>> {
     let mut stmt = db.prepare(
