@@ -49,24 +49,13 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .manacost .ms-img { margin-left:0.07em; }
 .rules .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .foilstar { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
-/* set symbol: monocolour silhouette (svg mask) over a solid rarity fill with a thin
-   perimeter bevel; a THIN white keyline around it (real old-frame look — not a thick
-   halo, not a full metallic gradient). */
+/* set symbol: an inline <svg> whose filter paints a solid monocolour body, a
+   contour-following GRADIENT inner border (real inset bevel, not a directional
+   shadow) and a thin white keyline. The svg is right-anchored in a near-square box
+   (preserveAspectRatio xMaxYMid) so square symbols bind on height and wide ones
+   (Nemesis) bind on width — see render.rs. All decoration lives in the svg filter. */
 .setsym { position:absolute; right:%%SSR%%%; top:%%SSY%%%; width:%%SSW%%%; height:%%SSH%%%;
-   filter:
-     drop-shadow(2.6px 0 0 #fbfaf3) drop-shadow(-2.6px 0 0 #fbfaf3)
-     drop-shadow(0 2.6px 0 #fbfaf3) drop-shadow(0 -2.6px 0 #fbfaf3)
-     drop-shadow(1.9px 1.9px 0 #fbfaf3) drop-shadow(-1.9px 1.9px 0 #fbfaf3)
-     drop-shadow(1.9px -1.9px 0 #fbfaf3) drop-shadow(-1.9px -1.9px 0 #fbfaf3); }
-.setsym-edge, .setsym-i { position:absolute; inset:0;
-   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-   /* RIGHT-anchored in a NEAR-SQUARE box: contain yields two placement modes —
-      a SQUARE symbol binds on height (fills the type bar); a WIDE one (Nemesis)
-      binds on width and so comes out shorter, right-aligned & vertically centred. */
-   -webkit-mask-position:right center; mask-position:right center;
-   -webkit-mask-size:contain; mask-size:contain; }
-.setsym-edge { background:#15110d; }                              /* dark inner border */
-.setsym-i { transform:scale(0.90); transform-origin:right center; } /* monocolour body */
+   overflow:visible; }
 /* errata scroll: parchment overlay on the LEFT frame strip, golden-ratio-low */
 .errata-scroll { position:absolute; left:%%ESX%%%; top:%%ESY%%%; width:%%ESW%%%; height:%%ESH%%%;
    background-repeat:no-repeat; background-position:left center; background-size:contain;

@@ -223,7 +223,12 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
         },
         _ => None,
     });
-    let auto_errata = o.as_object().is_some_and(|m| m.keys().any(|k| k != "errata_scroll"))
+    // Ribbon = FUNCTIONAL change only. Cosmetic overrides (name, flavor) never trip it;
+    // a manual `errata_scroll` override still forces it either way.
+    const FUNCTIONAL: &[&str] =
+        &["mana_cost", "type", "oracle_text", "power", "toughness", "loyalty", "colors"];
+    let auto_errata = o.as_object()
+        .is_some_and(|m| m.keys().any(|k| FUNCTIONAL.contains(&k.as_str())))
         || !errata_text.trim().is_empty();
     let is_errata = scroll_override.unwrap_or(auto_errata);
     let display_name = pick("name", Some(name.clone()));
@@ -255,7 +260,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 4,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 5,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -1520,9 +1525,17 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // window (0.618 down → 0.373), lower than centre, toward the type line.
         ("ESX", pc(0.035)), ("ESY", pc(0.3728 - 0.052 / 2.0)), ("ESW", pc(0.10)), ("ESH", pc(0.052)),
     ];
-    // Set-symbol element: the monocolour silhouette used as a MASK over a solid
-    // rarity fill (thin perimeter bevel via rarity_fill; thin white keyline in CSS).
-    // Mask is a data: URI so it loads in headless Chrome (file:// masks are blocked).
+    // Set-symbol element: an inline <svg> that embeds the Scryfall silhouette as an
+    // <image> and runs a single FILTER to paint, in order:
+    //   1. a thin WHITE keyline  (dilate the alpha, flood white)
+    //   2. the solid MONOCOLOUR body  (flood rarity colour, clip to the alpha)
+    //   3. a contour-following GRADIENT INNER BORDER — flood black, composite `out`
+    //      (black everywhere EXCEPT the shape), blur it so the black bleeds inward
+    //      across the edge, then composite `in` (keep only the part inside the shape).
+    //      That yields a dark ring that hugs the WHOLE inner contour and fades toward
+    //      the centre = the real inset bevel, NOT a directional drop-shadow.
+    // The svg is a data: <image> (file:// is blocked in headless Chrome). viewBox is the
+    // box's own px size so the filter radii read as pixels; xMaxYMid right-anchors it.
     let setsym = set_svg
         .and_then(|p| fs::read(p).ok())
         .map(|bytes| {
@@ -1530,16 +1543,20 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
                 "data:image/svg+xml;base64,{}",
                 base64::engine::general_purpose::STANDARD.encode(&bytes)
             );
-            // Three layers, all using the same svg as a mask:
-            //  • wrapper  — carries the thin white keyline (drop-shadow on an UNmasked
-            //    parent, since CSS applies filter before mask and would clip it).
-            //  • setsym-edge — full-shape DARK fill = the inner border that hugs the
-            //    whole contour.
-            //  • setsym-i — the solid monocolour body, scaled slightly smaller so the
-            //    dark edge shows as a thin stripe all the way around.
-            let m = format!("-webkit-mask-image:url('{uri}');mask-image:url('{uri}')");
+            let bw = (0.062 * f64::from(FACE_W)) as i32; // box px (must match SSW/SSH)
+            let bh = (0.0382 * f64::from(FACE_H)) as i32;
             format!(
-                r#"<div class="setsym"><div class="setsym-edge" style="{m}"></div><div class="setsym-i" style="{m};background:{fill}"></div></div>"#,
+                r##"<svg class="setsym" viewBox="0 0 {bw} {bh}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="ss" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+<feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
+<feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
+<feFlood flood-color="{fill}"/><feComposite in2="SourceAlpha" operator="in" result="body"/>
+<feFlood flood-color="#000" flood-opacity="0.92"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
+<feGaussianBlur in="o" stdDeviation="2.7" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="inner"/>
+<feMerge><feMergeNode in="key"/><feMergeNode in="body"/><feMergeNode in="inner"/></feMerge>
+</filter></defs>
+<image href="{uri}" width="{bw}" height="{bh}" preserveAspectRatio="xMaxYMid meet" filter="url(#ss)"/>
+</svg>"##,
                 fill = rarity_fill(&c.rarity),
             )
         })
