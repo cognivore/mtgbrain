@@ -260,7 +260,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 5,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 6,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -312,13 +312,36 @@ fn frame_file(c: &Card) -> &'static str {
             ['G'] => "frames/gl.png", _ => "frames/l.png",
         };
     }
+    // Coloured ARTIFACTS keep the brown artifact frame as the base; their colour is
+    // applied only to the text box via a clipped overlay (see frame_overlay).
+    if is_artifact {
+        return "frames/a.png";
+    }
     match cols.len() {
-        0 => if is_artifact { "frames/a.png" } else { "frames/c.png" },
+        0 => "frames/c.png",
         1 => match cols[0] {
             'W' => "frames/w.png", 'U' => "frames/u.png", 'B' => "frames/b.png",
             'R' => "frames/r.png", _ => "frames/g.png",
         },
         _ => "frames/m.png", // Seventh has a real gold multicolor frame.
+    }
+}
+
+/// For a COLOURED ARTIFACT, the colour frame whose TEXT BOX is overlaid (clipped) onto
+/// the brown artifact base — mono colour for one colour, gold (`m`) for multicolour.
+/// None for colourless artifacts and all non-artifacts (their base frame already fits).
+fn frame_overlay(c: &Card) -> Option<&'static str> {
+    let t = c.type_line.to_lowercase();
+    if !t.contains("artifact") || t.contains("land") {
+        return None;
+    }
+    match card_colors(c).as_slice() {
+        [] => None,
+        [one] => Some(match one {
+            'W' => "frames/w.png", 'U' => "frames/u.png", 'B' => "frames/b.png",
+            'R' => "frames/r.png", _ => "frames/g.png",
+        }),
+        _ => Some("frames/m.png"),
     }
 }
 
@@ -1473,6 +1496,12 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     } else {
         format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(&art.artist))
     };
+    // Coloured-artifact text box: overlay the colour frame, clipped to the text-box
+    // rectangle, on top of the brown artifact base (background stays brown).
+    let framebox = frame_overlay(c).map_or_else(String::new, |rel| {
+        let p = assets_dir.join(rel);
+        format!(r#"<div class="layer framebox" style="background-image:url('file://{}')"></div>"#, p.display())
+    });
     let year = if art.year.is_empty() { "2001".to_string() } else { art.year.clone() };
     let foil_layer = if foil {
         format!(r#"<img class="foilstar" src="file://{}">"#, assets_dir.join("foil/star.svg").display())
@@ -1551,8 +1580,9 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
 <feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
 <feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
 <feFlood flood-color="{fill}"/><feComposite in2="SourceAlpha" operator="in" result="body"/>
-<feFlood flood-color="#000" flood-opacity="0.92"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
-<feGaussianBlur in="o" stdDeviation="2.7" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="inner"/>
+<feFlood flood-color="#000" flood-opacity="1"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
+<feGaussianBlur in="o" stdDeviation="3.3" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="ir"/>
+<feComponentTransfer in="ir" result="inner"><feFuncA type="linear" slope="1.35"/></feComponentTransfer>
 <feMerge><feMergeNode in="key"/><feMergeNode in="body"/><feMergeNode in="inner"/></feMerge>
 </filter></defs>
 <image href="{uri}" width="{bw}" height="{bh}" preserveAspectRatio="xMaxYMid meet" filter="url(#ss)"/>
@@ -1561,9 +1591,10 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
             )
         })
         .unwrap_or_default();
-    let content: [(&str, String); 10] = [
+    let content: [(&str, String); 11] = [
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
+        ("FRAMEBOX", framebox),
         ("NAME", esc(&c.display_name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
