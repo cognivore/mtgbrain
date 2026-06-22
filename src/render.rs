@@ -184,6 +184,10 @@ struct Card {
     /// WUBRG color identity (mana symbols in cost+rules). For LANDS (which have no
     /// `colors`) this picks the single-colour 7ED land frame, e.g. U → ul.png.
     color_identity: String,
+    /// True when `color_identity` came from a MANUAL `color_identity` override (e.g. "UB"
+    /// on a cost-removed card) — then it is authoritative for the frame + colour-indicator
+    /// dot, reusing the coloured-artifact indicator for costless / off-colour-identity cards.
+    ci_manual: bool,
     is_creature: bool,
     set: String,
     rarity: String,
@@ -224,9 +228,20 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
     let errata_text: String = db
         .query_row("SELECT COALESCE(errata_text,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
         .unwrap_or_default();
-    let color_identity: String = db
-        .query_row("SELECT COALESCE(color_identity,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
-        .unwrap_or_default();
+    // Colour identity: a MANUAL `color_identity` override (e.g. "UB" on a cost-removed card)
+    // is authoritative for the frame + colour-indicator dot; otherwise the solved DB column.
+    let ci_override = o
+        .get("color_identity")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let ci_manual = ci_override.is_some();
+    let color_identity: String = match ci_override {
+        Some(s) => ci_letters(s).iter().map(char::to_string).collect::<Vec<_>>().join(", "),
+        None => db
+            .query_row("SELECT COALESCE(color_identity,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+            .unwrap_or_default(),
+    };
     // Errata scroll: auto when the printed text actually differs (any override field
     // besides the toggle itself, or an errata note), but a manual `errata_scroll`
     // override ("on"/"off"/true/false) in the overrides blob forces it either way.
@@ -263,6 +278,7 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
         loyalty: pick("loyalty", l),
         colors: pick("colors", colors),
         color_identity,
+        ci_manual,
         is_creature: is_cr != 0,
         // "set"/"rarity" overrides pick the set-symbol printing (e.g. force "usg" when the
         // oldest print is a symbol-less judge promo); else filled from Scryfall in render_one.
@@ -316,11 +332,36 @@ fn card_colors(c: &Card) -> Vec<char> {
     set
 }
 
+/// WUBRG letters of a colour-identity string, accepting "U, B", "UB", "ub", etc.,
+/// de-duplicated and sorted in WUBRG order.
+fn ci_letters(ci: &str) -> Vec<char> {
+    let mut out: Vec<char> = Vec::new();
+    for ch in ci.chars().map(|c| c.to_ascii_uppercase()) {
+        if "WUBRG".contains(ch) && !out.contains(&ch) {
+            out.push(ch);
+        }
+    }
+    const ORDER: &str = "WUBRG";
+    out.sort_by_key(|c| ORDER.find(*c).unwrap_or(9));
+    out
+}
+
+/// A single WUBRG letter → its 7ED colour frame file.
+fn color_frame(ch: char) -> &'static str {
+    match ch {
+        'W' => "frames/w.png",
+        'U' => "frames/u.png",
+        'B' => "frames/b.png",
+        'R' => "frames/r.png",
+        _ => "frames/g.png",
+    }
+}
+
 fn frame_file(c: &Card) -> &'static str {
     let t = c.type_line.to_lowercase();
     let is_land = t.contains("land");
     let is_artifact = t.contains("artifact");
-    let cols: Vec<char> = card_colors(c);
+    let mut cols: Vec<char> = card_colors(c);
     if is_land {
         // Lands have no `colors`; the single-colour 7ED land frame is chosen from the
         // colour identity (the {U} in "Add {U}"). Only a MONO identity gets a tinted
@@ -337,12 +378,14 @@ fn frame_file(c: &Card) -> &'static str {
     if is_artifact {
         return "frames/a.png";
     }
+    // A MANUAL colour identity (e.g. "UB" on a cost-removed card) drives the frame — mono →
+    // that colour, multi → gold — overriding the (now absent/stale) mana-cost colours.
+    if c.ci_manual {
+        cols = ci_letters(&c.color_identity);
+    }
     match cols.len() {
         0 => "frames/c.png",
-        1 => match cols[0] {
-            'W' => "frames/w.png", 'U' => "frames/u.png", 'B' => "frames/b.png",
-            'R' => "frames/r.png", _ => "frames/g.png",
-        },
+        1 => color_frame(cols[0]),
         _ => "frames/m.png", // Seventh has a real gold multicolor frame.
     }
 }
@@ -2522,23 +2565,30 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     // split of the two; 3+ colours → gold. Only on coloured (non-land) artifacts.
     let ind_frames: Vec<PathBuf> = {
         let t = c.type_line.to_lowercase();
-        let cols = card_colors(c);
-        if !t.contains("artifact") || t.contains("land") || cols.is_empty() {
+        let is_land = t.contains("land");
+        let is_artifact = t.contains("artifact");
+        let ci = ci_letters(&c.color_identity);
+        let cost = card_colors(c);
+        // The dot shows the colour identity the FRAME doesn't already convey: a coloured
+        // artifact (brown frame), a card with a MANUAL identity (costless / off-cost), or a
+        // coloured-via-ability artifact. Ordinary coloured cards show it through their pips.
+        let letters: Vec<char> = if is_land {
             vec![]
-        } else if cols.len() >= 3 {
+        } else if c.ci_manual && !ci.is_empty() {
+            ci
+        } else if is_artifact && !cost.is_empty() {
+            cost
+        } else if is_artifact && !ci.is_empty() {
+            ci
+        } else {
+            vec![]
+        };
+        if letters.is_empty() {
+            vec![]
+        } else if letters.len() >= 3 {
             vec![assets_dir.join("frames/m.png")]
         } else {
-            cols.iter()
-                .map(|ch| {
-                    assets_dir.join(match ch {
-                        'W' => "frames/w.png",
-                        'U' => "frames/u.png",
-                        'B' => "frames/b.png",
-                        'R' => "frames/r.png",
-                        _ => "frames/g.png",
-                    })
-                })
-                .collect()
+            letters.iter().map(|ch| assets_dir.join(color_frame(*ch))).collect()
         }
     };
     let ind_refs: Vec<&Path> = ind_frames.iter().map(PathBuf::as_path).collect();

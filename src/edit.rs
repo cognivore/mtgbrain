@@ -851,9 +851,28 @@ fn save_card(db: &Connection, id: i64, body: &str) -> Result<Option<Value>> {
                 }
             }
         }
+        // Re-solve the colour identity from the new EFFECTIVE mana cost + rules text (a manual
+        // `color_identity` override wins), so the frame / colour dot / CSV stay aligned without
+        // a separate `recolor` pass.
+        let merged_v = Value::Object(merged.clone());
+        let mpick = |k: &str, base: Option<String>| {
+            merged_v.get(k).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
+        };
+        let (base_mc, base_ot): (Option<String>, Option<String>) = db
+            .query_row(
+                "SELECT mana_cost, oracle_text FROM cube_cards WHERE id=?1",
+                params![id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap_or((None, None));
+        let ci = effective_color_identity(
+            &mpick("mana_cost", base_mc),
+            &mpick("oracle_text", base_ot),
+            merged_v.get("color_identity").and_then(Value::as_str),
+        );
         db.execute(
-            "UPDATE cube_cards SET overrides=?2, updated_at=datetime('now') WHERE id=?1",
-            params![id, Value::Object(merged).to_string()],
+            "UPDATE cube_cards SET overrides=?2, color_identity=?3, updated_at=datetime('now') WHERE id=?1",
+            params![id, Value::Object(merged).to_string(), ci],
         )?;
     }
     Ok(get_card(db, id))
@@ -1079,6 +1098,25 @@ fn color_identity_of(mana_cost: &str, oracle_text: &str) -> String {
     set.iter().map(char::to_string).collect::<Vec<_>>().join(", ")
 }
 
+/// `color_identity_of`, but a non-empty MANUAL override (e.g. "UB", "U, B") wins outright,
+/// letting a cost-removed card still declare its identity for the solver/frame/dot.
+fn effective_color_identity(mana_cost: &str, oracle_text: &str, ci_override: Option<&str>) -> String {
+    match ci_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(s) => {
+            let mut set: Vec<char> = Vec::new();
+            for ch in s.chars().map(|c| c.to_ascii_uppercase()) {
+                if "WUBRG".contains(ch) && !set.contains(&ch) {
+                    set.push(ch);
+                }
+            }
+            const ORDER: &str = "WUBRG";
+            set.sort_by_key(|c| ORDER.find(*c).unwrap_or(9));
+            set.iter().map(char::to_string).collect::<Vec<_>>().join(", ")
+        }
+        None => color_identity_of(mana_cost, oracle_text),
+    }
+}
+
 /// Recompute `color_identity` for every active card from its effective (override-
 /// applied) mana cost + rules text, and write it back. The DB mana cost (with the
 /// `overrides` blob applied) is the source of truth — this is what re-aligns the
@@ -1107,7 +1145,7 @@ pub fn recolor(editor_db: &Path, dry_run: bool) -> Result<()> {
         };
         let mana = pick("mana_cost", mc);
         let oracle = pick("oracle_text", ot);
-        let ci = color_identity_of(&mana, &oracle);
+        let ci = effective_color_identity(&mana, &oracle, o.get("color_identity").and_then(Value::as_str));
         let ci_old = ci_old.unwrap_or_default();
         if ci != ci_old {
             let show = |s: &str| if s.is_empty() { "—".to_string() } else { s.to_string() };
