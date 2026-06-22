@@ -238,6 +238,7 @@ CREATE TABLE cube_cards (
     removed         INTEGER NOT NULL DEFAULT 0,  -- soft-delete: kept for history, hidden from cube
     illustrator     TEXT NOT NULL DEFAULT '',     -- printed Illus. credit (GenAI artist pseudonym)
     genai_done      INTEGER NOT NULL DEFAULT 0,    -- gallery fully generated + accepted; pass skips it
+    art_override    TEXT NOT NULL DEFAULT '',      -- DURABLE art choice {rel,box,artist,year} (anti-trample)
     updated_at      TEXT
 );
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -260,6 +261,7 @@ INSERT INTO cube_cards (id,name,in_db_found,decision) VALUES (?1,?2,0,'pending')
 // ---------------------------------------------------------------------------
 
 /// Render config the UI uses to produce on-demand card images.
+#[derive(Clone)]
 pub struct RenderCfg {
     pub assets: PathBuf,
     pub cache: PathBuf,
@@ -365,6 +367,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN removed INTEGER NOT NULL DEFAULT 0", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0", []);
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN art_override TEXT NOT NULL DEFAULT ''", []);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let server = Server::http(addr).map_err(|e| anyhow::anyhow!("starting server: {e}"))?;
@@ -374,7 +377,25 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     );
     println!("Ctrl-C to stop.");
 
-    for mut req in server.incoming_requests() {
+    for req in server.incoming_requests() {
+        // Handle each request on its OWN thread with its OWN DB connection, so a slow render
+        // (MPCfill/Claude/Chrome on a freshly-added card) can never block the whole editor.
+        // Accepting stays on this thread (fast); only handling fans out.
+        let editor_db_buf = editor_db.to_path_buf();
+        let rc_owned = rc.clone();
+        std::thread::spawn(move || {
+        let mut req = req;
+        let editor_db: &Path = &editor_db_buf;
+        let rc: &RenderCfg = &rc_owned;
+        let db = match Connection::open(editor_db) {
+            Ok(d) => d,
+            Err(_) => {
+                let _ = req.respond(Response::from_string("db open failed").with_status_code(500));
+                return;
+            }
+        };
+        // Wait (don't error) if another thread/process holds a write lock.
+        let _ = db.busy_timeout(std::time::Duration::from_secs(15));
         let method = req.method().clone();
         let url = req.url().to_string();
         let path = url.split('?').next().unwrap_or("").to_string();
@@ -384,7 +405,18 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
             (Method::Get, "/api/cards") => json_response(&list_cards(&db)),
             (Method::Get, p) if p.starts_with("/api/card/") => match id_from(p, "/api/card/") {
                 Some(id) => match get_card(&db, id) {
-                    Some(v) => json_response(&v),
+                    Some(mut v) => {
+                        // Attach the original Scryfall flavor so the editor's flavor field
+                        // can prefill it (override wins; this is the fallback baseline).
+                        let name = v["name"].as_str().unwrap_or("").to_string();
+                        if let Some(o) = v.as_object_mut() {
+                            o.insert(
+                                "flavor_base".to_string(),
+                                json!(crate::render::base_flavor(&name, &rc.cache)),
+                            );
+                        }
+                        json_response(&v)
+                    }
                     None => not_found(),
                 },
                 None => not_found(),
@@ -556,15 +588,55 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                         }
                     }
                     // Serve a source image (the underlying card/art the user crops over).
+                    // `&thumb=1` serves a small cached JPEG for the picker sidebar.
                     (Method::Get, [_, "img"], Some(id)) => {
                         let rel = query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
-                        match crate::render::art_image_path(editor_db, &rc.cache, id, &rel) {
+                        let resolved = if url.contains("thumb=1") {
+                            crate::render::art_thumb(editor_db, &rc.cache, id, &rel)
+                        } else {
+                            crate::render::art_image_path(editor_db, &rc.cache, id, &rel)
+                        };
+                        match resolved {
                             Ok(path) => match std::fs::read(&path) {
                                 Ok(bytes) => Response::from_data(bytes)
                                     .with_header(header("Content-Type", mime_of(&path))),
                                 Err(_) => not_found(),
                             },
                             Err(_) => not_found(),
+                        }
+                    }
+                    // Fetch ALL candidates (MPCfill proxies >=600 DPI + alt-printing art),
+                    // then return the refreshed source list.
+                    (Method::Post, [_, "fetch"], Some(id)) => {
+                        match crate::render::art_fetch_all(editor_db, &rc.cache, id, rc.backend.as_deref()) {
+                            Ok(v) => json_response(&v),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        }
+                    }
+                    // Upload art from a local disk path:
+                    // {path, artist?, year?, illustrator?, dpi_threshold?, strict?}.
+                    (Method::Post, [_, "upload"], Some(id)) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
+                        let path = v["path"].as_str().unwrap_or("").trim().to_string();
+                        if path.is_empty() {
+                            json_response(&json!({"error": "missing 'path' (local image file)"}))
+                        } else {
+                            match crate::render::art_upload(
+                                editor_db,
+                                &rc.cache,
+                                id,
+                                std::path::Path::new(&path),
+                                v["artist"].as_str(),
+                                v["year"].as_str(),
+                                v["illustrator"].as_str(),
+                                v["dpi_threshold"].as_i64().unwrap_or(600),
+                                v["strict"].as_bool().unwrap_or(false),
+                            ) {
+                                Ok(res) => json_response(&res),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
                         }
                     }
                     // Save a hand-placed crop: {rel, box:[x,y,w,h]}.
@@ -617,6 +689,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
             _ => not_found(),
         };
         let _ = req.respond(resp);
+        }); // end per-request worker thread
     }
     Ok(())
 }

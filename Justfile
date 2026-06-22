@@ -46,9 +46,17 @@ card NAME:
 edit-seed:
     cargo run --release -- edit seed --force
 
-# Launch the local cube-editor web UI (deliberately weird port to avoid clashes).
+# Launch the local cube-editor web UI — UNIFIED: always loads the rageveil keys + live
+# MPCfill art + GenAI gallery, so "Generate" works out of the box (degrades to no-art if
+# rageveil is unavailable — keys just come back empty). Weird port avoids clashes.
 edit PORT="49737":
-    cargo run --release -- edit serve --port {{PORT}}
+    # Free the port first: kill any lingering mtgbrain editor on it so boot never fails
+    # with "Address already in use". (Leading '-' = ignore errors on this line.)
+    -for p in $(lsof -tiTCP:{{PORT}} -sTCP:LISTEN 2>/dev/null); do ps -o comm= -p $p 2>/dev/null | grep -q mtgbrain && kill $p 2>/dev/null; done; sleep 0.4
+    # Keys are best-effort: '|| true' so a locked/absent rageveil degrades to no-art, never bricks boot.
+    ANTHROPIC_API_KEY="$({{mpc_key}} 2>/dev/null | head -1 || true)" \
+    OPENAI_API_KEY="$({{openai_key}} 2>/dev/null | head -1 || true)" \
+      cargo run --release -- edit serve --port {{PORT}} --art-backend https://mpcfill.com
 
 # Recompute color_identity from each card's effective (override-applied) mana cost
 # + rules-text mana symbols, and write it back. Add --dry-run to preview.
@@ -83,11 +91,9 @@ mpc_key := "rageveil show geosurge.ai/api.anthropic.com/onehr-cellvm/pool"
 # OpenAI key (GenAI art) from rageveil.
 openai_key := "rageveil show platform.openai.com/api"
 
-# Editor with live art: MPCfill high-DPI preview + GenAI gallery (both keys from rageveil).
-edit-art PORT="49737":
-    ANTHROPIC_API_KEY="$({{mpc_key}} | head -1)" \
-    OPENAI_API_KEY="$({{openai_key}} | head -1)" \
-      cargo run --release -- edit serve --port {{PORT}} --art-backend https://mpcfill.com
+# `edit-art` is now identical to `edit` (the editor is unified — always keyed). Kept as an
+# alias for muscle memory; forwards the PORT argument.
+alias edit-art := edit
 
 # Render ONE card with MPCfill high-DPI art + foil, e.g. just render-mpc 2
 render-mpc ID:

@@ -11,10 +11,12 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .art { position:absolute; left:%%AX%%%; top:%%AY%%%; width:%%AW%%%; height:%%AH%%%;
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
-/* coloured-artifact text box: the colour frame, clipped to the text-box rectangle,
-   over the brown artifact base. Sits above the base frame, below the text. */
-.framebox { background-size:100% 100%; -webkit-clip-path:inset(60.3% 7.5% 9.7% 7.5%);
-   clip-path:inset(60.3% 7.5% 9.7% 7.5%); }
+/* coloured-artifact COLOUR INDICATOR: the artifact frame stays fully brown; a big
+   circular swatch of the card's colour (a patch of the matching colour FRAME's marble
+   texture) sits to the LEFT of the type line, decorated exactly like the set symbol —
+   thin white keyline + inlaid black inner-border gradient (done in the inline svg's
+   filter). Position/size come from inline style on the <svg>. */
+.colorind { position:absolute; overflow:visible; }
 .box { position:absolute; color:#080808; }
 /* ===== cardconjurer packSeventh.js exact bounds; SHARP black shadow (no blur) ===== */
 .titlerow { left:%%TX%%%; top:%%TY%%%; width:%%TW%%%; height:%%TH%%%; display:flex; align-items:center; }
@@ -23,7 +25,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 /* mana: wide right-aligned box (cc x:0.1067 width:0.8174); pips sit at the title height */
 .manacost { left:%%MAX%%%; top:%%MAY%%%; width:%%MAW%%%; height:%%MAH%%px; font-size:%%MSZ%%px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
-.type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:%%TYH%%%;
+.type { left:%%TYX%%%; top:%%TYY%%%; width:%%TYW%%%; height:%%TYH%%%; padding-left:%%TYPAD%%;
    display:flex; align-items:center; font-family:'mplantin'; font-weight:bold;
    font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; color:#f9f7ef;
    text-shadow:%%SHX%%px %%SHY%%px 0 rgba(0,0,0,0.95); }
@@ -35,6 +37,8 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .rules i { font-style:italic; }
 /* flavor: italic, below rules, with a faint divider rule (real old-frame look) */
 .rules .flav { font-style:italic; margin:.1em 0 .42em; }
+/* emphasis in flavor = UPRIGHT roman (inverted italics), the real-MTG way (e.g. "Principia") */
+.rules .flav .up { font-style:normal; }
 .rules .flavbar { width:100%; height:0; margin:.34em 0 0; }
 .pt { left:%%PX%%%; top:%%PY%%%; width:%%PW%%%; height:4.29%;
    display:flex; align-items:center; justify-content:center;
@@ -69,7 +73,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
   <div class="face">
     <div class="art" style="background-image:url('%%ART%%')"></div>
     <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
-    %%FRAMEBOX%%
+    %%COLORIND%%
     <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
     <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
     <div class="box type" id="ty">%%TYPE%%</div>

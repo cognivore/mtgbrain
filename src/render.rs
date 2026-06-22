@@ -264,8 +264,10 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
         colors: pick("colors", colors),
         color_identity,
         is_creature: is_cr != 0,
-        set: String::new(),    // from Scryfall (oldest print) in render_one
-        rarity: String::new(), // from Scryfall (oldest print) in render_one
+        // "set"/"rarity" overrides pick the set-symbol printing (e.g. force "usg" when the
+        // oldest print is a symbol-less judge promo); else filled from Scryfall in render_one.
+        set: pick("set", None),
+        rarity: pick("rarity", None),
         illustrator,
         is_errata,
     })
@@ -278,7 +280,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 8,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 10,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -348,6 +350,7 @@ fn frame_file(c: &Card) -> &'static str {
 /// For a COLOURED ARTIFACT, the colour frame whose TEXT BOX is overlaid (clipped) onto
 /// the brown artifact base — mono colour for one colour, gold (`m`) for multicolour.
 /// None for colourless artifacts and all non-artifacts (their base frame already fits).
+#[allow(dead_code)]
 fn frame_overlay(c: &Card) -> Option<&'static str> {
     let t = c.type_line.to_lowercase();
     if !t.contains("artifact") || t.contains("land") {
@@ -590,36 +593,39 @@ fn mpcfill_sources(base: &str, cache_root: &Path) -> Result<String> {
     Ok(format!("[{}]", pairs.join(",")))
 }
 
-/// Pull + cache all candidates, pick the best art-matching one, crop it.
-fn mpcfill_pick(
-    name: &str,
-    base: &str,
-    cache_root: &Path,
-    card_dir: &Path,
-    ref_path: &Path,
-    key: &str,
-) -> Result<Option<Pick>> {
+/// Search MPCfill for `name` and download EVERY candidate into the card cache, filtering
+/// to `>= min_dpi` (with a low-floor fallback so a card is never left with zero options).
+/// Records a DPI index at `mpcfill/index.json` (rel -> {dpi,bucket,label,ext}) so the
+/// editor can label each proxy's resolution. Returns the candidates (already on disk); no
+/// CV/Claude pick happens here — the auto-pick and the editor's "Fetch all" both use this.
+fn mpcfill_search_download(
+    name: &str, base: &str, cache_root: &Path, card_dir: &Path, min_dpi: i64,
+) -> Result<Vec<McCand>> {
     let base = base.trim_end_matches('/');
     let sources = mpcfill_sources(base, cache_root)?;
-    // editorSearch
-    let search = format!(
-        r#"{{"searchSettings":{{"searchTypeSettings":{{"fuzzySearch":true,"filterCardbacks":false}},"sourceSettings":{{"sources":{sources}}},"filterSettings":{{"minimumDPI":300,"maximumDPI":1500,"maximumSize":50,"languages":[],"includesTags":[],"excludesTags":["NSFW"]}}}},"queries":[{{"query":{q},"cardType":"CARD"}}]}}"#,
-        q = serde_json::to_string(name)?
-    );
-    let resp = curl_post_json(&format!("{base}/2/editorSearch/"), &search)?;
-    let v: Value = serde_json::from_str(&resp).context("editorSearch response")?;
-    let ids: Vec<String> = v["results"][name]["CARD"]
-        .as_array()
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
-        .unwrap_or_default();
-    if ids.is_empty() {
-        return Ok(None);
+    let run = |min: i64| -> Result<Vec<String>> {
+        let search = format!(
+            r#"{{"searchSettings":{{"searchTypeSettings":{{"fuzzySearch":true,"filterCardbacks":false}},"sourceSettings":{{"sources":{sources}}},"filterSettings":{{"minimumDPI":{min},"maximumDPI":1500,"maximumSize":50,"languages":[],"includesTags":[],"excludesTags":["NSFW"]}}}},"queries":[{{"query":{q},"cardType":"CARD"}}]}}"#,
+            q = serde_json::to_string(name)?
+        );
+        let resp = curl_post_json(&format!("{base}/2/editorSearch/"), &search)?;
+        let v: Value = serde_json::from_str(&resp).context("editorSearch response")?;
+        Ok(v["results"][name]["CARD"]
+            .as_array()
+            .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+            .unwrap_or_default())
+    };
+    let mut ids = run(min_dpi)?;
+    if ids.is_empty() && min_dpi > 100 {
+        ids = run(100)?; // never leave a card with zero options just because all proxies are <600 DPI
     }
-    // resolve metadata
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
     let cards_req = json!({ "cardIdentifiers": ids }).to_string();
     let resp = curl_post_json(&format!("{base}/2/cards/"), &cards_req)?;
     let cv: Value = serde_json::from_str(&resp).context("cards response")?;
-    let mut cands: Vec<McCand> = cv["results"]
+    let cands: Vec<McCand> = cv["results"]
         .as_object()
         .map(|o| {
             o.values()
@@ -636,7 +642,11 @@ fn mpcfill_pick(
         })
         .unwrap_or_default();
 
-    // Cache EVERY download under cards/<Card>/mpcfill/<bucket>/<id>.<ext> (never re-fetch).
+    // Cache EVERY download under cards/<Card>/mpcfill/<bucket>/<id>.<ext> (never re-fetch),
+    // and record its DPI in the per-card index.
+    let mut index = read_json(&card_dir.join("mpcfill").join("index.json"))
+        .and_then(|v| v.as_object().cloned())
+        .unwrap_or_default();
     for c in &cands {
         let dir = card_dir.join("mpcfill").join(sanitize_bucket(&c.bucket));
         fs::create_dir_all(&dir)?;
@@ -645,6 +655,34 @@ fn mpcfill_pick(
             eprintln!("    (download failed) {}", c.identifier);
         }
         record_bucket(&c.bucket, &c.ext_link)?;
+        index.insert(
+            format!("mpcfill/{}/{}.{}", sanitize_bucket(&c.bucket), c.identifier, c.ext),
+            json!({"dpi": c.dpi, "bucket": c.bucket, "label": c.label, "ext": c.ext}),
+        );
+    }
+    let _ = fs::write(
+        card_dir.join("mpcfill").join("index.json"),
+        Value::Object(index).to_string(),
+    );
+    Ok(cands)
+}
+
+/// Pull + cache all candidates, pick the best art-matching one, crop it.
+fn mpcfill_pick(
+    name: &str,
+    base: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+    ref_path: &Path,
+    key: &str,
+) -> Result<Option<Pick>> {
+    let base = base.trim_end_matches('/');
+    // Search + download every candidate (>=600 DPI, low-floor fallback) into the cache and
+    // record the DPI index. The editor's "Fetch all" uses the SAME path, so the picker and
+    // the auto-pick share one set of cached proxies.
+    let mut cands = mpcfill_search_download(name, base, cache_root, card_dir, 600)?;
+    if cands.is_empty() {
+        return Ok(None);
     }
 
     // Prefer plain prints (skip extended/full-art/showcase/etc), then highest DPI.
@@ -1050,9 +1088,14 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
 // = the hand-placed rectangle); `acquire_art` then crops it EXACTLY on every render. The
 // prior auto pick is stashed under `auto` so "reset to auto" is free (no re-pick).
 
+/// Parse any JSON file, if present + valid.
+fn read_json(path: &Path) -> Option<Value> {
+    serde_json::from_str(&fs::read_to_string(path).ok()?).ok()
+}
+
 /// Parse a card dir's `art.json` sidecar, if present.
 fn read_sidecar(card_dir: &Path) -> Option<Value> {
-    serde_json::from_str(&fs::read_to_string(card_dir.join("art.json")).ok()?).ok()
+    read_json(&card_dir.join("art.json"))
 }
 
 /// Look up a card's ORIGINAL name (the art/render addressing key) by editor-DB id.
@@ -1067,6 +1110,132 @@ fn sidecar_box(v: &Value) -> Option<[f64; 4]> {
         let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
         [g(0), g(1), g(2), g(3)]
     })
+}
+
+/// Effective print DPI of a cached proxy, MEASURED from its pixel dimensions — an MPC proxy
+/// is a full card with bleed (2.72in × 3.70in), so DPI ≈ longest-edge px / 3.70in. Reads
+/// only the image header (fast), rounded to the nearest 10 to match MPCfill's own numbers.
+fn measure_proxy_dpi(path: &Path) -> Option<i64> {
+    let (w, h) = image::image_dimensions(path).ok()?;
+    let dpi = (f64::from(w.max(h)) / 3.70 / 10.0).round() * 10.0;
+    (dpi > 0.0).then_some(dpi as i64)
+}
+
+/// Illustrators whose work we never want on a cube card (their art is auto-flagged in the
+/// art picker so the operator picks an alternative printing or GenAI). Seeded with Harold
+/// McNeill (a self-identified NSDAP supporter). Matched case-insensitively, trimmed.
+pub const BLOCKED_ARTISTS: &[&str] = &["Harold McNeill", "Harold McNeil"];
+
+/// Whether an illustrator credit is on the blocklist.
+fn artist_blocked(artist: &str) -> bool {
+    let a = artist.trim().to_lowercase();
+    !a.is_empty() && BLOCKED_ARTISTS.iter().any(|b| b.trim().to_lowercase() == a)
+}
+
+/// Resolve a source `rel` token to an existing image path (no DB access). Tokens:
+///   `@scryfall`        — the oldest paper printing's art_crop
+///   `@set:<CODE>`      — a SPECIFIC printing's art_crop (the "alternative art" picker)
+///   `@current`         — the sidecar's currently-cropped source
+///   `@upload`          — a disk-uploaded image at `<card_dir>/upload.<ext>` (see `art_upload`)
+///   `mpcfill/<b>/<f>`  — a cached MPCfill proxy (validated to stay under the card dir)
+fn resolve_source(name: &str, cache_dir: &Path, card_dir: &Path, rel: &str) -> Result<PathBuf> {
+    let art_dir = cache_dir.join("art");
+    match rel {
+        "@scryfall" => Ok(scryfall_oldest(name, &art_dir)?.0),
+        "@current" => read_sidecar(card_dir)
+            .and_then(|v| v["proxy"].as_str().map(PathBuf::from))
+            .filter(|p| p.exists())
+            .context("no current source image for this card"),
+        r if r.starts_with("@set:") => {
+            let set = r.trim_start_matches("@set:");
+            Ok(scryfall_printing(name, set, &art_dir)?.0)
+        }
+        r if r.starts_with("mpcfill/") => {
+            if r.contains("..") {
+                bail!("invalid source path");
+            }
+            let p = card_dir.join(r);
+            let mpc = card_dir.join("mpcfill");
+            let base = fs::canonicalize(&mpc).unwrap_or(mpc);
+            let cp = fs::canonicalize(&p).with_context(|| format!("no such source: {r}"))?;
+            if !cp.starts_with(&base) {
+                bail!("source path escapes the card dir");
+            }
+            Ok(p)
+        }
+        "@upload" => {
+            // Disk-uploaded art lives at <card_dir>/upload.<ext> under a FIXED name (no
+            // traversal, no user-supplied path component).
+            for ext in ["png", "jpg", "jpeg", "webp"] {
+                let p = card_dir.join(format!("upload.{ext}"));
+                if p.exists() {
+                    return Ok(p);
+                }
+            }
+            bail!("no uploaded art for {name:?} (expected {}/upload.*)", card_dir.display())
+        }
+        _ => bail!("unknown source token: {rel}"),
+    }
+}
+
+/// All paper printings of a card as `(set, artist, year)`, newest-set first deduped by
+/// (set, artist). Reads the cached Scryfall prints metadata (ensured downloaded). Used to
+/// offer "alternative art" per printing (e.g. Greed → 7ED / Peter Bollinger).
+fn printings_list(name: &str, art_dir: &Path) -> Vec<(String, String, String)> {
+    let _ = scryfall_oldest(name, art_dir); // ensure <name>.json (the prints search) is cached
+    let Some(v) = read_json(&art_dir.join(format!("{}.json", sanitize(name)))) else {
+        return Vec::new();
+    };
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for c in v["data"].as_array().into_iter().flatten() {
+        let set = c["set"].as_str().unwrap_or("").to_uppercase();
+        let artist = c["artist"].as_str().unwrap_or("").to_string();
+        let year = c["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+        if set.is_empty() || !seen.insert(format!("{set}|{artist}")) {
+            continue;
+        }
+        out.push((set, artist, year));
+    }
+    out
+}
+
+/// Re-materialise the cache sidecar from the DURABLE editor-DB art override (if any). This
+/// runs at the TOP of every render so a hand-picked alternative art survives a cache wipe
+/// or an auto re-pick — the DB is the source of truth, the sidecar is just its view, so a
+/// chosen art can never be silently trampled back to the original.
+fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, card_dir: &Path) -> Result<()> {
+    let ov: String = db
+        .query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .unwrap_or_default();
+    if ov.trim().is_empty() {
+        return Ok(());
+    }
+    let v: Value = serde_json::from_str(ov.trim()).unwrap_or_else(|_| json!({}));
+    let (Some(rel), Some(bx)) = (v["rel"].as_str(), sidecar_box(&v)) else {
+        return Ok(());
+    };
+    let source = match resolve_source(name, cache_dir, card_dir, rel) {
+        Ok(p) if p.exists() => p,
+        _ => {
+            eprintln!("  art override for {name:?}: source {rel} unavailable — using auto art");
+            return Ok(());
+        }
+    };
+    fs::create_dir_all(card_dir)?;
+    let side = json!({
+        "art_ref": format!("override:{rel}"),
+        "artist": v["artist"].as_str().unwrap_or(""),
+        "year": v["year"].as_str().unwrap_or("2001"),
+        "proxy": source.to_string_lossy(),
+        "box": bx,
+        "art_aspect": art_window_aspect(),
+        "manual": true,
+        "source_rel": rel,
+        "override": true,
+    });
+    fs::write(card_dir.join("art.json"), side.to_string())?;
+    Ok(())
 }
 
 /// Metadata for the per-card crop editor: the current box + source, every selectable
@@ -1085,14 +1254,45 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     let is_genai = art_ref.starts_with("genai:") && !manual;
     let proxy = side.as_ref().and_then(|v| v["proxy"].as_str()).map(PathBuf::from);
 
+    // The DURABLE override (editor DB) is authoritative if present — its rel is the current
+    // source and its box the current crop, regardless of the (materialised) sidecar.
+    let ov: Value = db
+        .query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| {
+            r.get::<_, String>(0)
+        })
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({}));
+    let override_rel = ov["rel"].as_str().map(str::to_string);
+
     // `rel` token for a source path under the card dir (forward slashes for the URL).
     let rel_of = |p: &Path| -> Option<String> {
         p.strip_prefix(&card_dir).ok().map(|r| r.to_string_lossy().replace('\\', "/"))
     };
+    let dpi_index = read_json(&mpc_dir.join("index.json")).unwrap_or_else(|| json!({}));
 
-    // Sources: Scryfall art (always offerable) + every cached MPCfill proxy.
-    let mut sources: Vec<Value> =
-        vec![json!({"rel": "@scryfall", "label": "Scryfall (original art)", "kind": "scryfall"})];
+    // Sources, in pick order: Scryfall original, then every alternative PRINTING (with its
+    // own artist — the "Greed → 7ED" case), then every cached MPCfill proxy (DPI-labelled).
+    let mut sources: Vec<Value> = Vec::new();
+    {
+        let (a, y) = scryfall_oldest(&name, &art_dir).map_or_else(
+            |_| (String::new(), String::new()),
+            |(_, a, y, _)| (a, y),
+        );
+        sources.push(json!({
+            "rel": "@scryfall", "kind": "scryfall",
+            "label": "Scryfall — original printing", "artist": a, "year": y,
+            "blocked": artist_blocked(&a),
+        }));
+    }
+    for (set, artist, year) in printings_list(&name, &art_dir) {
+        sources.push(json!({
+            "rel": format!("@set:{set}"), "kind": "printing",
+            "label": format!("{set} — {artist}"), "set": set, "artist": artist, "year": year,
+            "blocked": artist_blocked(&artist),
+        }));
+    }
     if let Ok(rd) = fs::read_dir(&mpc_dir) {
         let mut buckets: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
         buckets.sort();
@@ -1103,31 +1303,45 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
                 fl.sort();
                 for f in &fl {
                     if let Some(rel) = rel_of(f) {
-                        sources.push(json!({"rel": rel, "label": bucket, "kind": "mpcfill"}));
+                        // Prefer MPCfill's reported DPI (from the fetch index); else MEASURE
+                        // it from the image dimensions — a proxy is a full card, so
+                        // DPI ≈ long-edge px / 3.70in (MPC bleed height). No "? DPI".
+                        let dpi = dpi_index[&rel]["dpi"].as_i64().or_else(|| measure_proxy_dpi(f));
+                        sources.push(json!({
+                            "rel": rel, "kind": "mpcfill", "label": bucket,
+                            "dpi": dpi, "low_dpi": dpi.map(|d| d < 600),
+                        }));
                     }
                 }
             }
         }
     }
 
-    // Which source is the current crop taken from?
-    let current_rel = match &proxy {
+    // Current source: the durable override wins; else infer from the sidecar's proxy path.
+    let current_rel = override_rel.clone().or_else(|| match &proxy {
         Some(p) if p.starts_with(&mpc_dir) => rel_of(p),
         Some(p) if p.starts_with(&art_dir) => Some("@scryfall".to_string()),
         Some(_) => Some("@current".to_string()),
         None => None,
-    };
+    });
+    let current_box = sidecar_box(&ov).or_else(|| sidecar_box(side.as_ref().unwrap_or(&json!({}))));
+    let artist = ov["artist"].as_str()
+        .or_else(|| side.as_ref().and_then(|v| v["artist"].as_str()))
+        .unwrap_or("");
 
     Ok(json!({
         "id": id,
         "name": name,
         "window_aspect": art_window_aspect(),
-        "box": sidecar_box(side.as_ref().unwrap_or(&json!({}))),
+        "box": current_box,
         "art_aspect": side.as_ref().and_then(|v| v["art_aspect"].as_f64()),
-        "manual": manual,
+        "manual": manual || override_rel.is_some(),
+        "override": override_rel.is_some(),
+        "min_dpi": 600,
         "genai": is_genai,
         "current_rel": current_rel,
-        "artist": side.as_ref().and_then(|v| v["artist"].as_str()).unwrap_or(""),
+        "artist": artist,
+        "artist_blocked": artist_blocked(artist),
         "sources": sources,
         "has_sidecar": side.is_some(),
     }))
@@ -1140,31 +1354,179 @@ pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, rel: &str) ->
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let name = card_name(&db, id)?;
     let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    resolve_source(&name, cache_dir, &card_dir, rel)
+}
+
+/// The credit `(artist, year)` for a chosen source: a specific printing carries its OWN
+/// illustrator (e.g. Greed → 7ED → Peter Bollinger), `@scryfall` the oldest printing's,
+/// and a proxy keeps the prior credit (the proxy file doesn't say who painted it).
+fn source_credit(name: &str, cache_dir: &Path, rel: &str, prev: Option<&Value>) -> (String, String) {
+    let art_dir = cache_dir.join("art");
+    let oldest = || {
+        scryfall_oldest(name, &art_dir)
+            .map_or_else(|_| (String::new(), "2001".to_string()), |(_, a, y, _)| (a, y))
+    };
     match rel {
-        "@scryfall" => {
-            let (p, _, _, _) = scryfall_oldest(&name, &cache_dir.join("art"))?;
-            Ok(p)
-        }
-        "@current" => read_sidecar(&card_dir)
-            .and_then(|v| v["proxy"].as_str().map(PathBuf::from))
-            .filter(|p| p.exists())
-            .context("no current source image for this card"),
-        r if r.starts_with("mpcfill/") => {
-            if r.contains("..") {
-                bail!("invalid source path");
-            }
-            let p = card_dir.join(r);
-            // Canonicalize and confirm it stays under cards/<Name>/mpcfill (no escape).
-            let mpc = card_dir.join("mpcfill");
-            let base = fs::canonicalize(&mpc).unwrap_or(mpc);
-            let cp = fs::canonicalize(&p).with_context(|| format!("no such source: {r}"))?;
-            if !cp.starts_with(&base) {
-                bail!("source path escapes the card dir");
-            }
-            Ok(p)
-        }
-        _ => bail!("unknown source token: {rel}"),
+        r if r.starts_with("@set:") => scryfall_printing(name, r.trim_start_matches("@set:"), &art_dir)
+            .map_or_else(|_| oldest(), |(_, a, y)| (a, y)),
+        "@scryfall" => oldest(),
+        _ => match (
+            prev.and_then(|v| v["artist"].as_str()).map(str::to_string),
+            prev.and_then(|v| v["year"].as_str()).map(str::to_string),
+        ) {
+            (Some(a), Some(y)) => (a, y),
+            _ => oldest(),
+        },
     }
+}
+
+/// Largest centred crop box (fractions of the source) at the on-card art-window aspect, so
+/// the cropped region maps 1:1 into the art hole (no further `cover` cropping).
+fn window_fit_box(src_w: u32, src_h: u32) -> [f64; 4] {
+    let aspect = art_window_aspect();
+    let src_aspect = f64::from(src_w) / f64::from(src_h);
+    if src_aspect > aspect {
+        let w = aspect / src_aspect; // source is wider: trim the sides
+        [(1.0 - w) / 2.0, 0.0, w, 1.0]
+    } else {
+        let h = src_aspect / aspect; // source is taller: trim top/bottom
+        [0.0, (1.0 - h) / 2.0, 1.0, h]
+    }
+}
+
+/// On-card art-window size in inches at the 800-DPI face (FACE_W=2000px=2.5in).
+fn art_window_inches() -> (f64, f64) {
+    (
+        ART_WINDOW_FRAC[2] * f64::from(FACE_W) / 800.0,
+        ART_WINDOW_FRAC[3] * f64::from(FACE_H) / 800.0,
+    )
+}
+
+/// Effective print DPI of a source image as it will sit in the on-card art window, given
+/// the crop box (fractions of the source): the cropped pixels are scaled to fill the
+/// ~1.92×1.55in window, so the binding (worst) resolution is the smaller of the two axes.
+fn effective_art_dpi(src_w: u32, src_h: u32, bx: [f64; 4]) -> i64 {
+    let (win_w_in, win_h_in) = art_window_inches();
+    let dpi_w = (bx[2] * f64::from(src_w)) / win_w_in;
+    let dpi_h = (bx[3] * f64::from(src_h)) / win_h_in;
+    dpi_w.min(dpi_h).round() as i64
+}
+
+/// Best-effort artist credit inferred from an upload's file name: the stem with `_`/`-`
+/// turned to spaces (e.g. `Tyler_Miles_Lockett.jpg` → "Tyler Miles Lockett"). Pass an
+/// explicit artist when the file name also carries a subject prefix.
+fn infer_artist(src: &Path) -> String {
+    src.file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.split(['_', '-']).filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" "))
+        .unwrap_or_default()
+}
+
+/// Replace a card's art with a LOCAL image file. Copies the file into the card's cache dir
+/// (`upload.<ext>`, resolved by the `@upload` source token), crops it to the on-card art
+/// window, records a DURABLE art override + printed `illustrator` credit in the editor DB
+/// (so it can never be auto-trampled — `materialize_override` re-feeds it every render), and
+/// measures the effective print DPI, returning a warning (or, with `strict`, an error) when
+/// it is below `dpi_threshold`. Artist defaults to a guess from the file name; the printed
+/// "Illus." credit defaults to the artist. Returns a JSON report.
+#[allow(clippy::too_many_arguments)]
+pub fn art_upload(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    src: &Path,
+    artist: Option<&str>,
+    year: Option<&str>,
+    illustrator: Option<&str>,
+    dpi_threshold: i64,
+    strict: bool,
+) -> Result<Value> {
+    if !src.exists() {
+        bail!("art file not found: {}", src.display());
+    }
+    let (sw, sh) = image::image_dimensions(src)
+        .with_context(|| format!("decoding {} (is it a valid image?)", src.display()))?;
+
+    let name = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        card_name(&db, id)?
+    };
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    fs::create_dir_all(&card_dir)?;
+
+    // Store under a fixed name the `@upload` token resolves to. Keep a loadable extension;
+    // re-encode anything exotic to PNG. Clear any prior upload first (avoid stale matches).
+    let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let keep = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp");
+    for e in ["png", "jpg", "jpeg", "webp"] {
+        let _ = fs::remove_file(card_dir.join(format!("upload.{e}")));
+    }
+    let stored = card_dir.join(format!("upload.{}", if keep { ext.as_str() } else { "png" }));
+    if keep {
+        fs::copy(src, &stored).with_context(|| format!("copying art → {}", stored.display()))?;
+    } else {
+        image::open(src)?
+            .save(&stored)
+            .with_context(|| format!("re-encoding art → {}", stored.display()))?;
+    }
+
+    let bx = window_fit_box(sw, sh);
+    let dpi = effective_art_dpi(sw, sh, bx);
+    let low = dpi < dpi_threshold;
+    let (win_w, win_h) = art_window_inches();
+    let warning = low.then(|| {
+        format!(
+            "{name:?} art is ~{dpi} DPI in the {win_w:.2}×{win_h:.2}in card art window \
+             ({sw}×{sh}px source) — below the {dpi_threshold} DPI threshold; it will look soft at print size"
+        )
+    });
+    if let Some(w) = &warning {
+        eprintln!("  ⚠ {w}");
+        if strict {
+            bail!("{w} (use a higher-resolution image, lower --dpi-threshold, or drop --strict)");
+        }
+    }
+
+    let artist = artist
+        .map(str::to_string)
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| infer_artist(src));
+    let year = year.unwrap_or("2001").to_string();
+    let illus = illustrator
+        .map(str::to_string)
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| artist.clone());
+
+    // Sidecar (cache view): a MANUAL window-aspect crop of the upload. Mirrors art_save_crop
+    // so the editor preview shows immediately, and acquire_art re-crops in place each render.
+    let side = json!({
+        "art_ref": "upload:@upload",
+        "artist": artist, "year": year,
+        "proxy": stored.to_string_lossy(),
+        "box": bx, "art_aspect": art_window_aspect(),
+        "manual": true, "source_rel": "@upload", "upload": true,
+    });
+    fs::write(card_dir.join("art.json"), side.to_string())?;
+    crop_exact(&stored, bx, &card_dir.join("art.png"))?;
+
+    // DURABLE: the editor DB is the source of truth (anti-trample). `illustrator` is the
+    // printed "Illus." credit (preferred over the art's own artist at render time).
+    let override_json =
+        json!({"rel": "@upload", "box": bx, "artist": artist, "year": year}).to_string();
+    let w = Connection::open(editor_db)?;
+    w.execute(
+        "UPDATE cube_cards SET art_override=?2, illustrator=?3, updated_at=datetime('now') WHERE id=?1",
+        params![id, override_json, illus],
+    )?;
+
+    Ok(json!({
+        "ok": true, "id": id, "name": name,
+        "source": src.to_string_lossy(), "stored": stored.to_string_lossy(),
+        "pixels": [sw, sh], "box": bx,
+        "artist": artist, "year": year, "illustrator": illus,
+        "dpi": dpi, "dpi_threshold": dpi_threshold, "low_dpi": low,
+        "warning": warning,
+    }))
 }
 
 /// Save a MANUAL crop: write a `manual` sidecar (source + hand-placed box) and re-crop
@@ -1186,15 +1548,8 @@ pub fn art_save_crop(
     }
 
     let prev = read_sidecar(&card_dir);
-    // Keep the credit/year (from the prior sidecar, else the oldest Scryfall printing).
-    let (artist, year) = match (
-        prev.as_ref().and_then(|v| v["artist"].as_str()).map(str::to_string),
-        prev.as_ref().and_then(|v| v["year"].as_str()).map(str::to_string),
-    ) {
-        (Some(a), Some(y)) => (a, y),
-        _ => scryfall_oldest(&name, &cache_dir.join("art"))
-            .map_or_else(|_| (String::new(), "2001".to_string()), |(_, a, y, _)| (a, y)),
-    };
+    // Credit follows the CHOSEN source (a printing carries its own illustrator/year).
+    let (artist, year) = source_credit(&name, cache_dir, rel, prev.as_ref());
     // Stash the prior AUTO pick so "reset to auto" is free (no re-pick / CV / Claude).
     let auto = prev.as_ref().and_then(|v| {
         if v["manual"].as_bool().unwrap_or(false) {
@@ -1225,16 +1580,20 @@ pub fn art_save_crop(
     fs::write(card_dir.join("art.json"), side.to_string())?;
     crop_exact(&source, bx, &card_dir.join("art.png"))?;
 
+    // DURABLE: record the choice in the editor DB (the source of truth). The sidecar lives
+    // in the gitignored cache and can be wiped/re-picked; the DB override can't be trampled
+    // — every render re-materialises the sidecar from it (see materialize_override).
+    let override_json = json!({"rel": rel, "box": bx, "artist": artist, "year": year}).to_string();
     let w = Connection::open(editor_db)?;
     let _ = w.execute(
-        "UPDATE cube_cards SET updated_at=datetime('now') WHERE id=?1",
-        params![id],
+        "UPDATE cube_cards SET art_override=?2, updated_at=datetime('now') WHERE id=?1",
+        params![id, override_json],
     );
     Ok(())
 }
 
-/// Reset a card's crop to AUTOMATIC. If the stashed auto pick is present, restore it for
-/// free (re-crop with the inset logic); otherwise drop the sidecar so the next render
+/// Reset a card's crop to AUTOMATIC: clear the durable DB override, then restore the
+/// stashed auto pick if present (free re-crop) or drop the sidecar so the next render
 /// re-picks from scratch. Bumps `updated_at` so the editor preview refreshes.
 pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
     let name = {
@@ -1266,10 +1625,65 @@ pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
     }
     let w = Connection::open(editor_db)?;
     let _ = w.execute(
-        "UPDATE cube_cards SET updated_at=datetime('now') WHERE id=?1",
+        "UPDATE cube_cards SET art_override='', updated_at=datetime('now') WHERE id=?1",
         params![id],
     );
     Ok(())
+}
+
+/// "Fetch all" for the picker: download every MPCfill candidate (>=600 DPI, low-floor
+/// fallback) and cache every alternative printing's art_crop, so the sidebar shows real
+/// thumbnails to choose from. Returns the refreshed `art_meta`. Proxies need the MPCfill
+/// backend URL; printings come from Scryfall and work even without it.
+pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, backend: Option<&str>) -> Result<Value> {
+    let name = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        card_name(&db, id)?
+    };
+    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let art_dir = cache_dir.join("art");
+    // Pre-cache every printing's art_crop (cheap; powers the alternative-printing thumbnails).
+    for (set, _, _) in printings_list(&name, &art_dir) {
+        let _ = scryfall_printing(&name, &set, &art_dir);
+    }
+    // Download all MPCfill proxies, if a backend is configured.
+    match backend {
+        Some(base) => {
+            if let Err(e) = mpcfill_search_download(&name, base, cache_dir, &card_dir, 600) {
+                eprintln!("  fetch-all {name:?}: MPCfill error: {e}");
+            }
+        }
+        None => eprintln!("  fetch-all {name:?}: no --art-backend; printings only"),
+    }
+    art_meta(editor_db, cache_dir, id)
+}
+
+/// A small cached JPEG thumbnail (~420 px long edge) of a source image, for the picker
+/// sidebar — serving the full multi-MB proxies as thumbnails would be far too heavy.
+pub fn art_thumb(editor_db: &Path, cache_dir: &Path, id: i64, rel: &str) -> Result<PathBuf> {
+    let src = art_image_path(editor_db, cache_dir, id, rel)?;
+    let name = {
+        let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        card_name(&db, id)?
+    };
+    let thumb_dir = cache_dir.join("cards").join(sanitize(&name)).join(".thumbs");
+    fs::create_dir_all(&thumb_dir)?;
+    let out = thumb_dir.join(format!("{}.jpg", short_hash(rel)));
+    let fresh = match (
+        fs::metadata(&out).and_then(|m| m.modified()),
+        fs::metadata(&src).and_then(|m| m.modified()),
+    ) {
+        (Ok(o), Ok(s)) => s <= o,
+        _ => false,
+    };
+    if !out.exists() || !fresh {
+        let img = image::open(&src).with_context(|| format!("opening {}", src.display()))?;
+        img.thumbnail(420, 420)
+            .to_rgb8()
+            .save_with_format(&out, image::ImageFormat::Jpeg)
+            .with_context(|| format!("writing thumb {}", out.display()))?;
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------------------
@@ -1313,9 +1727,13 @@ pub const ARTISTS: &[(&str, &str, &str)] = &[
       subject must match this specific card, only the rendering is Brom's",
      "Brian Ohm"),
     ("Rob Alexander",
-     "atmospheric naturalistic landscapes and weathered architecture; deep aerial \
-      perspective, soft diffused daylight, layered misty distance and meticulous \
-      painterly terrain — quiet grand environments, almost no people",
+     "atmospheric naturalistic gouache STYLE ONLY — this is a way of PAINTING, not a fixed \
+      subject. Deep aerial/atmospheric perspective, soft diffused daylight, layered misty \
+      distance, masterful luminous skies, a meticulous painterly touch. CRITICAL: paint THE \
+      CARD'S OWN SUBJECT (whatever the art direction describes) in this style — do NOT default \
+      to a landscape, vista, ruins or building; if the card is about a creature, figure or \
+      object, THAT is the subject, simply rendered with his atmospheric naturalism. The \
+      landscape-with-a-building habit is banned",
      "Rob Macedon"),
     ("Greg Staples",
      "muscular British-comic dynamism (2000 AD / Judge Dredd); heavy theatrical \
@@ -1374,6 +1792,12 @@ fn claude_text(key: &str, prompt: &str) -> Result<String> {
         .as_str()
         .map(|s| s.trim().to_string())
         .with_context(|| format!("claude returned no text: {}", String::from_utf8_lossy(&out.stdout)))
+}
+
+/// The original Scryfall flavor for a card (for the editor's flavor field to prefill).
+/// Reads the cached print metadata; empty if the card hasn't been fetched/rendered yet.
+pub fn base_flavor(name: &str, cache_dir: &Path) -> String {
+    card_flavor(name, &cache_dir.join("art"))
 }
 
 /// Flavor text of the oldest printing (from the cached Scryfall metadata).
@@ -1488,6 +1912,57 @@ fn svg_aspect(bytes: &[u8]) -> f64 {
     1.0
 }
 
+/// A clean square swatch of a frame's marble texture (the title strip — pure colour,
+/// no baked text), resized to `diam`×`diam`.
+fn frame_swatch(frame_path: &Path, diam: u32) -> Option<image::RgbaImage> {
+    use image::imageops::{crop_imm, resize, FilterType};
+    let img = image::open(frame_path).ok()?.to_rgba8();
+    let (w, h) = img.dimensions();
+    let fx = |f: f32| (f * w as f32) as u32;
+    let fy = |f: f32| (f * h as f32) as u32;
+    let (x0, y0, x1, y1) = (fx(0.22), fy(0.040), fx(0.78), fy(0.075));
+    let patch =
+        crop_imm(&img, x0, y0, x1.saturating_sub(x0).max(1), y1.saturating_sub(y0).max(1)).to_image();
+    Some(resize(&patch, diam, diam, FilterType::Triangle))
+}
+
+/// A circular colour-indicator PNG for coloured artifacts, built from one or more
+/// frame textures. One frame → a solid circle of that colour's marble. Two frames →
+/// the circle split VERTICALLY 50:50 (left half = frames[0], right half = frames[1]).
+/// (Callers pass the gold frame alone for 3+ colours.) The set-symbol decoration
+/// (white keyline + inner border) is added by the SVG that embeds this PNG.
+fn color_indicator_png(frames: &[&Path], diam: u32) -> Option<Vec<u8>> {
+    let mut sq = frame_swatch(frames.first()?, diam)?;
+    if let Some(second) = frames.get(1) {
+        let right = frame_swatch(second, diam)?;
+        for y in 0..diam {
+            for x in (diam / 2)..diam {
+                *sq.get_pixel_mut(x, y) = *right.get_pixel(x, y);
+            }
+        }
+    }
+    let r = diam as f32 / 2.0;
+    for y in 0..diam {
+        for x in 0..diam {
+            let (dx, dy) = (x as f32 + 0.5 - r, y as f32 + 0.5 - r);
+            let d = (dx * dx + dy * dy).sqrt();
+            let a = if d <= r - 1.0 {
+                255.0
+            } else if d >= r {
+                0.0
+            } else {
+                (r - d) * 255.0
+            };
+            sq.get_pixel_mut(x, y)[3] = a as u8;
+        }
+    }
+    let mut buf = Vec::new();
+    image::DynamicImage::ImageRgba8(sq)
+        .write_to(&mut Cursor::new(&mut buf), image::ImageFormat::Png)
+        .ok()?;
+    Some(buf)
+}
+
 fn rarity_fill(rarity: &str) -> &'static str {
     match rarity {
         "uncommon" => "#b3bbbf", // silver
@@ -1514,6 +1989,12 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
          FLAVOR TEXT (and the feeling of its rules) — the picture must convey the card's MEANING, \
          not the literal rules. (e.g. a card called 'Beloved' whose flavor says beasts are charmed \
          by her shows animals lovingly drawn to her, not menacing her.)\n\n\
+         NEVER depict the CARD-GAME mechanic itself. In particular, NEVER show drawing cards, \
+         'looting' (draw-and-discard), rummaging, discarding, card selection/scry, or any hands, \
+         stacks, decks, scrolls-as-cards or libraries of playing cards — and never a card frame \
+         inside the art. A creature is shown as that CREATURE acting in the world per its name, \
+         type and flavor — never performing a card draw. (e.g. Glint-Horn Buccaneer is a fierce \
+         horned minotaur raider mid-battle, NOT someone reading, drawing or shuffling cards.)\n\n\
          HARD BAN on Earth-Christian / Catholic and generic-angelic imagery: do NOT include \
          angels, wings, halos, glowing divine auras, cathedrals, churches, chapels, crosses, \
          crucifixes, bishops, popes, nuns, monks, friars, choir robes, censers or stained glass — \
@@ -1572,7 +2053,35 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
          Mood: <one short evocative line capturing the feeling>",
         card.name, card.type_line, card.oracle_text, flavor_line
     );
-    claude_text(key, &prompt)
+    // Guardrail: the LLM occasionally slips and depicts the card-game mechanic itself
+    // (playing cards / a card-draw / looting). Validate every output and re-prompt — harder
+    // each time — until it is clean. Belt-and-braces on top of the in-prompt ban so this can
+    // never silently ruin a card again.
+    let mut p = prompt.clone();
+    for attempt in 1..=3 {
+        let d = claude_text(key, &p)?;
+        if !mentions_card_mechanic(&d) {
+            return Ok(d);
+        }
+        eprintln!("    (direction depicted a card-game mechanic — re-prompting, attempt {attempt})");
+        p = format!(
+            "{prompt}\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it referred to PLAYING CARDS, a \
+             card-draw, looting, discarding or rummaging. Rewrite the five fields with ABSOLUTELY \
+             ZERO mention of cards, card-draw, looting, discarding, rummaging or decks — depict \
+             ONLY the creature or scene acting in the world."
+        );
+    }
+    // After 3 strict re-prompts this is essentially impossible; take the final attempt.
+    claude_text(key, &p)
+}
+
+/// True if an art direction wrongly references the card-game mechanic (playing cards /
+/// looting / rummaging). Whole-word match so it won't false-positive on "cardinal",
+/// "placard", or legit scene words like "loot", "deck", "library" or "discarded armour".
+fn mentions_card_mechanic(d: &str) -> bool {
+    d.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .any(|w| matches!(w, "card" | "cards" | "rummage" | "rummaging" | "rummaged"))
 }
 
 /// Best-effort append to the GenAI event log (never fails a render).
@@ -1719,32 +2228,21 @@ pub fn genai_options(
                  light and shadow and composition — exactly as a master illustrator would — NOT \
                  through glowing CGI overlays. A shrieking creature is shown shrieking by its body \
                  and gaping jaws, not by cartoon sound-rings.";
-            let named = format!(
+            // NEVER name the artist to OpenAI: its moderation rejects (often living) artist
+            // names outright ("moderation_blocked"), burning a generation call every time and
+            // leaving only the fallback to actually succeed. Describe the style DIRECTLY via the
+            // concentrated signature — which is what truly drives the look anyway. One clean call.
+            let styled = format!(
                 "Make Magic: the Gathering card art from the late-1990s / early-2000s era, \
-                 painted in the EXACT, unmistakable signature style of {artist}: {signature}. \
-                 The artist's hand is the WHOLE POINT — it must read instantly as {artist}, never \
-                 as generic fantasy art; lean hard into their famous traits even past tasteful.\n\n\
+                 painted in this EXACT, unmistakable signature style: {signature}. \
+                 Lean hard into those specific traits — it must NOT read as generic fantasy art.\n\n\
                  MEDIUM (drive this hard): {medium}\n\n{composition}\n\n\
                  The art direction below is LOOSE INSPIRATION ONLY — a mood, not a spec. Serve the \
-                 artist's signature style and one strong, bold image first; freely reinterpret, \
-                 simplify, or drop parts of it (rules are made to be broken). Do NOT, however, \
-                 contradict the direction just to be contradictory.\n\nART DIRECTION:\n{direction}"
+                 style and one strong, bold image first; freely reinterpret, simplify, or drop \
+                 parts of it (rules are made to be broken), but never contradict it just to be \
+                 contradictory.\n\nART DIRECTION:\n{direction}"
             );
-            let mut res = gen_art_openai(&named, &art_png, k);
-            // OpenAI rejects some living-artist names — retry with the signature only (no name).
-            if res.as_ref().err().is_some_and(|e| e.to_string().contains("safety")) {
-                let styled = format!(
-                    "Make Magic: the Gathering card art from the late-1990s / early-2000s era, \
-                     painted in this EXACT, unmistakable signature style: {signature}. \
-                     Lean hard into those specific traits — it must NOT read as generic fantasy art.\n\n\
-                     MEDIUM (drive this hard): {medium}\n\n{composition}\n\n\
-                     The art direction below is LOOSE INSPIRATION ONLY — a mood, not a spec. Serve the \
-                     style and one strong, bold image first; freely reinterpret, simplify, or drop \
-                     parts of it (rules are made to be broken), but never contradict it just to be \
-                     contradictory.\n\nART DIRECTION:\n{direction}"
-                );
-                res = gen_art_openai(&styled, &art_png, k);
-            }
+            let res = gen_art_openai(&styled, &art_png, k);
             if let Err(e) = res {
                 let msg = e.to_string();
                 log_event(cache_dir, id, &card.name, crate::events::ART_FAILED, Some(artist), None, Some(&direction), Some(&msg));
@@ -2001,17 +2499,82 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     } else {
         String::new()
     };
-    let illus = if art.artist.is_empty() {
+    // The printed "Illus." credit prefers the editor-DB `illustrator` override (set by a
+    // GenAI pseudonym pick or an art upload); otherwise it falls back to the art's own
+    // historical artist credit.
+    let credit = if !c.illustrator.trim().is_empty() {
+        c.illustrator.trim()
+    } else {
+        art.artist.trim()
+    };
+    let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(&art.artist))
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
     };
-    // Coloured-artifact text box: overlay the colour frame, clipped to the text-box
-    // rectangle, on top of the brown artifact base (background stays brown).
-    let framebox = frame_overlay(c).map_or_else(String::new, |rel| {
-        let p = assets_dir.join(rel);
-        format!(r#"<div class="layer framebox" style="background-image:url('file://{}')"></div>"#, p.display())
-    });
+    // Coloured-artifact COLOUR INDICATOR: the frame stays fully brown; a big circular
+    // swatch of the card's colour (a patch of the matching colour frame's marble
+    // texture) sits to the LEFT of the type line, decorated exactly like the set symbol
+    // (white keyline + inlaid black inner-border gradient via the svg filter). The type
+    // text is indented (TYPAD) so it clears the indicator.
+    let diam_px = (0.030 * f64::from(FACE_H)) as u32; // ≈84px — half size, same centre
+    // Indicator colour logic: 1 colour → solid that colour; 2 colours → vertical 50:50
+    // split of the two; 3+ colours → gold. Only on coloured (non-land) artifacts.
+    let ind_frames: Vec<PathBuf> = {
+        let t = c.type_line.to_lowercase();
+        let cols = card_colors(c);
+        if !t.contains("artifact") || t.contains("land") || cols.is_empty() {
+            vec![]
+        } else if cols.len() >= 3 {
+            vec![assets_dir.join("frames/m.png")]
+        } else {
+            cols.iter()
+                .map(|ch| {
+                    assets_dir.join(match ch {
+                        'W' => "frames/w.png",
+                        'U' => "frames/u.png",
+                        'B' => "frames/b.png",
+                        'R' => "frames/r.png",
+                        _ => "frames/g.png",
+                    })
+                })
+                .collect()
+        }
+    };
+    let ind_refs: Vec<&Path> = ind_frames.iter().map(PathBuf::as_path).collect();
+    let (colorind, typad) = color_indicator_png(&ind_refs, 256)
+        .map_or_else(
+            || (String::new(), "0".to_string()),
+            |png| {
+                let uri = format!(
+                    "data:image/png;base64,{}",
+                    base64::engine::general_purpose::STANDARD.encode(&png)
+                );
+                let d = f64::from(diam_px);
+                let w_frac = d / f64::from(FACE_W) * 100.0; // % of face width
+                let h_frac = d / f64::from(FACE_H) * 100.0; // % of face height
+                let left = 10.3; // just inside the frame's inner edge
+                let top = (0.5757 - d / f64::from(FACE_H) / 2.0) * 100.0; // centred on type bar
+                let svg = format!(
+                    r##"<svg class="colorind" style="left:{left:.2}%;top:{top:.2}%;width:{w_frac:.3}%;height:{h_frac:.3}%" viewBox="0 0 {diam_px} {diam_px}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="ci" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+<feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
+<feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
+<feFlood flood-color="#000" flood-opacity="1"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
+<feGaussianBlur in="o" stdDeviation="3.3" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="ir"/>
+<feComponentTransfer in="ir" result="inner"><feFuncA type="linear" slope="1.35"/></feComponentTransfer>
+<feMerge><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="inner"/></feMerge>
+</filter></defs>
+<image href="{uri}" width="{diam_px}" height="{diam_px}" preserveAspectRatio="xMidYMid meet" filter="url(#ci)"/>
+</svg>"##
+                );
+                // indent the type text just past the indicator's right edge
+                let pad = ((left / 100.0 + w_frac / 100.0) * f64::from(FACE_W)
+                    - 0.1074 * f64::from(FACE_W)
+                    + 18.0) as i32;
+                (svg, format!("{pad}px"))
+            },
+        );
     let year = if art.year.is_empty() { "2001".to_string() } else { art.year.clone() };
     let foil_layer = if foil {
         format!(r#"<img class="foilstar" src="file://{}">"#, assets_dir.join("foil/star.svg").display())
@@ -2125,10 +2688,11 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
             )
         })
         .unwrap_or_default();
-    let content: [(&str, String); 11] = [
+    let content: [(&str, String); 12] = [
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("FRAMEBOX", framebox),
+        ("COLORIND", colorind),
+        ("TYPAD", typad),
         ("NAME", esc(&c.display_name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
@@ -2169,9 +2733,33 @@ fn rules_html(text: &str, flavor: &str, mana_base: &str) -> String {
         if i == 0 {
             s.push_str(r#"<div class="flavbar"></div>"#);
         }
-        s.push_str(&format!(r#"<p class="flav">{}</p>"#, esc(line)));
+        s.push_str(&format!(r#"<p class="flav">{}</p>"#, flav_emph(line)));
     }
     s
+}
+
+/// Flavor emphasis the real-MTG way: flavor is set in italics, so emphasis (`*word*`
+/// or `**word**`) is rendered UPRIGHT/roman — inverted italics, like "Principia" — not
+/// extra-italic. Operates on raw text; everything outside the markers is HTML-escaped.
+fn flav_emph(line: &str) -> String {
+    let mut out = String::new();
+    let mut emph = false;
+    let mut it = line.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '*' {
+            if it.peek() == Some(&'*') {
+                it.next(); // treat ** (bold) the same as * — both invert to upright
+            }
+            out.push_str(if emph { "</span>" } else { r#"<span class="up">"# });
+            emph = !emph;
+        } else {
+            out.push_str(&esc_char(c));
+        }
+    }
+    if emph {
+        out.push_str("</span>");
+    }
+    out
 }
 
 /// Wrap parenthetical reminder text in <i>…</i> (operates on already-escaped HTML).
@@ -2255,6 +2843,9 @@ pub fn render_one(
         bail!("missing frame asset {} — run `mtgbrain render assets`", frame_rel.display());
     }
     let dir = cache_dir.join("cards").join(sanitize(&card.name));
+    // Durable art override (editor DB) wins and is re-materialised every render so it can
+    // never be trampled by a cache wipe / auto re-pick.
+    materialize_override(&db, cache_dir, id, &card.name, &dir)?;
     let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
     // Flavor text (italic, below rules) — from the cached Scryfall print metadata that
     // acquire_art just settled. An "flavor" override wins if the editor set one.
@@ -2263,10 +2854,14 @@ pub fn render_one(
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
-    if card.set.is_empty() {
+    if card.set.is_empty() || card.rarity.is_empty() {
         let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
-        card.set = set;
-        card.rarity = rarity;
+        if card.set.is_empty() {
+            card.set = set;
+        }
+        if card.rarity.is_empty() {
+            card.rarity = rarity;
+        }
     }
     // Printed credit: the editor-chosen illustrator (GenAI pseudonym) wins; otherwise
     // the real historical illustrator from the oldest Scryfall printing.
@@ -2301,10 +2896,14 @@ pub fn genai_base_card(
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
-    if card.set.is_empty() {
+    if card.set.is_empty() || card.rarity.is_empty() {
         let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
-        card.set = set;
-        card.rarity = rarity;
+        if card.set.is_empty() {
+            card.set = set;
+        }
+        if card.rarity.is_empty() {
+            card.rarity = rarity;
+        }
     }
     let out = base_dir.join("card.png");
     let set_svg = set_symbol_svg(&card.set, cache_dir);

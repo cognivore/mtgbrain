@@ -150,6 +150,35 @@ enum RenderCmd {
         #[command(flatten)]
         common: RenderCommon,
     },
+    /// Replace a card's art with a LOCAL image file (durable, anti-trample override) and set
+    /// the printed "Illus." credit; warns if the art's effective print DPI is below a
+    /// threshold. Re-renders the card afterwards unless --no-render.
+    ArtUpload {
+        /// Editor-DB id of the card.
+        id: i64,
+        /// Path to the local image file (png/jpg/webp).
+        file: PathBuf,
+        /// Artist credit (default: inferred from the file name).
+        #[arg(long)]
+        artist: Option<String>,
+        /// Copyright year for the bottom credit line (default: 2001).
+        #[arg(long)]
+        year: Option<String>,
+        /// Printed "Illus." credit (default: the artist).
+        #[arg(long)]
+        illustrator: Option<String>,
+        /// Minimum acceptable effective print DPI before warning.
+        #[arg(long, default_value_t = 600)]
+        dpi_threshold: i64,
+        /// Fail (instead of warn) when the art is below the DPI threshold.
+        #[arg(long)]
+        strict: bool,
+        /// Skip re-rendering the card PNG after the swap.
+        #[arg(long)]
+        no_render: bool,
+        #[command(flatten)]
+        common: RenderCommon,
+    },
     /// Render every card in the editor DB.
     All {
         #[command(flatten)]
@@ -366,6 +395,42 @@ fn main() -> Result<()> {
                     common.force, common.art_backend.as_deref(),
                 )?;
                 println!("{}", out.display());
+                Ok(())
+            }
+            RenderCmd::ArtUpload {
+                id,
+                file,
+                artist,
+                year,
+                illustrator,
+                dpi_threshold,
+                strict,
+                no_render,
+                common,
+            } => {
+                let edb = common
+                    .editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let res = render::art_upload(
+                    &edb,
+                    &common.cache,
+                    *id,
+                    file,
+                    artist.as_deref(),
+                    year.as_deref(),
+                    illustrator.as_deref(),
+                    *dpi_threshold,
+                    *strict,
+                )?;
+                println!("{}", serde_json::to_string_pretty(&res)?);
+                if !*no_render {
+                    let out = render::render_one(
+                        &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
+                        true, common.art_backend.as_deref(),
+                    )?;
+                    println!("rendered → {}", out.display());
+                }
                 Ok(())
             }
             RenderCmd::All { common } => {
