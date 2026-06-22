@@ -74,6 +74,12 @@ a partner, so each gains a small floor:
 > **Ghoulcaller's Bell** already mill 1/turn; The Rack/Cursed Rack do nothing into an empty hand but
 > that's the *opposite axis* by design, not a blank.
 
+### 2c. Self-mill / theme errata (design decision)
+- **Brain Freeze** — errata'd so it can only target **yourself**: *"You mill three cards. Storm."* It is
+  a **self-mill enabler** (fuels threshold, Cabal Ritual threshold, Songs of the Damned, and the Lab
+  Maniac self-deck-out), **not** a clock on opponents. (Its printed text targets any player; the cube
+  removes the opponent-mill mode now that conventional Storm is cut — see §6.)
+
 ---
 
 ## 3. Manual handling (not in DB / mis-named)
@@ -115,3 +121,19 @@ Not deleted — parked on the maybeboard with a reason, in case you want to rais
 Yawgmoth's Bargain, Necropotence, Channel, Demonic Tutor, Palinchron, Time Spiral, Mind Over Matter,
 Bolas's Citadel, Thousand Year Storm, Trinisphere (format-warping floor), Exquisite Blood (+ Sanguine
 Bond = infinite loop), Solemnity (anti-synergy: shuts off the cube's own fade/counters).
+
+---
+
+## 6. Cut by design (off-theme, not too-strong)
+Removed from the cube because they cut against the intended feel, not because of raw power. These leave
+slots to backfill (see `cube360/cube_list.txt`).
+
+| Card | Why cut | What replaces it |
+|---|---|---|
+| **Tendrils of Agony** | Conventional Storm is out — no turn-3 storm kills. | The slow **discard-drain** (Bond of Agony, Sickening Dreams, Shrieking Affliction, Gibbering Descent, Faith of the Devoted). |
+| **Grapeshot** | Storm cut. | UR closes on coin-flips (Chance Encounter), Lightning Storm/Fevered Visions burn, and the High Tide → Stroke of Genius deck-out. |
+| **Empty the Warrens** | Storm cut. | Go-wide lives in GW (Opposition) / WR (Goblin Trenches); RG tokens via Molten Birth. |
+| **Test of Endurance** | "Gain to 50" alt-win is cringe / off-theme; it also split WB into two anti-synergistic halves. | WB is now a single low-life plan (Mirror Universe swap + Death Grasp / Bond of Agony). The only count-to-a-number alt-win left is **Chance Encounter**. |
+
+> **Brain Freeze stays** (errata'd to self-mill only — see §2c); it is not a storm payoff in this cube.
+> **Lightning Storm stays** — it is a charge-counter burn spell, not a Storm card.

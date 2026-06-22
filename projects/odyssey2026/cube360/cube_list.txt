@@ -44,7 +44,6 @@ Solitary Confinement
 Story Circle
 Humility
 Opalescence
-Test of Endurance
 Sphere of Safety
 Starfield of Nyx
 Serra's Sanctum
@@ -153,7 +152,6 @@ Infernal Tutor
 Sickening Dreams
 Doomsday
 Ill-Gotten Gains
-Tendrils of Agony
 The Last Ride
 Pact Weapon
 Font of Agonies
@@ -198,14 +196,12 @@ Violent Eruption
 Faithless Looting
 Mana Clash
 Cathartic Reunion
-Grapeshot
 Tribal Flames
 Fiery Gambit
 Game of Chaos
 Molten Birth
 Wheel of Fortune
 Change of Fortune
-Empty the Warrens
 Reforge the Soul
 Seal of Fire
 Braid of Fire
@@ -360,14 +356,16 @@ Nantuko Monastery
 Saltcrusted Steppe
 Sungrass Prairie
 Wooded Bastion
+Cascade Bluffs
+Fetid Heath
+Flooded Grove
+Rugged Prairie
+Twilight Mire
 Barbarian Ring
-Barren Moor
 Cabal Pit
 Centaur Garden
 Cephalid Coliseum
-Forgotten Cave
 Karn's Bastion
-Lonely Sandbar
 Mage-Ring Network
 Mikokoro, Center of the Sea
 Nesting Grounds
@@ -375,8 +373,6 @@ Nomad Stadium
 Riptide Laboratory
 Sea Gate Wreckage
 Seafloor Debris
-Secluded Steppe
-Tranquil Thicket
 Spin into Myth
 Mirari
 Mirari's Wake
@@ -430,3 +426,22 @@ Feed the Swarm
 Chaos Warp
 Vampire Hexmage
 Tranquility
+Thought Scour
+Mental Note
+False Memories
+Terror
+Vendetta
+Caves of Koilos
+Shivan Reef
+Llanowar Wastes
+Battlefield Forge
+Yavimaya Coast
+Scoured Barrens
+Swiftwater Cliffs
+Jungle Hollow
+Wind-Scarred Crag
+Thornwood Falls
+Shadow of Mortality
+Doomed Dissenter
+Yawgmoth's Will
+Underworld Breach
