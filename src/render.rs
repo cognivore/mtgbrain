@@ -3118,10 +3118,16 @@ pub fn selfhost_one(card_dir: &Path) -> Result<Option<PathBuf>> {
 
 /// Generate the selfhost image for every active card in the editor DB. Reports
 /// how many were written and which cards still lack a render.
-pub fn render_selfhost(editor_db: &Path, cache_dir: &Path) -> Result<()> {
+pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
-    let names: Vec<String> = {
+    let names: Vec<String> = if let Some(id) = only {
+        // Just one card by editor-DB id (e.g. after updating only that card).
+        let name: String = db
+            .query_row("SELECT name FROM cube_cards WHERE id=?1 AND removed=0", params![id], |r| r.get(0))
+            .with_context(|| format!("no active card with id {id}"))?;
+        vec![name]
+    } else {
         let mut stmt = db.prepare("SELECT name FROM cube_cards WHERE removed=0 ORDER BY id")?;
         let v = stmt.query_map([], |r| r.get(0))?.collect::<std::result::Result<_, _>>()?;
         v

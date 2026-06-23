@@ -184,9 +184,11 @@ enum RenderCmd {
         #[command(flatten)]
         common: RenderCommon,
     },
-    /// Build the Scryfall-format "selfhost" image (cropped, rounded, 745×1040) for
-    /// every card from its forefront MPC render. No Chrome/network needed.
+    /// Build the Scryfall-format "selfhost" image (cropped, rounded, 745×1040) from each
+    /// card's forefront MPC render. No Chrome/network needed. Pass an id for just one card.
     Selfhost {
+        /// Only this editor-DB id (default: all active cards).
+        id: Option<i64>,
         #[command(flatten)]
         common: RenderCommon,
     },
@@ -443,12 +445,12 @@ fn main() -> Result<()> {
                     common.force, common.art_backend.as_deref(),
                 )
             }
-            RenderCmd::Selfhost { common } => {
+            RenderCmd::Selfhost { id, common } => {
                 let edb = common
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                render::render_selfhost(&edb, &common.cache)
+                render::render_selfhost(&edb, &common.cache, *id)
             }
             RenderCmd::GenaiPass { common } => {
                 let edb = common
