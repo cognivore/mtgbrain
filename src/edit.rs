@@ -759,7 +759,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
         "SELECT id,name,mana_cost,mana_value,type,colors,color_identity,power,toughness,
                 loyalty,oracle_text,keywords,produced_mana,printings,cube_elo,edhrec_rank,
                 is_creature,is_odysseyblock_creature,genai_art,decision,errata_text,notes,
-                in_db_found,updated_at,overrides,removed
+                in_db_found,updated_at,overrides,removed,COALESCE(illustrator,'')
            FROM cube_cards WHERE id=?1",
         params![id],
         |r| {
@@ -791,6 +791,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
                 "overrides": serde_json::from_str::<Value>(&r.get::<_, String>(24)?)
                     .unwrap_or_else(|_| json!({})),
                 "removed": r.get::<_, i64>(25)? != 0,
+                "illustrator": r.get::<_, String>(26)?,
             }))
         },
     )
@@ -824,6 +825,14 @@ fn save_card(db: &Connection, id: i64, body: &str) -> Result<Option<Value>> {
         db.execute(
             "UPDATE cube_cards SET notes=?2, updated_at=datetime('now') WHERE id=?1",
             params![id, n],
+        )?;
+    }
+    // Artist / printed "Illus." credit (a dedicated column, NOT an `overrides` errata field).
+    // The renderer prefers this over the art's own historical artist; blank reverts to it.
+    if let Some(a) = v.get("illustrator").and_then(Value::as_str) {
+        db.execute(
+            "UPDATE cube_cards SET illustrator=?2, updated_at=datetime('now') WHERE id=?1",
+            params![id, a.trim()],
         )?;
     }
     if let Some(o) = v.get("overrides") {

@@ -423,6 +423,7 @@ function viewForm(){
       ${fval("keywords")?`<div><b>keywords</b> ${esc(fval("keywords"))}${ovmark("keywords")}</div>`:""}
       ${fval("produced_mana")?`<div><b>produces</b> ${esc(fval("produced_mana"))}${ovmark("produced_mana")}</div>`:""}
       ${C.printings?`<div><b>printings</b> ${esc(C.printings)}</div>`:""}
+      ${C.illustrator?`<div><b>illus.</b> ${esc(C.illustrator)} <span class="ov" title="custom credit">✎</span></div>`:""}
     </div>
     <div class="badges">
       <span class="badge ${C.decision==='accepted'?'on':''} ${C.decision==='errata'?'er':''}" ${C.decision==='removed'?'style="color:var(--red)"':''}>decision: ${C.decision}</span>
@@ -468,6 +469,8 @@ function editForm(){
         <textarea id="f_flavor" rows="3" placeholder="italic flavor text — *word* or **word** prints UPRIGHT (MTG emphasis) — clear to blank it">${esc(cur)}</textarea></label>
       <div class="frow"><span class="flab"></span><span style="color:var(--dim);font-size:11px">flavor is italic; <code>*word*</code> or <code>**word**</code> → upright roman (like “Principia”). Empty = no flavor.</span></div>`;
     })()}
+    <label class="frow"><span class="flab">artist · Illus. credit${C.illustrator?` <span class="ov" title="custom credit">✎</span>`:""}</span>
+      <input id="f_illustrator" type="text" value="${esc(C.illustrator||"")}" placeholder="printed “Illus.” name — blank = the art’s own credit"></label>
     <label class="chk" style="margin-top:10px"><input type="checkbox" id="genai" ${C.genai_art?"checked":""}>
       GenAI new art in the style of Odyssey-block <i>Magic: the Gathering</i> artists?</label>
     <div class="actions">
@@ -532,7 +535,11 @@ async function saveEdits(){
   const genai = document.getElementById("genai")?.checked ?? C.genai_art;
   // Only a FUNCTIONAL change makes the card "errata" (flavor/name are cosmetic).
   const hasFunctional = Object.keys(ov).some(k => FUNCTIONAL.includes(k));
-  await save({ decision: hasFunctional ? "errata" : C.decision, overrides: ov, genai_art: genai }, false);
+  const patch = { decision: hasFunctional ? "errata" : C.decision, overrides: ov, genai_art: genai };
+  // Artist / printed "Illus." credit (a dedicated column; blank reverts to the art's own credit).
+  const ilEl = document.getElementById("f_illustrator");
+  if (ilEl && ilEl.value.trim() !== (C.illustrator||"").trim()) patch.illustrator = ilEl.value.trim();
+  await save(patch, false);
 }
 
 async function save(patch, advance) {
