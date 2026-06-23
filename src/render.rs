@@ -2572,10 +2572,13 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // The dot shows the colour identity the FRAME doesn't already convey: a coloured
         // artifact (brown frame), a card with a MANUAL identity (costless / off-cost), or a
         // coloured-via-ability artifact. Ordinary coloured cards show it through their pips.
-        let letters: Vec<char> = if is_land {
+        let letters: Vec<char> = if c.ci_manual && !ci.is_empty() {
+            // A hand-declared identity gets the dot, EXCEPT a mono-colour land that already
+            // conveys it through its tinted land frame (wl/ul/…). A multi-colour land has no
+            // tinted frame, so it DOES get the dot (e.g. a W/U dual-identity land).
+            if is_land && ci.len() == 1 { vec![] } else { ci }
+        } else if is_land {
             vec![]
-        } else if c.ci_manual && !ci.is_empty() {
-            ci
         } else if is_artifact && !cost.is_empty() {
             cost
         } else if is_artifact && !ci.is_empty() {
