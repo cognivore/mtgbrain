@@ -445,3 +445,6 @@ Shadow of Mortality
 Doomed Dissenter
 Yawgmoth's Will
 Underworld Breach
+Reclamation Sage
+Trygon Predator
+Pick Your Poison
