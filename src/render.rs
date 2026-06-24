@@ -2776,19 +2776,56 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
 /// Rules text → paragraphs, mana symbols inline, parenthetical reminder italic.
 fn rules_html(text: &str, flavor: &str, mana_base: &str) -> String {
     let mut s = String::new();
-    for line in text.split('\n').filter(|l| !l.trim().is_empty()) {
+    for para in paragraphs(text) {
+        let parts: Vec<String> = para
+            .iter()
+            .map(|l| reminder_italic(&manaify(l, mana_base)))
+            .collect();
         s.push_str("<p>");
-        s.push_str(&reminder_italic(&manaify(line, mana_base)));
+        s.push_str(&parts.join("<br>"));
         s.push_str("</p>");
     }
     // Flavor text: italic, below the rules, separated by a thin divider (real old frame).
-    for (i, line) in flavor.split('\n').filter(|l| !l.trim().is_empty()).enumerate() {
+    for (i, para) in paragraphs(flavor).iter().enumerate() {
         if i == 0 {
             s.push_str(r#"<div class="flavbar"></div>"#);
         }
-        s.push_str(&format!(r#"<p class="flav">{}</p>"#, flav_emph(line)));
+        let parts: Vec<String> = para.iter().map(|l| flav_emph(l)).collect();
+        s.push_str(&format!(r#"<p class="flav">{}</p>"#, parts.join("<br>")));
     }
     s
+}
+
+/// Group `\n`-separated lines into paragraphs, honouring Markdown's hard-break syntax.
+///
+/// A line ending in two (or more) trailing spaces is a Markdown hard line break: it stays
+/// in the *same* paragraph as the following line, joined later by `<br>` — a CONDENSED
+/// newline (tight `line-height`), used for verse/poetry. Any other non-blank line ends its
+/// paragraph, which renders with the usual spaced paragraph margin. Blank lines are dropped.
+///
+/// Text with no trailing double-spaces behaves exactly as before: one paragraph per line.
+fn paragraphs(text: &str) -> Vec<Vec<String>> {
+    let mut paras: Vec<Vec<String>> = Vec::new();
+    let mut cur: Vec<String> = Vec::new();
+    for raw in text.split('\n') {
+        let raw = raw.trim_end_matches('\r');
+        let hard_break = raw.ends_with("  ");
+        let line = raw.trim();
+        if line.is_empty() {
+            if !cur.is_empty() {
+                paras.push(std::mem::take(&mut cur));
+            }
+            continue;
+        }
+        cur.push(line.to_string());
+        if !hard_break {
+            paras.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.is_empty() {
+        paras.push(cur);
+    }
+    paras
 }
 
 /// Flavor emphasis the real-MTG way: flavor is set in italics, so emphasis (`*word*`
