@@ -703,22 +703,59 @@ fn list_cards(db: &Connection) -> Value {
         .prepare(
             // Includes the fields the front-end Scryfall-style search filters on
             // (colors, stats, oracle text, etc.) so the whole query runs client-side
-            // over just this cube's cards.
+            // over just this cube's cards. `overrides` is applied below so the search
+            // sees each card's EFFECTIVE (post-errata / colour-shifted) values, not the
+            // original printed snapshot.
             "SELECT id,name,type,mana_cost,cube_elo,decision,genai_art,
                     is_odysseyblock_creature,in_db_found,removed,
                     (overrides IS NOT NULL AND overrides != '{}' AND overrides != ''),
                     mana_value,colors,color_identity,power,toughness,loyalty,
-                    oracle_text,keywords,produced_mana,printings,edhrec_rank,is_creature
+                    oracle_text,keywords,produced_mana,printings,edhrec_rank,is_creature,
+                    COALESCE(overrides,'{}')
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
     let rows = stmt
         .query_map([], |r| {
+            let ov: Value =
+                serde_json::from_str(&r.get::<_, String>(23)?).unwrap_or_else(|_| json!({}));
+            // Effective value of an erratable field: the override wins, else the base column.
+            let eff = |k: &str, base: Option<String>| {
+                ov.get(k).and_then(Value::as_str).map(str::to_string).or(base)
+            };
+
+            let eff_mc = eff("mana_cost", r.get::<_, Option<String>>(3)?);
+            let eff_ot = eff("oracle_text", r.get::<_, Option<String>>(17)?);
+
+            // Effective colour identity: a manual `color_identity` override wins, else it is
+            // re-solved from the effective mana cost + rules text — the same value that drives
+            // the gold frame / colour dot / CSV. Effective colours: an explicit `colors`
+            // override wins, else a deliberate colour-shift (identity override) defines the
+            // colour, else the colours are the pips of the effective mana cost. This is what
+            // makes `c:`/`id:` search match the cube's shifted colour, not the printed one.
+            let ci_ov = ov.get("color_identity").and_then(Value::as_str);
+            let mc_s = eff_mc.as_deref().unwrap_or("");
+            let eff_ci = effective_color_identity(mc_s, eff_ot.as_deref().unwrap_or(""), ci_ov);
+            let eff_colors = if let Some(s) = ov.get("colors").and_then(Value::as_str) {
+                effective_color_identity("", "", Some(s))
+            } else if ci_ov.map(str::trim).is_some_and(|s| !s.is_empty()) {
+                eff_ci.clone()
+            } else {
+                color_identity_of(mc_s, "")
+            };
+
+            // Mana value: recompute from an errata'd cost, else trust the seeded value.
+            let mana_value = if ov.get("mana_cost").is_some() {
+                Some(mana_value_of(mc_s))
+            } else {
+                r.get::<_, Option<f64>>(11)?
+            };
+
             Ok(json!({
                 "id": r.get::<_, i64>(0)?,
-                "name": r.get::<_, String>(1)?,
-                "type": r.get::<_, Option<String>>(2)?,
-                "mana_cost": r.get::<_, Option<String>>(3)?,
+                "name": eff("name", r.get::<_, Option<String>>(1)?),
+                "type": eff("type", r.get::<_, Option<String>>(2)?),
+                "mana_cost": eff_mc,
                 "cube_elo": r.get::<_, Option<f64>>(4)?,
                 "decision": r.get::<_, String>(5)?,
                 "genai_art": r.get::<_, i64>(6)? != 0,
@@ -726,15 +763,15 @@ fn list_cards(db: &Connection) -> Value {
                 "found": r.get::<_, i64>(8)? != 0,
                 "removed": r.get::<_, i64>(9)? != 0,
                 "errata": r.get::<_, i64>(10)? != 0,
-                "mana_value": r.get::<_, Option<f64>>(11)?,
-                "colors": r.get::<_, Option<String>>(12)?,
-                "color_identity": r.get::<_, Option<String>>(13)?,
-                "power": r.get::<_, Option<String>>(14)?,
-                "toughness": r.get::<_, Option<String>>(15)?,
-                "loyalty": r.get::<_, Option<String>>(16)?,
-                "oracle_text": r.get::<_, Option<String>>(17)?,
-                "keywords": r.get::<_, Option<String>>(18)?,
-                "produced_mana": r.get::<_, Option<String>>(19)?,
+                "mana_value": mana_value,
+                "colors": eff_colors,
+                "color_identity": eff_ci,
+                "power": eff("power", r.get::<_, Option<String>>(14)?),
+                "toughness": eff("toughness", r.get::<_, Option<String>>(15)?),
+                "loyalty": eff("loyalty", r.get::<_, Option<String>>(16)?),
+                "oracle_text": eff_ot,
+                "keywords": eff("keywords", r.get::<_, Option<String>>(18)?),
+                "produced_mana": eff("produced_mana", r.get::<_, Option<String>>(19)?),
                 "printings": r.get::<_, Option<String>>(20)?,
                 "edhrec_rank": r.get::<_, Option<i64>>(21)?,
                 "is_creature": r.get::<_, i64>(22)? != 0,
@@ -1092,6 +1129,38 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
 // ---------------------------------------------------------------------------
 // recolor — recompute color identity from the effective mana cost + rules text
 // ---------------------------------------------------------------------------
+
+/// Mana value of a `{..}`-symbol cost: numeric symbols add their number, `{X}`/`{Y}`/`{Z}`
+/// count 0, and every other symbol (coloured, hybrid, Phyrexian, `{C}`, snow, `{S}`) counts 1.
+/// Used to keep mana value aligned with an errata'd mana cost in the editor search.
+fn mana_value_of(mana_cost: &str) -> f64 {
+    let mut total = 0.0;
+    let mut chars = mana_cost.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '{' {
+            let mut sym = String::new();
+            for c2 in chars.by_ref() {
+                if c2 == '}' {
+                    break;
+                }
+                sym.push(c2);
+            }
+            // Hybrid like "2/W" contributes the numeric side (2); "W/U" contributes 1.
+            let numeric = sym.split(['/', '\u{2044}']).find_map(|p| p.trim().parse::<f64>().ok());
+            if let Some(n) = numeric {
+                total += n;
+            } else if sym.eq_ignore_ascii_case("x")
+                || sym.eq_ignore_ascii_case("y")
+                || sym.eq_ignore_ascii_case("z")
+            {
+                // variable: counts 0
+            } else {
+                total += 1.0;
+            }
+        }
+    }
+    total
+}
 
 /// A card's color identity = every WUBRG letter appearing in any `{..}` mana
 /// symbol of its mana cost OR its rules text (hybrid/Phyrexian symbols count each
