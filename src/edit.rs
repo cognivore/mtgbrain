@@ -701,9 +701,14 @@ fn id_from(path: &str, prefix: &str) -> Option<i64> {
 fn list_cards(db: &Connection) -> Value {
     let mut stmt = db
         .prepare(
+            // Includes the fields the front-end Scryfall-style search filters on
+            // (colors, stats, oracle text, etc.) so the whole query runs client-side
+            // over just this cube's cards.
             "SELECT id,name,type,mana_cost,cube_elo,decision,genai_art,
                     is_odysseyblock_creature,in_db_found,removed,
-                    (overrides IS NOT NULL AND overrides != '{}' AND overrides != '')
+                    (overrides IS NOT NULL AND overrides != '{}' AND overrides != ''),
+                    mana_value,colors,color_identity,power,toughness,loyalty,
+                    oracle_text,keywords,produced_mana,printings,edhrec_rank,is_creature
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
@@ -721,6 +726,18 @@ fn list_cards(db: &Connection) -> Value {
                 "found": r.get::<_, i64>(8)? != 0,
                 "removed": r.get::<_, i64>(9)? != 0,
                 "errata": r.get::<_, i64>(10)? != 0,
+                "mana_value": r.get::<_, Option<f64>>(11)?,
+                "colors": r.get::<_, Option<String>>(12)?,
+                "color_identity": r.get::<_, Option<String>>(13)?,
+                "power": r.get::<_, Option<String>>(14)?,
+                "toughness": r.get::<_, Option<String>>(15)?,
+                "loyalty": r.get::<_, Option<String>>(16)?,
+                "oracle_text": r.get::<_, Option<String>>(17)?,
+                "keywords": r.get::<_, Option<String>>(18)?,
+                "produced_mana": r.get::<_, Option<String>>(19)?,
+                "printings": r.get::<_, Option<String>>(20)?,
+                "edhrec_rank": r.get::<_, Option<i64>>(21)?,
+                "is_creature": r.get::<_, i64>(22)? != 0,
             }))
         })
         .expect("query list")

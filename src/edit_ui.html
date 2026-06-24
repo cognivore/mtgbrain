@@ -32,6 +32,7 @@
   .filter button.on { color:var(--ink); border-color:var(--accent); }
   #search { width:100%; padding:6px 8px; background:var(--panel2); border:1px solid var(--line);
             color:var(--ink); border-radius:5px; }
+  #search.bad { border-color:var(--red); }
   .addrow { display:flex; gap:6px; padding:0 8px 8px; background:var(--panel);
             position:sticky; top:74px; z-index:4; border-bottom:1px solid var(--line); }
   .addrow input { flex:1; min-width:0; padding:6px 8px; background:var(--panel2);
@@ -220,7 +221,14 @@
 <main id="editorview">
   <aside>
     <div class="filter">
-      <input id="search" placeholder="filter by name / type…">
+      <input id="search" placeholder="search this cube — Scryfall syntax (t: o: c: mv≷ pow≷ kw: is: …)" title="Scryfall-style search over THIS cube only.
+Bare words → card name.  &quot;exact phrase&quot; or /regex/.
+  t:creature  o:&quot;draw a card&quot;  o:~  (~ = this card's name)
+  c:rg  c&gt;=wu  c:m(ulti)  c:c(olorless)  id&lt;=wub
+  mv&gt;=3  pow&gt;tou  tou=4  loy:3  elo&gt;1500  edhrec&lt;5000
+  kw:flying  produces:g  set:ody  mc:WW
+  is:creature|gold|land|vanilla|removed|genai|errata|odyssey
+Combine: space = AND, OR, -negate, (parens).  e.g.  c:b t:creature -o:flying">
       <button data-f="all" class="on">all</button>
       <button data-f="pending">pending</button>
       <button data-f="accepted">accepted</button>
@@ -294,7 +302,7 @@
   </div>
 </div>
 <script>
-let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "";
+let CARDS = [], COUNTS = {}, cur = null, filter = "all", q = "", qFn = null;
 let C = null, editMode = false, foilView = false;
 
 async function loadList() {
@@ -321,7 +329,7 @@ function visible() {
     else if (c.removed) return false;
     if (filter === "genai" && !c.genai_art) return false;
     if (["pending","accepted","errata"].includes(filter) && c.decision !== filter) return false;
-    if (q) { const s = (c.name + " " + (c.type||"")).toLowerCase(); if (!s.includes(q)) return false; }
+    if (qFn && !qFn(c)) return false;
     return true;
   });
 }
@@ -568,6 +576,215 @@ function nextPending() {
   const p = firstPendingId(); if (p!==null) selectId(p);
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Scryfall-style search, evaluated client-side over THIS cube's cards only.
+// compileQuery(str) -> (card)=>bool, or null for an empty query. Throws on a
+// genuinely unparseable query (the caller flags the box red and shows all).
+// ───────────────────────────────────────────────────────────────────────────
+const COLOR_LETTERS = new Set(["w","u","b","r","g"]);
+const COLOR_NAMES = { white:"w", blue:"u", black:"b", red:"r", green:"g" };
+const COLOR_COMBOS = {
+  azorius:"wu", dimir:"ub", rakdos:"br", golgari:"bg", orzhov:"wb",
+  izzet:"ur", simic:"ug", boros:"rw", gruul:"rg", selesnya:"gw",
+  bant:"gwu", esper:"wub", grixis:"ubr", jund:"brg", naya:"rgw",
+  abzan:"wbg", jeskai:"urw", sultai:"bgu", mardu:"rwb", temur:"gur",
+};
+function colorSet(s) { // "W, U" -> Set{"w","u"}
+  const set = new Set();
+  for (const ch of (s || "").toLowerCase()) if (COLOR_LETTERS.has(ch)) set.add(ch);
+  return set;
+}
+function parseColorSpec(v) {
+  v = v.toLowerCase();
+  if (v in COLOR_NAMES) return new Set([COLOR_NAMES[v]]);
+  if (v in COLOR_COMBOS) v = COLOR_COMBOS[v];
+  const set = new Set();
+  for (const ch of v) if (COLOR_LETTERS.has(ch)) set.add(ch);
+  return set;
+}
+function statNum(s) {
+  if (s == null) return NaN;
+  s = String(s).trim();
+  if (s === "" || s === "*" || /x/i.test(s)) return NaN;
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : n;
+}
+function cmpNum(a, op, b) {
+  if (isNaN(a) || isNaN(b)) return false;
+  switch (op) {
+    case ":": case "=": return a === b;
+    case "!=": return a !== b;
+    case "<": return a < b;  case "<=": return a <= b;
+    case ">": return a > b;  case ">=": return a >= b;
+    default: return a === b;
+  }
+}
+function setRelation(card, op, spec) {
+  const subset = (a, b) => [...a].every(x => b.has(x));      // a ⊆ b
+  const equal = (a, b) => a.size === b.size && subset(a, b);
+  switch (op) {
+    case ":": case ">=": return subset(spec, card);          // card ⊇ spec
+    case "=":  return equal(card, spec);
+    case "!=": return !equal(card, spec);
+    case "<=": return subset(card, spec);
+    case "<":  return subset(card, spec) && !equal(card, spec);
+    case ">":  return subset(spec, card) && !equal(card, spec);
+    default:   return subset(spec, card);
+  }
+}
+function makeColorFilter(getSet, op, raw) {
+  const v = raw.toLowerCase();
+  if (/^\d+$/.test(v)) { const n = +v, o = op === ":" ? "=" : op; return c => cmpNum(getSet(c).size, o, n); }
+  if (v === "c" || v === "colorless") return c => getSet(c).size === 0;
+  if (v === "m" || v === "multi" || v === "multicolor" || v === "multicolored") return c => getSet(c).size >= 2;
+  const spec = parseColorSpec(v);
+  return c => setRelation(getSet(c), op, spec);
+}
+const STAT_GETTERS = {
+  mv: c => statNum(c.mana_value), cmc: c => statNum(c.mana_value),
+  pow: c => statNum(c.power), power: c => statNum(c.power),
+  tou: c => statNum(c.toughness), toughness: c => statNum(c.toughness),
+  loy: c => statNum(c.loyalty), loyalty: c => statNum(c.loyalty),
+  elo: c => (c.cube_elo == null ? NaN : c.cube_elo),
+  edhrec: c => (c.edhrec_rank == null ? NaN : c.edhrec_rank),
+  rank: c => (c.edhrec_rank == null ? NaN : c.edhrec_rank),
+};
+function makeNumFilter(get, op, raw) {
+  const rhsStat = STAT_GETTERS[raw.toLowerCase()];        // pow>tou, tou<=pow, …
+  if (rhsStat) return c => cmpNum(get(c), op, rhsStat(c));
+  const b = parseFloat(raw);
+  if (isNaN(b)) throw new Error("bad number: " + raw);
+  return c => cmpNum(get(c), op, b);
+}
+function makeRegexOrSub(raw) {
+  if (raw.length >= 2 && raw[0] === "/" && raw[raw.length - 1] === "/") {
+    const re = new RegExp(raw.slice(1, -1), "i");          // throws on bad regex -> flagged
+    return s => re.test(s || "");
+  }
+  const needle = raw.toLowerCase();
+  return s => (s || "").toLowerCase().includes(needle);
+}
+function makeTextFilter(get, raw) { const m = makeRegexOrSub(raw); return c => m(get(c)); }
+function makeOracleFilter(raw) {
+  // "~" is Scryfall shorthand for this card's own name.
+  if (raw.includes("~")) {
+    const tmpl = raw.toLowerCase();
+    return c => (c.oracle_text || "").toLowerCase().includes(tmpl.split("~").join((c.name || "").toLowerCase()));
+  }
+  return makeTextFilter(c => c.oracle_text, raw);
+}
+function makeIsFilter(raw) {
+  const isLand = c => /\bland\b/i.test(c.type || "");
+  switch (raw.toLowerCase()) {
+    case "creature": return c => c.is_creature || /\bcreature\b/i.test(c.type || "");
+    case "land": return isLand;
+    case "permanent": return c => /(creature|artifact|enchantment|land|planeswalker|battle)/i.test(c.type || "");
+    case "spell": return c => !isLand(c);
+    case "vanilla": return c => !(c.oracle_text || "").trim();
+    case "gold": case "multicolor": case "multicolored": return c => colorSet(c.colors).size >= 2;
+    case "colorless": return c => colorSet(c.colors).size === 0;
+    case "mono": case "monocolored": return c => colorSet(c.colors).size === 1;
+    case "hybrid": return c => /\{[wubrg2]\/[wubrgp]\}/i.test(c.mana_cost || "");
+    // app-specific flags
+    case "removed": return c => c.removed;
+    case "genai": case "art": return c => c.genai_art;
+    case "errata": return c => c.errata;
+    case "odyssey": return c => c.odyssey_creature;
+    case "found": return c => c.found;
+    case "missing": return c => !c.found;
+    default: throw new Error("unknown is: " + raw);
+  }
+}
+function dispatch(key, op, val) {
+  switch (key.toLowerCase()) {
+    case "name": case "n": return makeTextFilter(c => c.name, val);
+    case "type": case "t": return makeTextFilter(c => c.type, val);
+    case "oracle": case "o": case "text": return makeOracleFilter(val);
+    case "color": case "c": case "colors": return makeColorFilter(c => colorSet(c.colors), op, val);
+    case "identity": case "id": case "ci": case "commander":
+      return makeColorFilter(c => colorSet(c.color_identity), op, val);
+    case "produces": case "produced": case "produce":
+      return makeColorFilter(c => colorSet(c.produced_mana), op, val);
+    case "mana": case "mc": case "m": return makeTextFilter(c => (c.mana_cost || "").replace(/[{}]/g, ""), val);
+    case "mv": case "cmc": return makeNumFilter(STAT_GETTERS.mv, op, val);
+    case "pow": case "power": return makeNumFilter(STAT_GETTERS.pow, op, val);
+    case "tou": case "toughness": return makeNumFilter(STAT_GETTERS.tou, op, val);
+    case "loy": case "loyalty": return makeNumFilter(STAT_GETTERS.loy, op, val);
+    case "elo": return makeNumFilter(STAT_GETTERS.elo, op, val);
+    case "edhrec": case "rank": return makeNumFilter(STAT_GETTERS.edhrec, op, val);
+    case "kw": case "keyword": return makeTextFilter(c => c.keywords, val);
+    case "set": case "s": case "e": case "edition": case "in":
+      return makeTextFilter(c => c.printings, val);
+    case "decision": case "d": {
+      const want = val.toLowerCase();
+      if (want === "errata") return c => c.errata;
+      return c => (c.decision || "").toLowerCase() === want;
+    }
+    case "is": case "not": return key.toLowerCase() === "not" ? null : makeIsFilter(val);
+    default: return null;   // unknown key -> caller treats the token as a name search
+  }
+}
+function buildTerm(str) {
+  const m = str.match(/^([a-z]+)(>=|<=|!=|[:=<>])([\s\S]*)$/i);
+  if (m) {
+    const f = dispatch(m[1], m[2], m[3]);
+    if (f) return f;
+  }
+  return makeTextFilter(c => c.name, str);   // bare word / quoted phrase / unknown -> name
+}
+function tokenize(input) {
+  const toks = [];
+  let i = 0;
+  const n = input.length;
+  while (i < n) {
+    const c = input[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "(") { toks.push({ type: "lparen" }); i++; continue; }
+    if (c === ")") { toks.push({ type: "rparen" }); i++; continue; }
+    if (c === "-") { toks.push({ type: "not" }); i++; continue; }
+    // read one term, honouring double quotes (which are stripped but keep their spaces)
+    let buf = "", inQ = false;
+    while (i < n) {
+      const ch = input[i];
+      if (ch === '"') { inQ = !inQ; i++; continue; }
+      if (!inQ && (/\s/.test(ch) || ch === "(" || ch === ")")) break;
+      buf += ch; i++;
+    }
+    if (!buf) continue;
+    if (buf.toLowerCase() === "or") { toks.push({ type: "or" }); continue; }
+    if (buf.toLowerCase() === "and") continue;            // implicit AND already
+    toks.push({ type: "term", pred: buildTerm(buf) });
+  }
+  return toks;
+}
+function compileQuery(input) {
+  const toks = tokenize((input || "").trim());
+  if (!toks.length) return null;
+  let i = 0;
+  const peek = () => toks[i];
+  const parseOr = () => {
+    let left = parseAnd();
+    while (peek() && peek().type === "or") { i++; const r = parseAnd(), l = left; left = c => l(c) || r(c); }
+    return left;
+  };
+  const parseAnd = () => {
+    let left = parseUnary();
+    while (peek() && peek().type !== "or" && peek().type !== "rparen") {
+      const r = parseUnary(), l = left; left = c => l(c) && r(c);
+    }
+    return left;
+  };
+  const parseUnary = () => {
+    const t = peek();
+    if (!t) return () => true;
+    if (t.type === "not") { i++; const e = parseUnary(); return c => !e(c); }
+    if (t.type === "lparen") { i++; const e = parseOr(); if (peek() && peek().type === "rparen") i++; return e; }
+    if (t.type === "term") { i++; return t.pred; }
+    i++; return () => true;   // stray rparen
+  };
+  return parseOr();
+}
+
 // nav + filter wiring
 document.getElementById("prev").onclick = () => step(-1);
 document.getElementById("next").onclick = () => step(1);
@@ -576,7 +793,12 @@ document.querySelectorAll(".filter button").forEach(b =>
   b.onclick = () => { filter = b.dataset.f;
     document.querySelectorAll(".filter button").forEach(x=>x.classList.toggle("on", x===b));
     renderList(); });
-document.getElementById("search").oninput = e => { q = e.target.value.toLowerCase(); renderList(); };
+document.getElementById("search").oninput = e => {
+  q = e.target.value;
+  try { qFn = compileQuery(q); e.target.classList.remove("bad"); }
+  catch (err) { qFn = null; e.target.classList.add("bad"); }
+  renderList();
+};
 
 const sani = s => (s||"").replace(/[^A-Za-z0-9-]/g,"_");
 // Step 1: show the art direction (Claude) for review/editing BEFORE spending on 8 images.
