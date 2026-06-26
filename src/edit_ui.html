@@ -227,7 +227,7 @@ Bare words → card name.  &quot;exact phrase&quot; or /regex/.
   c:rg  c&gt;=wu  c:m(ulti)  c:c(olorless)  id&lt;=wub
   mv&gt;=3  pow&gt;tou  tou=4  loy:3  elo&gt;1500  edhrec&lt;5000
   kw:flying  produces:g  set:ody  mc:WW
-  is:creature|gold|land|vanilla|removed|genai|errata|odyssey
+  is:creature|gold|land|vanilla|removed|genai|errata|odyssey|banger
 Combine: space = AND, OR, -negate, (parens).  e.g.  c:b t:creature -o:flying">
       <button data-f="all" class="on">all</button>
       <button data-f="pending">pending</button>
@@ -340,6 +340,7 @@ function renderList() {
     const li = document.createElement("li");
     li.className = c.decision + (c.id === cur ? " sel" : "") + (c.removed ? " removed" : "");
     li.innerHTML = `<span class="dot"></span><span class="nm">${esc(c.name)}</span>` +
+                   (c.banger ? `<span class="art" title="banger (${esc(c.tags||'')})" style="color:#ff7a18;font-weight:700">🔥banger</span>` : "") +
                    (c.errata ? `<span class="art" title="has field errata" style="color:var(--amber)">✎</span>` : "") +
                    (c.removed ? `<span class="art" style="color:var(--red)">removed</span>` : c.genai_art ? `<span class="art">✦art</span>` : "");
     li.onclick = () => selectId(c.id);
@@ -687,6 +688,7 @@ function makeIsFilter(raw) {
     case "hybrid": return c => /\{[wubrg2]\/[wubrgp]\}/i.test(c.mana_cost || "");
     // app-specific flags
     case "removed": return c => c.removed;
+    case "banger": return c => !!c.banger;
     case "genai": case "art": return c => c.genai_art;
     case "errata": return c => c.errata;
     case "odyssey": return c => c.odyssey_creature;

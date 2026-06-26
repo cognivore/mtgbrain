@@ -273,7 +273,7 @@ pub struct RenderCfg {
 
 /// Add a card to the cube by exact name: snapshot its fields from `source_db`,
 /// apply the same pre-sets as seeding, append it to the source list, return it.
-fn add_card(db: &Connection, source_db: &Path, name: &str) -> Result<Value> {
+fn add_card(db: &Connection, source_db: &Path, name: &str, tags: &str) -> Result<Value> {
     let name = name.trim();
     if name.is_empty() {
         bail!("empty card name");
@@ -302,6 +302,10 @@ fn add_card(db: &Connection, source_db: &Path, name: &str) -> Result<Value> {
             i64::from(odyssey_creature), i64::from(modern_frame), "pending", 1i64,
         ],
     )?;
+    let tags = tags.trim();
+    if !tags.is_empty() {
+        db.execute("UPDATE cube_cards SET tags=?2 WHERE id=?1", params![next_id, tags])?;
+    }
     // Keep the source list file in sync so a future re-seed remembers this card.
     if let Ok(list_path) =
         db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0))
@@ -368,6 +372,8 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN art_override TEXT NOT NULL DEFAULT ''", []);
+    // Free-form comma-separated tags (e.g. "banger") — shown as a list badge + searchable `is:banger`.
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN tags TEXT NOT NULL DEFAULT ''", []);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let server = Server::http(addr).map_err(|e| anyhow::anyhow!("starting server: {e}"))?;
@@ -437,11 +443,16 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
             (Method::Post, "/api/add") => {
                 let mut body = String::new();
                 req.as_reader().read_to_string(&mut body).ok();
-                let name = serde_json::from_str::<Value>(&body)
-                    .ok()
+                let parsed = serde_json::from_str::<Value>(&body).ok();
+                let name = parsed
+                    .as_ref()
                     .and_then(|v| v.get("name").and_then(Value::as_str).map(ToString::to_string))
                     .unwrap_or_default();
-                match add_card(&db, &rc.source_db, &name) {
+                let tags = parsed
+                    .as_ref()
+                    .and_then(|v| v.get("tags").and_then(Value::as_str).map(ToString::to_string))
+                    .unwrap_or_default();
+                match add_card(&db, &rc.source_db, &name, &tags) {
                     Ok(v) => json_response(&v),
                     Err(e) => json_response(&json!({"error": e.to_string()})),
                 }
@@ -711,7 +722,7 @@ fn list_cards(db: &Connection) -> Value {
                     (overrides IS NOT NULL AND overrides != '{}' AND overrides != ''),
                     mana_value,colors,color_identity,power,toughness,loyalty,
                     oracle_text,keywords,produced_mana,printings,edhrec_rank,is_creature,
-                    COALESCE(overrides,'{}')
+                    COALESCE(overrides,'{}'),COALESCE(tags,'')
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
@@ -775,6 +786,8 @@ fn list_cards(db: &Connection) -> Value {
                 "printings": r.get::<_, Option<String>>(20)?,
                 "edhrec_rank": r.get::<_, Option<i64>>(21)?,
                 "is_creature": r.get::<_, i64>(22)? != 0,
+                "tags": r.get::<_, String>(24)?,
+                "banger": r.get::<_, String>(24)?.to_lowercase().contains("banger"),
             }))
         })
         .expect("query list")
@@ -1080,13 +1093,17 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
     #[allow(clippy::type_complexity)]
-    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String)> = {
+    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String, String)> = {
         let mut stmt = db.prepare(
-            "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,'')
+            "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,''),COALESCE(tags,'')
              FROM cube_cards WHERE removed=0 ORDER BY id",
         )?;
         let v = stmt
-            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+            .query_map([], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, Option<f64>>(1)?, r.get::<_, Option<String>>(2)?,
+                    r.get::<_, Option<String>>(3)?, r.get::<_, String>(4)?, r.get::<_, String>(5)?,
+                    r.get::<_, String>(6)?))
+            })?
             .collect::<std::result::Result<_, _>>()?;
         v
     };
@@ -1094,7 +1111,7 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
         "Name,CMC,Type,Color,Set,Collector Number,Rarity,Color Category,Status,Finish,Maybeboard,Image URL,Image Back URL,Tags,Notes,MTGO ID\n",
     );
     let mut n = 0usize;
-    for (name, mv, ty, ci, ov, errata_text) in rows {
+    for (name, mv, ty, ci, ov, errata_text, card_tags) in rows {
         let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
         let type_line = o.get("type").and_then(Value::as_str).map(ToString::to_string)
             .or(ty).unwrap_or_default();
@@ -1105,16 +1122,26 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
         let color: String = letters.iter().collect();
         let cat = color_category(&type_line, &letters);
         let url = format!("{base}/{}.png", crate::render::sanitize(&name));
-        // Tag ONLY the errata-ribbon cards (same rule as the renderer: a manual
-        // `errata_scroll` override forces it, else any FUNCTIONAL field override or an
-        // errata note auto-trips it). No blanket tag — non-errata cards get no tag.
-        let tags = if errata_ribbon(&o, &errata_text) { "Errata" } else { "" };
+        // Tags: the errata ribbon (same rule as the renderer) plus any cube_cards.tags
+        // (e.g. "banger"), title-cased, so CubeCobra can show/filter them too.
+        let mut tag_list: Vec<String> = Vec::new();
+        if errata_ribbon(&o, &errata_text) {
+            tag_list.push("Errata".to_string());
+        }
+        for t in card_tags.split(',').map(str::trim).filter(|t| !t.is_empty()) {
+            let mut cs = t.chars();
+            let titled = cs.next().map_or_else(String::new, |c| {
+                c.to_uppercase().collect::<String>() + cs.as_str()
+            });
+            tag_list.push(titled);
+        }
+        let tags = tag_list.join(",");
         w.push_str(&format!(
             "{},{cmc},{},{color},,,,{cat},Owned,Non-foil,false,{},,{},,\n",
             csv_field(&name),
             csv_field(&type_line),
             csv_field(&url),
-            csv_field(tags),
+            csv_field(&tags),
         ));
         n += 1;
     }
