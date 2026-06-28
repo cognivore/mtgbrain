@@ -3122,7 +3122,48 @@ fn ink_8th(frame: &str) -> (&'static str, &'static str) {
     }
 }
 
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art) -> String {
+/// Build the set-symbol `<svg>` (white keyline + monocolour body + contour inner-border),
+/// right-anchored `right_pct`% in and vertically centred at face-fraction `center_frac`.
+/// Same filter construction as the Seventh frame; empty when no set svg.
+fn set_symbol_svg_html(set_svg: Option<&Path>, rarity: &str, center_frac: f64, right_pct: f64) -> String {
+    set_svg
+        .and_then(|p| fs::read(p).ok())
+        .and_then(|bytes| set_symbol_ink(&bytes))
+        .map(|(png, ink_aspect)| {
+            let uri = format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(&png));
+            let aspect = ink_aspect.clamp(0.25, 6.0);
+            let (w_px, h_px) = if aspect >= 1.45 {
+                let mut w = 250.0_f64;
+                let mut h = w / aspect;
+                if h > 92.0 { h = 92.0; w = h * aspect; }
+                (w, h)
+            } else {
+                let h = 100.0_f64;
+                (h * aspect, h)
+            };
+            let w_frac = w_px / f64::from(FACE_W) * 100.0;
+            let h_frac = h_px / f64::from(FACE_H) * 100.0;
+            let top = center_frac * 100.0 - h_frac / 2.0;
+            format!(
+                r##"<svg class="setsym" style="width:{w_frac:.3}%;height:{h_frac:.3}%;top:{top:.3}%;right:{right_pct}%" viewBox="0 0 {w_px:.1} {h_px:.1}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="ss" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+<feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
+<feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
+<feFlood flood-color="{fill}"/><feComposite in2="SourceAlpha" operator="in" result="body"/>
+<feFlood flood-color="#000" flood-opacity="1"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
+<feGaussianBlur in="o" stdDeviation="3.3" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="ir"/>
+<feComponentTransfer in="ir" result="inner"><feFuncA type="linear" slope="1.35"/></feComponentTransfer>
+<feMerge><feMergeNode in="key"/><feMergeNode in="body"/><feMergeNode in="inner"/></feMerge>
+</filter></defs>
+<image href="{uri}" width="{w_px:.1}" height="{h_px:.1}" preserveAspectRatio="xMidYMid meet" filter="url(#ss)"/>
+</svg>"##,
+                fill = rarity_fill(rarity),
+            )
+        })
+        .unwrap_or_default()
+}
+
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -3163,7 +3204,8 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("TYPE", esc(&c.type_line)),
         ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
         ("PT", pt),
-        ("SETSYM", String::new()),
+        // set symbol on the type bar, right-anchored, centred on the type line (~0.591)
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.591, 6.5)),
         ("ILLUS", illus),
         ("YEAR", year),
     ];
@@ -3176,14 +3218,15 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
 
 #[allow(clippy::too_many_arguments)]
 fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let ptbox_abs = fs::canonicalize(ptbox_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art);
+    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref());
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -3223,9 +3266,15 @@ pub fn render_card_8th(
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
+    if card.set.is_empty() || card.rarity.is_empty() {
+        let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
+        if card.set.is_empty() { card.set = set; }
+        if card.rarity.is_empty() { card.rarity = rarity; }
+    }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let set_svg = set_symbol_svg(&card.set, cache_dir);
     let out = dir.join("card8.png");
-    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"))?;
+    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     Ok(out)
 }
 

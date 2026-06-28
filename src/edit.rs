@@ -269,6 +269,14 @@ pub struct RenderCfg {
     pub backend: Option<String>,
     /// Source card DB (mtg.sqlite) for adding new cards by name.
     pub source_db: PathBuf,
+    /// Frame style for this editor instance: "seventh" (old frame) or "8th" (8ED/modern).
+    pub frame: String,
+}
+
+impl RenderCfg {
+    fn is_eighth(&self) -> bool {
+        matches!(self.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth")
+    }
 }
 
 /// Add a card to the cube by exact name: snapshot its fields from `source_db`,
@@ -683,10 +691,16 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 let foil = url.contains("foil=1");
                 let force = url.contains("force=1");
                 match id_from(p, "/api/render/") {
-                    Some(id) => match crate::render::render_one(
-                        editor_db, &rc.assets, &rc.cache, &rc.chrome, id, foil, force,
-                        rc.backend.as_deref(),
-                    ) {
+                    Some(id) => match if rc.is_eighth() {
+                        crate::render::render_card_8th(
+                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, rc.backend.as_deref(),
+                        )
+                    } else {
+                        crate::render::render_one(
+                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, foil, force,
+                            rc.backend.as_deref(),
+                        )
+                    } {
                         Ok(path) => match std::fs::read(&path) {
                             Ok(bytes) => Response::from_data(bytes)
                                 .with_header(header("Content-Type", "image/png")),

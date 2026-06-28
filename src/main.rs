@@ -263,6 +263,9 @@ enum EditCmd {
         /// MPC-Autofill backend URL for high-DPI art (else Scryfall).
         #[arg(long)]
         art_backend: Option<String>,
+        /// Frame style for this editor instance: `seventh` (old) or `8th` (8ED/modern).
+        #[arg(long, default_value = "seventh")]
+        frame: String,
     },
 }
 
@@ -374,6 +377,7 @@ fn main() -> Result<()> {
                 cache,
                 chrome,
                 art_backend,
+                frame,
             } => {
                 let edb = editor_db
                     .clone()
@@ -384,6 +388,7 @@ fn main() -> Result<()> {
                     chrome: chrome.clone(),
                     backend: art_backend.clone(),
                     source_db: db.clone(),
+                    frame: frame.clone(),
                 };
                 edit::serve(&edb, *port, &rc)
             }
