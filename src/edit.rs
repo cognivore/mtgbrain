@@ -57,7 +57,7 @@ const OLD_FRAME_SETS: &[&str] = &[
 // ---------------------------------------------------------------------------
 
 /// Build the editor DB from `list_path`, snapshotting fields from `mtg_db`.
-pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<()> {
+pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool, no_genai: bool) -> Result<()> {
     if out.exists() {
         if force {
             fs::remove_file(out).with_context(|| format!("removing {}", out.display()))?;
@@ -81,7 +81,7 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
 
     let tx = db.transaction()?;
     let (mut found, mut approved, mut genai, mut missing) = (0u32, 0u32, 0u32, 0u32);
-    for (idx, name) in names.iter().enumerate() {
+    for (idx, (name, qty)) in names.iter().enumerate() {
         if let Some(c) = lookup_card(&src, name)? {
             found += 1;
             let is_creature = c.type_line.contains("Creature");
@@ -89,10 +89,12 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
             let odyssey_creature =
                 is_creature && printings.iter().any(|p| ODYSSEY_BLOCK.contains(p));
             let modern_frame = !printings.iter().any(|p| OLD_FRAME_SETS.contains(p));
+            // `--no-genai` (the 8ED back cube uses latest high-DPI art, never GenAI).
+            let want_genai = modern_frame && !no_genai;
             if odyssey_creature {
                 approved += 1;
             }
-            if modern_frame {
+            if want_genai {
                 genai += 1;
             }
             tx.execute(
@@ -116,7 +118,7 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
                     c.edhrec_rank,
                     i64::from(is_creature),
                     i64::from(odyssey_creature),
-                    i64::from(modern_frame), // genai_art (pre-set)
+                    i64::from(want_genai), // genai_art (pre-set)
                     if odyssey_creature {
                         "accepted"
                     } else {
@@ -128,6 +130,9 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool) -> Result<
         } else {
             missing += 1;
             tx.execute(INSERT_MISSING, params![idx as i64, name])?;
+        }
+        if *qty != 1 {
+            tx.execute("UPDATE cube_cards SET qty=?2 WHERE id=?1", params![idx as i64, qty])?;
         }
     }
     tx.execute(
@@ -200,17 +205,22 @@ fn lookup_card(src: &Connection, name: &str) -> Result<Option<CardRow>> {
     Ok(None)
 }
 
-fn read_list(path: &Path) -> Result<Vec<String>> {
+/// One entry per UNIQUE card name (first-seen order), with `qty` = how many times it
+/// appeared in the list (so 16× Evolving Wilds → one row, qty 16).
+fn read_list(path: &Path) -> Result<Vec<(String, i64)>> {
     let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-    let mut out = Vec::new();
-    let mut seen = std::collections::HashSet::new();
+    let mut out: Vec<(String, i64)> = Vec::new();
+    let mut idx: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for line in text.lines() {
         let n = line.trim();
         if n.is_empty() || n.starts_with('#') {
             continue;
         }
-        if seen.insert(n.to_string()) {
-            out.push(n.to_string());
+        if let Some(&i) = idx.get(n) {
+            out[i].1 += 1;
+        } else {
+            idx.insert(n.to_string(), out.len());
+            out.push((n.to_string(), 1));
         }
     }
     Ok(out)
@@ -241,6 +251,7 @@ CREATE TABLE cube_cards (
     errata_text     TEXT NOT NULL DEFAULT '',
     notes           TEXT NOT NULL DEFAULT '',
     in_db_found     INTEGER NOT NULL DEFAULT 1,
+    qty             INTEGER NOT NULL DEFAULT 1,   -- how many copies to print (from list duplicates)
     overrides       TEXT NOT NULL DEFAULT '{}',  -- JSON: per-field errata {field: new value}
     removed         INTEGER NOT NULL DEFAULT 0,  -- soft-delete: kept for history, hidden from cube
     illustrator     TEXT NOT NULL DEFAULT '',     -- printed Illus. credit (GenAI artist pseudonym)
@@ -387,6 +398,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0", []);
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN art_override TEXT NOT NULL DEFAULT ''", []);
+    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN qty INTEGER NOT NULL DEFAULT 1", []);
     // Free-form comma-separated tags (e.g. "banger") — shown as a list badge + searchable `is:banger`.
     let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN tags TEXT NOT NULL DEFAULT ''", []);
 
@@ -472,6 +484,21 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     Err(e) => json_response(&json!({"error": e.to_string()})),
                 }
             }
+            // Set the print quantity (number of copies) for a card.
+            (Method::Post, p) if p.starts_with("/api/qty/") => match id_from(p, "/api/qty/") {
+                Some(id) => {
+                    let mut body = String::new();
+                    req.as_reader().read_to_string(&mut body).ok();
+                    let q = serde_json::from_str::<Value>(&body)
+                        .ok()
+                        .and_then(|v| v.get("qty").and_then(Value::as_i64))
+                        .unwrap_or(1)
+                        .max(0);
+                    let _ = db.execute("UPDATE cube_cards SET qty=?2 WHERE id=?1", params![id, q]);
+                    json_response(&json!({"id": id, "qty": q}))
+                }
+                None => not_found(),
+            },
             // Soft-remove / restore a card (kept in DB; removed from the cube list).
             (Method::Post, p) if p.starts_with("/api/remove/") => match id_from(p, "/api/remove/") {
                 Some(id) => set_removed(&db, id, true).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
@@ -743,7 +770,7 @@ fn list_cards(db: &Connection) -> Value {
                     (overrides IS NOT NULL AND overrides != '{}' AND overrides != ''),
                     mana_value,colors,color_identity,power,toughness,loyalty,
                     oracle_text,keywords,produced_mana,printings,edhrec_rank,is_creature,
-                    COALESCE(overrides,'{}'),COALESCE(tags,'')
+                    COALESCE(overrides,'{}'),COALESCE(tags,''),COALESCE(qty,1)
                FROM cube_cards ORDER BY id",
         )
         .expect("prepare list");
@@ -809,6 +836,7 @@ fn list_cards(db: &Connection) -> Value {
                 "is_creature": r.get::<_, i64>(22)? != 0,
                 "tags": r.get::<_, String>(24)?,
                 "banger": r.get::<_, String>(24)?.to_lowercase().contains("banger"),
+                "qty": r.get::<_, i64>(25)?,
             }))
         })
         .expect("query list")
@@ -847,7 +875,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
         "SELECT id,name,mana_cost,mana_value,type,colors,color_identity,power,toughness,
                 loyalty,oracle_text,keywords,produced_mana,printings,cube_elo,edhrec_rank,
                 is_creature,is_odysseyblock_creature,genai_art,decision,errata_text,notes,
-                in_db_found,updated_at,overrides,removed,COALESCE(illustrator,'')
+                in_db_found,updated_at,overrides,removed,COALESCE(illustrator,''),COALESCE(qty,1)
            FROM cube_cards WHERE id=?1",
         params![id],
         |r| {
@@ -880,6 +908,7 @@ fn get_card(db: &Connection, id: i64) -> Option<Value> {
                     .unwrap_or_else(|_| json!({})),
                 "removed": r.get::<_, i64>(25)? != 0,
                 "illustrator": r.get::<_, String>(26)?,
+                "qty": r.get::<_, i64>(27)?,
             }))
         },
     )

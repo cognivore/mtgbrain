@@ -217,6 +217,9 @@ enum EditCmd {
         /// Overwrite an existing editor DB (discards saved decisions).
         #[arg(long)]
         force: bool,
+        /// Never pre-set the GenAI-art flag (the 8ED back cube uses latest high-DPI art).
+        #[arg(long)]
+        no_genai: bool,
     },
     /// Recompute color_identity for every card from its effective (override-applied)
     /// mana cost + rules-text mana symbols, and write it back to the editor DB.
@@ -349,11 +352,11 @@ fn main() -> Result<()> {
         } => query::search(&db, query, where_clause.as_deref(), order, *phrase, out),
         Cmd::Card { name, out } => query::card(&db, name, out),
         Cmd::Edit { cmd } => match cmd {
-            EditCmd::Seed { list, out, force } => {
+            EditCmd::Seed { list, out, force, no_genai } => {
                 let out = out
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                edit::seed(&db, list, &out, *force)
+                edit::seed(&db, list, &out, *force, *no_genai)
             }
             EditCmd::Recolor { editor_db, dry_run } => {
                 let edb = editor_db

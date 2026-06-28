@@ -340,6 +340,7 @@ function renderList() {
     const li = document.createElement("li");
     li.className = c.decision + (c.id === cur ? " sel" : "") + (c.removed ? " removed" : "");
     li.innerHTML = `<span class="dot"></span><span class="nm">${esc(c.name)}</span>` +
+                   (c.qty > 1 ? `<span class="art" title="${c.qty} copies to print" style="color:var(--accent);font-weight:700">×${c.qty}</span>` : "") +
                    (c.banger ? `<span class="art" title="banger (${esc(c.tags||'')})" style="color:#ff7a18;font-weight:700">🔥banger</span>` : "") +
                    (c.errata ? `<span class="art" title="has field errata" style="color:var(--amber)">✎</span>` : "") +
                    (c.removed ? `<span class="art" style="color:var(--red)">removed</span>` : c.genai_art ? `<span class="art">✦art</span>` : "");
@@ -398,6 +399,13 @@ function img(){
   </div>`;
 }
 
+async function setQty(id, v){
+  const q = Math.max(0, parseInt(v, 10) || 1);
+  await fetch('/api/qty/' + id, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({qty:q}) });
+  const c = CARDS.find(x => x.id === id); if (c) c.qty = q;
+  if (C && C.id === id) C.qty = q;
+  renderList();
+}
 function renderCard(){
   if (!C) return;
   document.getElementById("card").innerHTML = editMode ? editForm() : viewForm();
@@ -422,7 +430,8 @@ function viewForm(){
     <h2>${esc(fval("name"))}${ovmark("name")}</h2>
     <div class="mc">${esc(fval("mana_cost"))}${ovmark("mana_cost")} ${C.mana_value!=null?`· mv ${C.mana_value}`:""}
         ${C.cube_elo!=null?`· elo ${Math.round(C.cube_elo)}`:""}
-        ${C.edhrec_rank!=null?`· edhrec #${C.edhrec_rank}`:""}</div>
+        ${C.edhrec_rank!=null?`· edhrec #${C.edhrec_rank}`:""}
+        &nbsp;·&nbsp; qty <input type="number" min="0" value="${C.qty||1}" style="width:52px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 4px" onchange="setQty(${C.id}, this.value)"></div>
     <div class="tl">${esc(fval("type"))}${ovmark("type")}</div>
     ${C.found ? "" : `<div class="missing">⚠ not found in card DB — fields unavailable</div>`}
     <div class="otext">${esc(fval("oracle_text")||"—")}${ovmark("oracle_text")}</div>

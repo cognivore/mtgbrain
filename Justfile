@@ -61,7 +61,7 @@ edit PORT="49737":
 # Seed the "pointless-b-side" BACK cube (rendered in 8ED/modern frame) from its card list
 # at projects/pointless-b-side/cube_list.txt -> data/pointless-b-side.sqlite.
 edit-8ed-seed LIST="projects/pointless-b-side/cube_list.txt":
-    cargo run --release -- edit seed --list {{LIST}} --out data/pointless-b-side.sqlite --force
+    cargo run --release -- edit seed --list {{LIST}} --out data/pointless-b-side.sqlite --force --no-genai
 
 # The "pointless-b-side" editor instance: the OTHER cube on the BACK of the MPC card,
 # rendered in the 8th-Edition (modern) frame. Own DB + own port (49738), 8ED frame.
