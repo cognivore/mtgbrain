@@ -457,7 +457,7 @@ struct Pick {
 /// MPC-Autofill `backend` and `ANTHROPIC_API_KEY` are present, pull all high-DPI
 /// candidates (cached per bucket), pick the highest-DPI one whose illustration
 /// Claude confirms matches the old art, and crop its art window cleanly.
-fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&str>) -> Result<Art> {
+fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&str>, latest: bool) -> Result<Art> {
     let art_dir = cache_root.join("art");
     fs::create_dir_all(&art_dir)?;
     fs::create_dir_all(card_dir)?;
@@ -534,7 +534,13 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
         }
     }
 
-    let (mut ref_path, mut artist, mut year, set) = scryfall_oldest(name, &art_dir)?;
+    // 8ED back cube wants the LATEST high-DPI art; the old frame wants the oldest (authentic
+    // pre-modern) print. Either becomes the reference the MPCfill matcher targets.
+    let (mut ref_path, mut artist, mut year, set) = if latest {
+        scryfall_latest(name, &art_dir)?
+    } else {
+        scryfall_oldest(name, &art_dir)?
+    };
     // Optional per-render art-source override: MTGBRAIN_ART_SET=<setcode> matches the
     // MPCfill art against THAT printing's art_crop instead of the oldest one (the set
     // symbol still comes from the oldest printing). Used to pick a reprint's art.
@@ -599,6 +605,45 @@ fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
             .or_else(|| first["card_faces"][0]["image_uris"]["art_crop"].as_str())
             .with_context(|| format!("no art_crop for {name}"))?;
         curl_to_file(art_url, &dst)?;
+    }
+    Ok((dst, artist, year, set))
+}
+
+/// NEWEST paper printing that still has a HIGH-RES art scan — the up-to-date, best-quality
+/// illustration for the modern (8ED) back cube. Falls back to the newest printing with any
+/// art_crop if none are flagged `highres_scan`. Cached separately so it never clobbers the
+/// oldest-printing metadata the old frame uses.
+fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, String, String)> {
+    let meta_file = art_dir.join(format!("{}__latest.json", sanitize(name)));
+    let dst = art_dir.join(format!("{}__latest.jpg", sanitize(name)));
+    if !meta_file.exists() || !dst.exists() {
+        let meta_url = format!(
+            "https://api.scryfall.com/cards/search?order=released&dir=desc&unique=prints&q={}",
+            percent(&format!("!\"{name}\" game:paper"))
+        );
+        curl_to_file(&meta_url, &meta_file)?;
+    }
+    let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
+        .with_context(|| format!("parsing Scryfall metadata for {name}"))?;
+    let prints = v["data"].as_array().with_context(|| format!("no Scryfall print found for {name}"))?;
+    let art_crop_of = |c: &Value| -> Option<String> {
+        c["image_uris"]["art_crop"]
+            .as_str()
+            .or_else(|| c["card_faces"][0]["image_uris"]["art_crop"].as_str())
+            .map(ToString::to_string)
+    };
+    // newest high-res scan with art; else newest with any art_crop.
+    let pick = prints
+        .iter()
+        .find(|c| c["image_status"].as_str() == Some("highres_scan") && art_crop_of(c).is_some())
+        .or_else(|| prints.iter().find(|c| art_crop_of(c).is_some()))
+        .with_context(|| format!("no printing with art for {name}"))?;
+    let artist = pick["artist"].as_str().unwrap_or("").to_string();
+    let year = pick["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+    let set = pick["set"].as_str().unwrap_or("?").to_string();
+    if !dst.exists() {
+        let art_url = art_crop_of(pick).with_context(|| format!("no art_crop for {name}"))?;
+        curl_to_file(&art_url, &dst)?;
     }
     Ok((dst, artist, year, set))
 }
@@ -2959,7 +3004,7 @@ pub fn render_one(
     // Durable art override (editor DB) wins and is re-materialised every render so it can
     // never be trampled by a cache wipe / auto re-pick.
     materialize_override(&db, cache_dir, id, &card.name, &dir)?;
-    let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
+    let art = acquire_art(&card.name, cache_dir, &dir, backend, false)?;
     // Flavor text (italic, below rules) — from the cached Scryfall print metadata that
     // acquire_art just settled. An "flavor" override wins if the editor set one.
     // Fall back to the Scryfall flavor only when the editor set NO flavor override.
@@ -3005,7 +3050,7 @@ pub fn genai_base_card(
     fs::create_dir_all(&base_dir)?;
     // Acquire the REAL art into the ISOLATED base dir (Scryfall, fast/free — same
     // illustration MPCfill would pick, just lower-res; enough to vote on).
-    let art = acquire_art(&card.name, cache_dir, &base_dir, None)?;
+    let art = acquire_art(&card.name, cache_dir, &base_dir, None, false)?;
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
@@ -3331,7 +3376,8 @@ pub fn render_card_8th(
     }
     let dir = cache_dir.join("cards8").join(sanitize(&card.name));
     materialize_override(&db, cache_dir, id, &card.name, &dir)?;
-    let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
+    // 8ED back cube: fetch the LATEST high-DPI art, not the oldest printing.
+    let art = acquire_art(&card.name, cache_dir, &dir, backend, true)?;
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
