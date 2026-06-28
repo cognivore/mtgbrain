@@ -166,31 +166,38 @@ struct CardRow {
 }
 
 fn lookup_card(src: &Connection, name: &str) -> Result<Option<CardRow>> {
-    let mut stmt = src.prepare_cached(
-        "SELECT mana_cost, mana_value, type, colors, color_identity, power, toughness,
-                loyalty, text, keywords, produced_mana, printings, cube_elo, edhrec_rank
-           FROM cards WHERE name = ?1 ORDER BY COALESCE(face_index, 0) LIMIT 1",
-    )?;
-    let mut rows = stmt.query(params![name])?;
-    let Some(r) = rows.next()? else {
-        return Ok(None);
-    };
-    Ok(Some(CardRow {
-        mana_cost: r.get(0)?,
-        mana_value: r.get(1)?,
-        type_line: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
-        colors: r.get(3)?,
-        color_identity: r.get(4)?,
-        power: r.get(5)?,
-        toughness: r.get(6)?,
-        loyalty: r.get(7)?,
-        oracle_text: r.get(8)?,
-        keywords: r.get(9)?,
-        produced_mana: r.get(10)?,
-        printings: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
-        cube_elo: r.get(12)?,
-        edhrec_rank: r.get(13)?,
-    }))
+    // Match the full card `name` first; if that misses — a multi-face card listed by its
+    // FRONT-face name (e.g. "Value Town" for "Value Town // Take a Trip", or the "prepare"
+    // cards listed by their creature half) — fall back to the matching FACE so it seeds with
+    // that face's data and renders it single-sided.
+    for col in ["name", "display_name", "face_name"] {
+        let sql = format!(
+            "SELECT mana_cost, mana_value, type, colors, color_identity, power, toughness,
+                    loyalty, text, keywords, produced_mana, printings, cube_elo, edhrec_rank
+               FROM cards WHERE {col} = ?1 ORDER BY COALESCE(face_index, 0) LIMIT 1"
+        );
+        let mut stmt = src.prepare(&sql)?;
+        let mut rows = stmt.query(params![name])?;
+        if let Some(r) = rows.next()? {
+            return Ok(Some(CardRow {
+                mana_cost: r.get(0)?,
+                mana_value: r.get(1)?,
+                type_line: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                colors: r.get(3)?,
+                color_identity: r.get(4)?,
+                power: r.get(5)?,
+                toughness: r.get(6)?,
+                loyalty: r.get(7)?,
+                oracle_text: r.get(8)?,
+                keywords: r.get(9)?,
+                produced_mana: r.get(10)?,
+                printings: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
+                cube_elo: r.get(12)?,
+                edhrec_rank: r.get(13)?,
+            }));
+        }
+    }
+    Ok(None)
 }
 
 fn read_list(path: &Path) -> Result<Vec<String>> {
