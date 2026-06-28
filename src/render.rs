@@ -317,7 +317,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 10,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 11,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -2556,7 +2556,9 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     } else {
         String::new()
     };
-    let pt = if c.is_creature && (!c.power.is_empty() || !c.toughness.is_empty()) {
+    // Any card with a printed P/T gets the box — creatures AND **Vehicles** (Artifact —
+    // Vehicle: a P/T but is_creature=0, e.g. The Last Ride 13/13). Loyalty → planeswalkers.
+    let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
         format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
     } else if !c.loyalty.is_empty() {
         format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&c.loyalty))
@@ -3174,15 +3176,17 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     } else {
         String::new()
     };
-    let pt = if c.is_creature && (!c.power.is_empty() || !c.toughness.is_empty()) {
+    // Any card with a printed power/toughness gets the P/T box — creatures AND **Vehicles**
+    // (which are Artifacts, not creatures, but still have a P/T). Loyalty → planeswalkers.
+    let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
         format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
     } else if !c.loyalty.is_empty() {
         format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&c.loyalty))
     } else {
         String::new()
     };
-    // The P/T frame box only exists for cards that HAVE a P/T (creatures) or loyalty —
-    // never on an enchantment/instant/sorcery.
+    // The P/T frame box only exists for cards that HAVE a P/T (creatures, vehicles) or
+    // loyalty — never on an enchantment/instant/sorcery.
     let ptboxdiv = if pt.is_empty() {
         String::new()
     } else {
@@ -3196,7 +3200,63 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     };
     let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
     let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
+    // ---- colour indicator: coloured artifacts / manual-identity cards show a colour dot
+    // to the LEFT of the type line (same logic + filter as the old frame). ----
+    let diam_px = (0.030 * f64::from(FACE_H)) as u32;
+    let ind_frames: Vec<PathBuf> = {
+        let t = c.type_line.to_lowercase();
+        let is_land = t.contains("land");
+        let is_artifact = t.contains("artifact");
+        let ci = ci_letters(&c.color_identity);
+        let cost = card_colors(c);
+        let letters: Vec<char> = if c.ci_manual && !ci.is_empty() {
+            if is_land && ci.len() == 1 { vec![] } else { ci }
+        } else if is_land {
+            vec![]
+        } else if is_artifact && !cost.is_empty() {
+            cost
+        } else if is_artifact && !ci.is_empty() {
+            ci
+        } else {
+            vec![]
+        };
+        if letters.is_empty() {
+            vec![]
+        } else if letters.len() >= 3 {
+            vec![assets_dir.join("frames8/m.png")]
+        } else {
+            letters.iter().map(|ch| assets_dir.join(color_frame_8th(*ch))).collect()
+        }
+    };
+    let ind_refs: Vec<&Path> = ind_frames.iter().map(PathBuf::as_path).collect();
+    let (colorind, typad) = color_indicator_png(&ind_refs, 256).map_or_else(
+        || (String::new(), "0".to_string()),
+        |png| {
+            let uri = format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(&png));
+            let d = f64::from(diam_px);
+            let w_frac = d / f64::from(FACE_W) * 100.0;
+            let h_frac = d / f64::from(FACE_H) * 100.0;
+            let left = 10.4; // just inside the type box's left edge
+            let top = (0.591 - d / f64::from(FACE_H) / 2.0) * 100.0; // centred on the type line
+            let svg = format!(
+                r##"<svg class="colorind" style="left:{left:.2}%;top:{top:.3}%;width:{w_frac:.3}%;height:{h_frac:.3}%" viewBox="0 0 {diam_px} {diam_px}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs><filter id="ci" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+<feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d"/>
+<feFlood flood-color="#fbfaf3"/><feComposite in2="d" operator="in" result="key"/>
+<feFlood flood-color="#000" flood-opacity="1"/><feComposite in2="SourceAlpha" operator="out" result="o"/>
+<feGaussianBlur in="o" stdDeviation="3.3" result="ob"/><feComposite in="ob" in2="SourceAlpha" operator="in" result="ir"/>
+<feComponentTransfer in="ir" result="inner"><feFuncA type="linear" slope="1.35"/></feComponentTransfer>
+<feMerge><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="inner"/></feMerge>
+</filter></defs>
+<image href="{uri}" width="{diam_px}" height="{diam_px}" preserveAspectRatio="xMidYMid meet" filter="url(#ci)"/>
+</svg>"##
+            );
+            let pad = ((left / 100.0 + w_frac / 100.0) * f64::from(FACE_W) - 0.10 * f64::from(FACE_W) + 18.0) as i32;
+            (svg, format!("{pad}px"))
+        },
+    );
     let pairs: Vec<(&str, String)> = vec![
+        ("COLORIND", colorind), ("TYPAD", typad),
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),

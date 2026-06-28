@@ -28,9 +28,13 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    so the rightmost pip lines up with the art window, NOT smooshed against the frame. */
 .manacost { left:4%; right:8.8%; top:6.29%; height:4.29%; font-size:111px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
-.type { left:10%; top:57.2%; width:78%; height:3.85%;
+.type { left:10%; top:57.2%; width:78%; height:3.85%; padding-left:%%TYPAD%%;
    display:flex; align-items:center; font-family:'matrix'; font-size:100px; line-height:1;
    white-space:nowrap; overflow:hidden; }
+/* colour-indicator dot (coloured artifacts / manual-identity cards): a swatch of the
+   matching colour frame, decorated with the same keyline + inner-border filter as the
+   set symbol. Sits to the LEFT of the type line; type text is indented past it (TYPAD). */
+.colorind { position:absolute; overflow:visible; }
 .rules { left:10%; top:62.77%; width:80%; height:26.91%;
    display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:101px; line-height:1.18; color:#0a0a0a;
@@ -42,7 +46,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .rules .flav .up { font-style:normal; }
 .pt { left:76.67%; top:89.53%; width:13.67%; height:4.43%;
    display:flex; align-items:center; justify-content:center;
-   font-family:'matrix'; font-size:124px; line-height:1; font-feature-settings:"smcp"; }
+   font-family:'matrix'; font-size:131px; line-height:1; font-feature-settings:"smcp"; }
 .info { position:absolute; left:9.4%; width:81.07%; text-align:left; color:%%INFOINK%%;
    font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
 .illus { top:92.0%; font-family:'matrix'; font-size:46px; }
@@ -60,6 +64,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="art" style="background-image:url('%%ART%%')"></div>
     <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
     %%PTBOXDIV%%
+    %%COLORIND%%
     <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
     <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
     <div class="box type" id="ty">%%TYPE%%</div>
