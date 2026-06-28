@@ -58,17 +58,18 @@ edit PORT="49737":
     OPENAI_API_KEY="$({{openai_key}} 2>/dev/null | head -1 || true)" \
       cargo run --release -- edit serve --port {{PORT}} --art-backend https://mpcfill.com
 
-# Seed the BACK cube (the other cube, rendered in 8ED/modern frame) from a name list.
-edit-8ed-seed LIST="data/cube8ed_list.txt":
-    cargo run --release -- edit seed --list {{LIST}} --out data/cube_editor_8ed.sqlite --force
+# Seed the "pointless-b-side" BACK cube (rendered in 8ED/modern frame) from its card list
+# at projects/pointless-b-side/cube_list.txt -> data/pointless-b-side.sqlite.
+edit-8ed-seed LIST="projects/pointless-b-side/cube_list.txt":
+    cargo run --release -- edit seed --list {{LIST}} --out data/pointless-b-side.sqlite --force
 
-# Second editor instance: the OTHER cube on the BACK of the MPC card, rendered in the
-# 8th-Edition (modern) frame. Own DB (data/cube_editor_8ed.sqlite) + own port (49738).
+# The "pointless-b-side" editor instance: the OTHER cube on the BACK of the MPC card,
+# rendered in the 8th-Edition (modern) frame. Own DB + own port (49738), 8ED frame.
 edit-8ed PORT="49738":
     -for p in $(lsof -tiTCP:{{PORT}} -sTCP:LISTEN 2>/dev/null); do ps -o comm= -p $p 2>/dev/null | grep -q mtgbrain && kill $p 2>/dev/null; done; sleep 0.4
     ANTHROPIC_API_KEY="$({{mpc_key}} 2>/dev/null | head -1 || true)" \
     OPENAI_API_KEY="$({{openai_key}} 2>/dev/null | head -1 || true)" \
-      cargo run --release -- edit serve --editor-db data/cube_editor_8ed.sqlite --port {{PORT}} --frame 8th --art-backend https://mpcfill.com
+      cargo run --release -- edit serve --editor-db data/pointless-b-side.sqlite --port {{PORT}} --frame 8th --art-backend https://mpcfill.com
 
 # Recompute color_identity from each card's effective (override-applied) mana cost
 # + rules-text mana symbols, and write it back. Add --dry-run to preview.
