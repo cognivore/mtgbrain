@@ -3112,13 +3112,15 @@ fn pt_box_8th(c: &Card) -> &'static str {
     }
 }
 
-/// Ink + text-shadow for 8th text. Only the dark frames (black, black-land) take
-/// light ink; every other 8th frame is light → black ink, no shadow.
-fn ink_8th(frame: &str) -> (&'static str, &'static str) {
-    if frame.ends_with("/b.png") || frame.ends_with("bl.png") {
-        ("#f6f4ec", "1px 2px 0 rgba(0,0,0,0.85)")
+/// Ink + shadow for the BOTTOM credit line only (title/type/PT are always black in 8ED).
+/// pack8th: black, but WHITE on Black / Land / Colorless frames (their bottom border is black).
+fn info_ink_8th(frame: &str) -> (&'static str, &'static str) {
+    let base = frame.rsplit('/').next().unwrap_or(frame);
+    let dark_border = base == "b.png" || base == "c.png" || base.ends_with("l.png");
+    if dark_border {
+        ("#f4f1e8", "1px 1px 0 rgba(0,0,0,0.85)")
     } else {
-        ("#0a0a0a", "none")
+        ("#161310", "none")
     }
 }
 
@@ -3179,6 +3181,13 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     } else {
         String::new()
     };
+    // The P/T frame box only exists for cards that HAVE a P/T (creatures) or loyalty —
+    // never on an enchantment/instant/sorcery.
+    let ptboxdiv = if pt.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display())
+    };
     let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
     let illus = if credit.is_empty() {
         String::new()
@@ -3186,7 +3195,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
     };
     let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
-    let (ink, shadow) = ink_8th(frame_file_8th(c));
+    let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
     let pairs: Vec<(&str, String)> = vec![
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
@@ -3197,15 +3206,15 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("PTBOX", format!("file://{}", ptbox_abs.display())),
-        ("INK", ink.to_string()), ("SHADOW", shadow.to_string()),
+        ("PTBOXDIV", ptboxdiv),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
         ("NAME", esc(&c.name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
         ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
         ("PT", pt),
-        // set symbol on the type bar, right-anchored, centred on the type line (~0.591)
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.591, 6.5)),
+        // set symbol on the type bar, right edge ~0.90 (right:10%), centred on the type bar
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
         ("ILLUS", illus),
         ("YEAR", year),
     ];
@@ -3266,11 +3275,11 @@ pub fn render_card_8th(
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
-    if card.set.is_empty() || card.rarity.is_empty() {
-        let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
-        if card.set.is_empty() { card.set = set; }
-        if card.rarity.is_empty() { card.rarity = rarity; }
-    }
+    // The back cube wears ONE consistent set symbol — the 8th-Edition mark — gold by
+    // default so it reads on every frame colour (a real card's per-set/rarity symbol would
+    // be invisible black-on-black for many of these).
+    card.set = "8ed".to_string();
+    if card.rarity.is_empty() { card.rarity = "rare".to_string(); }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
     let set_svg = set_symbol_svg(&card.set, cache_dir);
     let out = dir.join("card8.png");

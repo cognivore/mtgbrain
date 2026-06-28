@@ -16,7 +16,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 /* the separate 8th P/T frame box (pack8th bounds x.7227 y.8796 w.2147 h.0839) */
 .ptbox { position:absolute; left:72.27%; top:87.96%; width:21.47%; height:8.39%;
          background-size:100% 100%; background-repeat:no-repeat; }
-.box { position:absolute; color:%%INK%%; text-shadow:%%SHADOW%%; }
+/* Title / type / P-T text is ALWAYS black in 8ED — the title & type bars are light/silver
+   on every colour (incl. black-frame cards). Only the bottom credit line ever goes white. */
+.box { position:absolute; color:#0a0a0a; text-shadow:none; }
 /* pack8th text fields (fractions of FACE; font px = fraction*FACE_H) */
 .titlerow { left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex; align-items:center; }
 .titlerow .nm { font-family:'matrix'; font-size:120px; line-height:1; white-space:nowrap;
@@ -41,8 +43,8 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .pt { left:76.67%; top:89.53%; width:13.67%; height:4.43%;
    display:flex; align-items:center; justify-content:center;
    font-family:'matrix'; font-size:124px; line-height:1; font-feature-settings:"smcp"; }
-.info { position:absolute; left:9.4%; width:81.07%; text-align:left; color:%%INK%%;
-   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%SHADOW%%; }
+.info { position:absolute; left:9.4%; width:81.07%; text-align:left; color:%%INFOINK%%;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
 .illus { top:92.0%; font-family:'matrix'; font-size:46px; }
 .legal { top:93.3%; font-size:30px; letter-spacing:.01em; }
 .ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em;
@@ -57,7 +59,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
   <div class="face">
     <div class="art" style="background-image:url('%%ART%%')"></div>
     <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
-    <div class="ptbox" style="background-image:url('%%PTBOX%%')"></div>
+    %%PTBOXDIV%%
     <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
     <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
     <div class="box type" id="ty">%%TYPE%%</div>
