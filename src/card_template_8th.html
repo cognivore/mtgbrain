@@ -21,7 +21,8 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .titlerow { left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex; align-items:center; }
 .titlerow .nm { font-family:'matrix'; font-size:120px; line-height:1; white-space:nowrap;
    overflow:hidden; }
-.manacost { left:4%; top:6.45%; width:91.47%; height:4.4%; font-size:111px;
+/* mana row shares the TITLE row's exact vertical bounds so pips sit on the name's line */
+.manacost { left:4%; top:6.29%; width:91.47%; height:4.29%; font-size:111px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
 .type { left:10%; top:57.2%; width:78%; height:3.85%;
    display:flex; align-items:center; font-family:'matrix'; font-size:100px; line-height:1;
@@ -44,7 +45,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .legal { top:93.3%; font-size:30px; letter-spacing:.01em; }
 .ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em;
    filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
-.manacost .ms-img { margin-left:0.07em; }
+/* pips centred on the line (real 8ED: circles sit just a hair below the name text) */
+.manacost .ms-img { margin-left:0.07em; vertical-align:-0.02em; }
+.manacost span { display:inline-flex; align-items:center; line-height:1; }
 .rules .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .setsym { position:absolute; right:7%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
 </style></head>
