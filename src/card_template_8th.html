@@ -21,8 +21,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .titlerow { left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex; align-items:center; }
 .titlerow .nm { font-family:'matrix'; font-size:120px; line-height:1; white-space:nowrap;
    overflow:hidden; }
-/* mana row shares the TITLE row's exact vertical bounds so pips sit on the name's line */
-.manacost { left:4%; top:6.29%; width:91.47%; height:4.29%; font-size:111px;
+/* mana row shares the TITLE row's exact vertical bounds so pips sit on the name's line;
+   its RIGHT edge is the art-box right edge (pack8th artBounds 0.088+0.824=0.912 → right:8.8%)
+   so the rightmost pip lines up with the art window, NOT smooshed against the frame. */
+.manacost { left:4%; right:8.8%; top:6.29%; height:4.29%; font-size:111px;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
 .type { left:10%; top:57.2%; width:78%; height:3.85%;
    display:flex; align-items:center; font-family:'matrix'; font-size:100px; line-height:1;
