@@ -70,6 +70,27 @@ fn asset_list() -> Vec<(String, &'static str)> {
     }
     // 7ED foil "falling star" (white path, correctly positioned).
     v.push((format!("{CC}/img/frames/seventh/foilStar.svg"), "foil/star.svg"));
+    // Eighth-Edition (2003 / modern) frame pack: a COLOUR layer per frame + region
+    // masks (frame/pinline/type/rules) the template composites via CSS, plus the
+    // separate P/T boxes. Geometry comes from cardconjurer's pack8th.js.
+    for letter in ["w", "u", "b", "r", "g", "m", "a", "c", "l", "wl", "ul", "bl", "rl", "gl", "ml"] {
+        v.push((
+            format!("{CC}/img/frames/8th/{letter}.png"),
+            Box::leak(format!("frames8/{letter}.png").into_boxed_str()),
+        ));
+    }
+    for mask in ["frame", "pinline", "type", "rules", "title"] {
+        v.push((
+            format!("{CC}/img/frames/8th/{mask}.png"),
+            Box::leak(format!("frames8/mask_{mask}.png").into_boxed_str()),
+        ));
+    }
+    for letter in ["w", "u", "b", "r", "g", "m", "a", "l"] {
+        v.push((
+            format!("{CC}/img/frames/8th/pt/{letter}.png"),
+            Box::leak(format!("frames8/pt/{letter}.png").into_boxed_str()),
+        ));
+    }
     // old fonts (proprietary — kept out of git; personal-use only)
     v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
@@ -3032,6 +3053,180 @@ fn compose(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &
         bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Eighth-Edition (2003 / modern) frame — same Chrome-screenshots-HTML pipeline,
+// pack8th geometry + Matrix fonts. The 8th colour frame is a self-contained PNG
+// (transparent art hole) so it overlays like Seventh; the P/T box is a separate
+// layer. Used by the second editor instance (`edit serve --frame 8th`) for the
+// OTHER cube on the back of the MPC card.
+// ---------------------------------------------------------------------------
+
+const TEMPLATE_8TH: &str = include_str!("card_template_8th.html");
+
+fn color_frame_8th(ch: char) -> &'static str {
+    match ch {
+        'W' => "frames8/w.png", 'U' => "frames8/u.png", 'B' => "frames8/b.png",
+        'R' => "frames8/r.png", _ => "frames8/g.png",
+    }
+}
+
+fn frame_file_8th(c: &Card) -> &'static str {
+    let t = c.type_line.to_lowercase();
+    if t.contains("land") {
+        let lc: Vec<char> = c.color_identity.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+        return match lc.as_slice() {
+            ['W'] => "frames8/wl.png", ['U'] => "frames8/ul.png", ['B'] => "frames8/bl.png",
+            ['R'] => "frames8/rl.png", ['G'] => "frames8/gl.png", _ => "frames8/l.png",
+        };
+    }
+    if t.contains("artifact") {
+        return "frames8/a.png";
+    }
+    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    match cols.len() {
+        0 => "frames8/c.png",
+        1 => color_frame_8th(cols[0]),
+        _ => "frames8/m.png",
+    }
+}
+
+/// The matching 8th P/T box art (overlaid at pack8th's PT bounds).
+fn pt_box_8th(c: &Card) -> &'static str {
+    let t = c.type_line.to_lowercase();
+    if t.contains("land") {
+        return "frames8/pt/l.png";
+    }
+    if t.contains("artifact") {
+        return "frames8/pt/a.png";
+    }
+    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    match cols.as_slice() {
+        [] => "frames8/pt/a.png",
+        [one] => match one {
+            'W' => "frames8/pt/w.png", 'U' => "frames8/pt/u.png", 'B' => "frames8/pt/b.png",
+            'R' => "frames8/pt/r.png", _ => "frames8/pt/g.png",
+        },
+        _ => "frames8/pt/m.png",
+    }
+}
+
+/// Ink + text-shadow for 8th text. Only the dark frames (black, black-land) take
+/// light ink; every other 8th frame is light → black ink, no shadow.
+fn ink_8th(frame: &str) -> (&'static str, &'static str) {
+    if frame.ends_with("/b.png") || frame.ends_with("bl.png") {
+        ("#f6f4ec", "1px 2px 0 rgba(0,0,0,0.85)")
+    } else {
+        ("#0a0a0a", "none")
+    }
+}
+
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let pt = if c.is_creature && (!c.power.is_empty() || !c.toughness.is_empty()) {
+        format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
+    } else if !c.loyalty.is_empty() {
+        format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&c.loyalty))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
+    let (ink, shadow) = ink_8th(frame_file_8th(c));
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()),
+        ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("PTBOX", format!("file://{}", ptbox_abs.display())),
+        ("INK", ink.to_string()), ("SHADOW", shadow.to_string()),
+        ("NAME", esc(&c.name)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
+        ("PT", pt),
+        ("SETSYM", String::new()),
+        ("ILLUS", illus),
+        ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let ptbox_abs = fs::canonicalize(ptbox_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
+/// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
+pub fn render_card_8th(
+    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, backend: Option<&str>,
+) -> Result<PathBuf> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
+    let mut card = load_card(&db, id)?;
+    let frame_rel = assets_dir.join(frame_file_8th(&card));
+    let ptbox_rel = assets_dir.join(pt_box_8th(&card));
+    if !frame_rel.exists() {
+        bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
+    }
+    let dir = cache_dir.join("cards8").join(sanitize(&card.name));
+    materialize_override(&db, cache_dir, id, &card.name, &dir)?;
+    let art = acquire_art(&card.name, cache_dir, &dir, backend)?;
+    if card.flavor.is_empty() && !card.flavor_overridden {
+        card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
+    }
+    let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let out = dir.join("card8.png");
+    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"))?;
+    Ok(out)
 }
 
 #[allow(clippy::too_many_arguments)]

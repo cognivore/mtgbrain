@@ -1,0 +1,89 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="%%MANA_CSS%%">
+<style>
+@font-face { font-family:'matrix'; src:url('%%MATRIX%%'); }
+@font-face { font-family:'mplantin'; src:url('%%MPLANTIN%%'); }
+%%ITALIC_FACE%%
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
+.face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; }
+.layer { position:absolute; left:0; top:0; width:100%; height:100%; }
+/* art sits UNDER the self-contained 8th colour frame (transparent art hole). pack8th
+   artBounds: x.088 y.12 w.824 h.4348 */
+.art { position:absolute; left:8.8%; top:12%; width:82.4%; height:43.48%;
+       background-size:cover; background-position:center; }
+.frame { background-size:100% 100%; }
+/* the separate 8th P/T frame box (pack8th bounds x.7227 y.8796 w.2147 h.0839) */
+.ptbox { position:absolute; left:72.27%; top:87.96%; width:21.47%; height:8.39%;
+         background-size:100% 100%; background-repeat:no-repeat; }
+.box { position:absolute; color:%%INK%%; text-shadow:%%SHADOW%%; }
+/* pack8th text fields (fractions of FACE; font px = fraction*FACE_H) */
+.titlerow { left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex; align-items:center; }
+.titlerow .nm { font-family:'matrix'; font-size:120px; line-height:1; white-space:nowrap;
+   overflow:hidden; }
+.manacost { left:6%; top:6.6%; width:85.4%; height:4.4%; font-size:96px;
+   display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
+.type { left:10%; top:57.2%; width:74%; height:3.85%;
+   display:flex; align-items:center; font-family:'matrix'; font-size:100px; line-height:1;
+   white-space:nowrap; overflow:hidden; }
+.rules { left:10%; top:62.77%; width:80%; height:26.91%;
+   display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;
+   text-align:left; font-family:'mplantin'; font-size:101px; line-height:1.18; color:#0a0a0a;
+   text-shadow:none; }
+.rules p { margin:0 0 .42em; width:100%; }
+.rules p:last-child { margin-bottom:0; }
+.rules i { font-style:italic; }
+.rules .flav { font-style:italic; margin:.18em 0 .42em; color:#0a0a0a; }
+.rules .flav .up { font-style:normal; }
+.pt { left:76.67%; top:89.0%; width:13.67%; height:4.6%;
+   display:flex; align-items:center; justify-content:center;
+   font-family:'matrix'; font-size:124px; line-height:1; font-feature-settings:"smcp"; }
+.info { position:absolute; left:9.4%; width:81.07%; text-align:left; color:%%INK%%;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%SHADOW%%; }
+.illus { top:92.0%; font-family:'matrix'; font-size:46px; }
+.legal { top:93.3%; font-size:30px; letter-spacing:.01em; }
+.ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em;
+   filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+.manacost .ms-img { margin-left:0.07em; }
+.rules .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
+.setsym { position:absolute; right:7%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
+</style></head>
+<body>
+  <div class="face">
+    <div class="art" style="background-image:url('%%ART%%')"></div>
+    <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
+    <div class="ptbox" style="background-image:url('%%PTBOX%%')"></div>
+    <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
+    <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
+    <div class="box type" id="ty">%%TYPE%%</div>
+    %%SETSYM%%
+    <div class="box rules" id="rules">%%RULES%%</div>
+    %%PT%%
+    %%ILLUS%%
+    <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
+  </div>
+<script>
+function fitOneLine(el, span){
+  if(!el) return; const t = span || el;
+  let s = parseFloat(getComputedStyle(t).fontSize);
+  for(let i=0; i<120 && t.scrollWidth > el.clientWidth && s > 8; i++){ s -= 1; t.style.fontSize = s + 'px'; }
+}
+function fitBox(el){
+  if(!el) return; let s = parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0; i<140 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) && s > 10; i++){
+    s -= 1; el.style.fontSize = s + 'px';
+  }
+}
+function fit(){
+  fitOneLine(document.querySelector('.titlerow'), document.getElementById('nm'));
+  fitBox(document.getElementById('ty'));
+  fitBox(document.getElementById('rules'));
+  document.querySelectorAll('.info').forEach(function(el){ fitOneLine(el, el.querySelector('span')); });
+  const pt = document.querySelector('.pt');
+  if(pt) fitOneLine(pt, pt.querySelector('span'));
+  document.documentElement.setAttribute('data-fit','done');
+}
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); } else { window.onload = fit; }
+setTimeout(fit, 1200);
+</script>
+</body></html>

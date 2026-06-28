@@ -131,6 +131,9 @@ pub struct RenderCommon {
     /// Re-render even if the cached hash file already exists.
     #[arg(long)]
     force: bool,
+    /// Frame style: `seventh` (default, old frame) or `8th` (8ED / modern frame).
+    #[arg(long, default_value = "seventh")]
+    frame: String,
 }
 
 #[derive(Subcommand)]
@@ -392,10 +395,18 @@ fn main() -> Result<()> {
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                let out = render::render_one(
-                    &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
-                    common.force, common.art_backend.as_deref(),
-                )?;
+                let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
+                let out = if eighth {
+                    render::render_card_8th(
+                        &edb, &common.assets, &common.cache, &common.chrome, *id,
+                        common.art_backend.as_deref(),
+                    )?
+                } else {
+                    render::render_one(
+                        &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
+                        common.force, common.art_backend.as_deref(),
+                    )?
+                };
                 println!("{}", out.display());
                 Ok(())
             }
