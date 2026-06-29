@@ -433,10 +433,12 @@ fn main() -> Result<()> {
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
                 let res = render::art_upload(
                     &edb,
                     &common.cache,
                     *id,
+                    eighth,
                     file,
                     artist.as_deref(),
                     year.as_deref(),
@@ -446,10 +448,17 @@ fn main() -> Result<()> {
                 )?;
                 println!("{}", serde_json::to_string_pretty(&res)?);
                 if !*no_render {
-                    let out = render::render_one(
-                        &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
-                        true, common.art_backend.as_deref(),
-                    )?;
+                    let out = if eighth {
+                        render::render_card_8th(
+                            &edb, &common.assets, &common.cache, &common.chrome, *id, true,
+                            common.art_backend.as_deref(),
+                        )?
+                    } else {
+                        render::render_one(
+                            &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
+                            true, common.art_backend.as_deref(),
+                        )?
+                    };
                     println!("rendered → {}", out.display());
                 }
                 Ok(())
@@ -459,8 +468,9 @@ fn main() -> Result<()> {
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
                 render::render_all(
-                    &edb, &common.assets, &common.cache, &common.chrome, common.foil,
+                    &edb, &common.assets, &common.cache, &common.chrome, eighth, common.foil,
                     common.force, common.art_backend.as_deref(),
                 )
             }

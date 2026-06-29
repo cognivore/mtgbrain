@@ -1373,10 +1373,18 @@ fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, 
 /// source image (Scryfall art_crop + each cached MPCfill proxy), and the art-window
 /// aspect the box is locked to. `genai` cards can't be repositioned here (their art is
 /// the generated image itself, not a sub-crop of a proxy) — the UI disables editing.
-pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
+/// The per-card cache dir for the *active frame*. The modern (8th) pipeline keeps a card's
+/// art, MPCfill proxies and crops under `cards8/<name>`; the classic frame uses `cards/<name>`.
+/// The crop editor MUST read the same dir its render rips art from — otherwise the picker scans
+/// the empty `cards/` dir on the 8th server and shows no MPCfill sources (only Scryfall prints).
+fn frame_card_dir(cache_dir: &Path, name: &str, eighth: bool) -> PathBuf {
+    cache_dir.join(if eighth { "cards8" } else { "cards" }).join(sanitize(name))
+}
+
+pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Result<Value> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let name = card_name(&db, id)?;
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     let mpc_dir = card_dir.join("mpcfill");
     let art_dir = cache_dir.join("art");
     // SPLIT cards (" // " in the name): the crop editor slices the combined two-half art with
@@ -1515,10 +1523,10 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
 /// Resolve a source `rel` token to a real, existing image path (validated to stay
 /// inside the card's cache dir). `@scryfall` downloads the art_crop on demand;
 /// `@current` is the sidecar's current source; `mpcfill/<bucket>/<file>` is a cached proxy.
-pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, rel: &str) -> Result<PathBuf> {
+pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let name = card_name(&db, id)?;
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     resolve_source(&name, cache_dir, &card_dir, rel)
 }
 
@@ -1599,6 +1607,7 @@ pub fn art_upload(
     editor_db: &Path,
     cache_dir: &Path,
     id: i64,
+    eighth: bool,
     src: &Path,
     artist: Option<&str>,
     year: Option<&str>,
@@ -1616,7 +1625,7 @@ pub fn art_upload(
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
     };
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
 
     // Store under a fixed name the `@upload` token resolves to. Keep a loadable extension;
@@ -1699,15 +1708,15 @@ pub fn art_upload(
 /// in fractions of the source image and is expected to already carry the art-window
 /// aspect (the editor locks it). Bumps `updated_at` so the editor preview cache-busts.
 pub fn art_save_crop(
-    editor_db: &Path, cache_dir: &Path, id: i64, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
+    editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
 ) -> Result<()> {
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
     };
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
-    let source = art_image_path(editor_db, cache_dir, id, rel)?;
+    let source = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
     if !source.exists() {
         bail!("source image missing: {}", source.display());
     }
@@ -1770,12 +1779,12 @@ pub fn art_save_crop(
 /// Reset a card's crop to AUTOMATIC: clear the durable DB override, then restore the
 /// stashed auto pick if present (free re-crop) or drop the sidecar so the next render
 /// re-picks from scratch. Bumps `updated_at` so the editor preview refreshes.
-pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
+pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Result<()> {
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
     };
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     let prev = read_sidecar(&card_dir);
     if let Some(auto) = prev.as_ref().and_then(|v| v.get("auto")).cloned() {
         let artist = prev.as_ref().and_then(|v| v["artist"].as_str()).unwrap_or("");
@@ -1810,12 +1819,12 @@ pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
 /// fallback) and cache every alternative printing's art_crop, so the sidebar shows real
 /// thumbnails to choose from. Returns the refreshed `art_meta`. Proxies need the MPCfill
 /// backend URL; printings come from Scryfall and work even without it.
-pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, backend: Option<&str>) -> Result<Value> {
+pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, backend: Option<&str>) -> Result<Value> {
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
     };
-    let card_dir = cache_dir.join("cards").join(sanitize(&name));
+    let card_dir = frame_card_dir(cache_dir, &name, eighth);
     let art_dir = cache_dir.join("art");
     // Pre-cache every printing's art_crop (cheap; powers the alternative-printing thumbnails).
     for (set, _, _) in printings_list(&name, &art_dir) {
@@ -1830,18 +1839,18 @@ pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, backend: Optio
         }
         None => eprintln!("  fetch-all {name:?}: no --art-backend; printings only"),
     }
-    art_meta(editor_db, cache_dir, id)
+    art_meta(editor_db, cache_dir, id, eighth)
 }
 
 /// A small cached JPEG thumbnail (~420 px long edge) of a source image, for the picker
 /// sidebar — serving the full multi-MB proxies as thumbnails would be far too heavy.
-pub fn art_thumb(editor_db: &Path, cache_dir: &Path, id: i64, rel: &str) -> Result<PathBuf> {
-    let src = art_image_path(editor_db, cache_dir, id, rel)?;
+pub fn art_thumb(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str) -> Result<PathBuf> {
+    let src = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
     };
-    let thumb_dir = cache_dir.join("cards").join(sanitize(&name)).join(".thumbs");
+    let thumb_dir = frame_card_dir(cache_dir, &name, eighth).join(".thumbs");
     fs::create_dir_all(&thumb_dir)?;
     let out = thumb_dir.join(format!("{}.jpg", short_hash(rel)));
     let fresh = match (
@@ -3818,11 +3827,11 @@ pub fn render_card_8th(
 #[allow(clippy::too_many_arguments)]
 pub fn render_all(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str,
-    foil: bool, force: bool, backend: Option<&str>,
+    eighth: bool, foil: bool, force: bool, backend: Option<&str>,
 ) -> Result<()> {
     let ids: Vec<i64> = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-        let mut stmt = db.prepare("SELECT id FROM cube_cards WHERE in_db_found=1 ORDER BY id")?;
+        let mut stmt = db.prepare("SELECT id FROM cube_cards WHERE in_db_found=1 AND removed=0 ORDER BY id")?;
         let mut v = Vec::new();
         let mut rows = stmt.query([])?;
         while let Some(r) = rows.next()? {
@@ -3832,16 +3841,23 @@ pub fn render_all(
     };
     let total = ids.len();
     for (i, id) in ids.iter().enumerate() {
-        match render_one(editor_db, assets_dir, cache_dir, chrome, *id, false, force, backend) {
+        // The modern (8th) frame has its own pipeline (no foil); everything else is render_one.
+        let res = if eighth {
+            render_card_8th(editor_db, assets_dir, cache_dir, chrome, *id, force, backend)
+        } else {
+            render_one(editor_db, assets_dir, cache_dir, chrome, *id, false, force, backend)
+        };
+        match res {
             Ok(_) => print!("\r[{}/{total}] id {id}        ", i + 1),
             Err(e) => eprintln!("\n  id {id}: {e}"),
         }
-        if foil {
+        if foil && !eighth {
             let _ = render_one(editor_db, assets_dir, cache_dir, chrome, *id, true, force, backend);
         }
         std::io::stdout().flush().ok();
     }
-    println!("\ndone: {total} cards -> {}", cache_dir.join("cards").display());
+    let sub = if eighth { "cards8" } else { "cards" };
+    println!("\ndone: {total} cards -> {}", cache_dir.join(sub).display());
     Ok(())
 }
 

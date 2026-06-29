@@ -635,7 +635,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 match (&method, segs.as_slice(), aid) {
                     // Metadata: current box + every selectable source + window aspect.
                     (Method::Get, [_], Some(id)) => {
-                        match crate::render::art_meta(editor_db, &rc.cache, id) {
+                        match crate::render::art_meta(editor_db, &rc.cache, id, rc.is_eighth()) {
                             Ok(v) => json_response(&v),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
@@ -645,9 +645,9 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     (Method::Get, [_, "img"], Some(id)) => {
                         let rel = query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
                         let resolved = if url.contains("thumb=1") {
-                            crate::render::art_thumb(editor_db, &rc.cache, id, &rel)
+                            crate::render::art_thumb(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
                         } else {
-                            crate::render::art_image_path(editor_db, &rc.cache, id, &rel)
+                            crate::render::art_image_path(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
                         };
                         match resolved {
                             Ok(path) => match std::fs::read(&path) {
@@ -661,7 +661,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     // Fetch ALL candidates (MPCfill proxies >=600 DPI + alt-printing art),
                     // then return the refreshed source list.
                     (Method::Post, [_, "fetch"], Some(id)) => {
-                        match crate::render::art_fetch_all(editor_db, &rc.cache, id, rc.backend.as_deref()) {
+                        match crate::render::art_fetch_all(editor_db, &rc.cache, id, rc.is_eighth(), rc.backend.as_deref()) {
                             Ok(v) => json_response(&v),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
@@ -680,6 +680,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                                 editor_db,
                                 &rc.cache,
                                 id,
+                                rc.is_eighth(),
                                 std::path::Path::new(&path),
                                 v["artist"].as_str(),
                                 v["year"].as_str(),
@@ -708,7 +709,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                         let bx = parse_box("box");
                         let bx2 = parse_box("box2");
                         match bx {
-                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, &rel, bx, bx2) {
+                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, rc.is_eighth(), &rel, bx, bx2) {
                                 Ok(()) => json_response(&json!({"ok": true})),
                                 Err(e) => json_response(&json!({"error": e.to_string()})),
                             },
@@ -717,7 +718,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     }
                     // Reset to the automatic crop (restores the stashed auto pick if any).
                     (Method::Post, [_, "reset"], Some(id)) => {
-                        match crate::render::art_reset(editor_db, &rc.cache, id) {
+                        match crate::render::art_reset(editor_db, &rc.cache, id, rc.is_eighth()) {
                             Ok(()) => json_response(&json!({"ok": true})),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
