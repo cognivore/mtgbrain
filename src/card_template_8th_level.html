@@ -26,7 +26,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    way the Rise-of-the-Eldrazi leveler frame divides its tiers — rendered in the 8ED idiom. ---- */
 .lvl { position:absolute; left:9.2%; top:61.9%; width:81.6%; height:27.9%;
    display:flex; flex-direction:column; color:#0a0a0a; }
-.lvl-band { flex:1 1 0; position:relative; border-top:3px solid #0d0c08; padding:6px 134px 2px 6px; overflow:hidden; }
+/* each tier band centres its own content VERTICALLY (the 7ED rule), so a short tier floats to the
+   middle of its band instead of pinning to the top. */
+.lvl-band { flex:1 1 0; position:relative; border-top:3px solid #0d0c08; padding:6px 134px 2px 6px; overflow:hidden;
+   display:flex; flex-direction:column; justify-content:center; }
 .lvl-band:first-child { border-top:none; }
 .lvl-up { font-family:'mplantin'; font-size:%%LSZ%%px; line-height:1.12; }
 .lvl-up .lu-rem { font-style:italic; }

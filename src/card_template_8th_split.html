@@ -25,8 +25,13 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .sh-title .mc { font-size:80px; flex:none; }
 .sh-type { position:absolute; left:10%; top:57.2%; width:78%; height:3.85%; display:flex; align-items:center;
            font-family:'matrix'; font-size:77px; color:#0a0a0a; white-space:nowrap; overflow:hidden; }
+/* rules: text VERTICALLY CENTRED in the box (the 7ED rule) — short text floats to the middle
+   instead of pinning to the top, applied here to each split half too. */
 .sh-rules { position:absolute; left:10%; top:62.77%; width:80%; height:31%; font-family:'mplantin';
-            font-size:76px; line-height:1.16; color:#0a0a0a; overflow:hidden; }
+            font-size:76px; line-height:1.16; color:#0a0a0a; overflow:hidden;
+            display:flex; flex-direction:column; justify-content:center; align-items:flex-start; text-align:left; }
+.sh-rules p { width:100%; margin:0 0 .42em; }
+.sh-rules p:last-child { margin-bottom:0; }
 .sh-rules i { font-style:italic; }
 .ms-img { width:0.78em; height:0.78em; vertical-align:-0.16em; margin:0 0.02em;
           filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }

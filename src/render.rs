@@ -3405,19 +3405,24 @@ fn set_symbol_wfrac(set_svg: Option<&Path>) -> Option<f64> {
 /// The spell ("adventure" / "prepare") half of a two-part card — (title, mana, type, rules) —
 /// read from the cached Scryfall metadata. `front` is the main face's name (what the editor
 /// card renders); the other face is the sub-spell. None for normal single-part cards.
-fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(String, String, String, String)> {
+/// (kind, title, mana, type, rules). `kind` is "adventure" or "prepare" — the two share a
+/// sub-spell layout but sit on OPPOSITE halves: adventures on the LEFT, prepared spells on the
+/// RIGHT (mirroring how the real cards print them).
+fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(String, String, String, String, String)> {
     let meta = cache_dir.join("art").join(format!("{}__latest.json", sanitize(card_name)));
     let v: Value = serde_json::from_str(&fs::read_to_string(meta).ok()?).ok()?;
     let card = v["data"].as_array()?.first()?;
-    if !matches!(card["layout"].as_str().unwrap_or(""), "adventure" | "prepare") {
-        return None;
-    }
+    let kind = match card["layout"].as_str().unwrap_or("") {
+        k @ ("adventure" | "prepare") => k.to_string(),
+        _ => return None,
+    };
     let faces = card["card_faces"].as_array()?;
     if faces.len() < 2 {
         return None;
     }
     let other = faces.iter().find(|f| f["name"].as_str() != Some(front))?;
     Some((
+        kind,
         other["name"].as_str().unwrap_or_default().to_string(),
         other["mana_cost"].as_str().unwrap_or_default().to_string(),
         other["type_line"].as_str().unwrap_or_default().to_string(),
@@ -3656,7 +3661,7 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
     Ok(())
 }
 
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: Option<&(String, String, String, String)>) -> String {
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: Option<&(String, String, String, String, String)>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -3743,14 +3748,20 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
             (svg, format!("{pad}px"))
         },
     );
-    // adventure / prepare sub-box: the spell half on the LEFT, creature rules reflow right.
+    // adventure / prepare sub-box: a self-contained mini 8ED frame (capsule title bar + capsule
+    // type bar + parchment rules) occupying HALF the text box. ADVENTURES sit on the LEFT (creature
+    // rules reflow to the right); PREPARED spells sit on the RIGHT (creature rules to the left).
     let (advbox, rules_left, rules_width) = match adv {
-        Some((title, mana, ty, rules)) => {
+        Some((kind, title, mana, ty, rules)) => {
+            let right = kind == "prepare";
+            let side = if right { "adv right" } else { "adv" };
             let html = format!(
-                r#"<div class="adv"><div class="adv-head"><span class="adv-title">{}</span><span class="adv-mana">{}</span></div><div class="adv-type">{}</div><div class="adv-rules">{}</div></div>"#,
-                esc(title), manaify(mana, &mana_base), esc(ty), rules_html(rules, "", &mana_base),
+                r#"<div class="{}"><div class="adv-cap adv-head"><span class="adv-title">{}</span><span class="adv-mana">{}</span></div><div class="adv-cap adv-type">{}</div><div class="adv-rules">{}</div></div>"#,
+                side, esc(title), manaify(mana, &mana_base), esc(ty), rules_html(rules, "", &mana_base),
             );
-            (html, "53%".to_string(), "37%".to_string())
+            // creature rules take the OTHER half: prepare → left half, adventure → right half.
+            let (rl, rw) = if right { ("10%", "37%") } else { ("53%", "37%") };
+            (html, rl.to_string(), rw.to_string())
         }
         None => (String::new(), "10%".to_string(), "80%".to_string()),
     };
@@ -3800,11 +3811,10 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     html
 }
 
-#[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
     frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>,
-    adv: Option<&(String, String, String, String)>) -> Result<()> {
+    adv: Option<&(String, String, String, String, String)>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
