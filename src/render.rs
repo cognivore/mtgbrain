@@ -3791,15 +3791,44 @@ pub fn render_card_8th(
         bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
     }
     let dir = cache_dir.join("cards8").join(sanitize(&card.name));
+    let out = dir.join("card8.png");
+    let hash_file = dir.join("card8.hash");
+
+    // REVIEW-FAST cache key — DB / card data ONLY, computed BEFORE any art work. This is what
+    // lets you simply browse the cube: a card that's already rendered and whose data hasn't
+    // changed is served straight from disk, with NO Scryfall fetch, NO MPCfill re-pick and NO
+    // headless-Chrome screenshot. (The old key folded in the auto-picked art identity, so cards
+    // with no art sidecar re-fetched art from the network on every single view — 6-18 s each.)
+    // The durable art override carries any manual crop / source pick, so editing art — or
+    // passing --force — busts the key; the AUTO art identity is deliberately excluded (viewing
+    // must never re-pick it). split / adventure layout is implied by the card name, already here.
+    let hash = {
+        let canon = json!({
+            "name": card.name, "display_name": card.display_name, "mana_cost": card.mana_cost,
+            "type": card.type_line, "oracle_text": card.oracle_text, "flavor": card.flavor,
+            "power": card.power, "toughness": card.toughness, "loyalty": card.loyalty,
+            "set": card.set, "rarity": card.rarity, "errata": card.is_errata,
+            "ci": card.color_identity, "illustrator": card.illustrator,
+            "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            "override": art_override_json(&db, id).to_string(),
+            "frame_kind": "eighth", "v": 3,
+        });
+        let mut h = Sha256::new();
+        h.update(canon.to_string().as_bytes());
+        format!("{:x}", h.finalize())
+    };
+    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
+        return Ok(out);
+    }
+
+    // ---- CACHE MISS: only now do the expensive art acquisition + screenshot. ----
     materialize_override(&db, cache_dir, id, &card.name, &dir)?;
     // 8ED back cube: fetch the LATEST high-DPI art, not the oldest printing.
     let art = acquire_art(&card.name, cache_dir, &dir, backend, true)?;
     // SET SYMBOL + FLAVOUR come from the card's EARLIEST printing (its debut set's mark, the
-    // original flavour) — like the old-frame path — even though the ART above is the latest
-    // high-DPI scan. acquire_art only cached `__latest.json`, so make sure the oldest-first
-    // prints metadata (`<name>.json`, what card_set_rarity / card_flavor read) exists first.
-    // Editor-DB overrides still win (only fill when empty). The set symbol carries a white
-    // keyline so even a black common mark reads on the darkest frame.
+    // original flavour) — even though the ART above is the latest high-DPI scan. Editor-DB
+    // overrides still win (only fill when empty).
     ensure_prints_meta(&card.name, &cache_dir.join("art"));
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
@@ -3814,36 +3843,11 @@ pub fn render_card_8th(
         }
     }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
-    let out = dir.join("card8.png");
     // SPLIT cards (Bind // Liberate) get the rotated two-half layout: each half shows its OWN
-    // crop of the combined two-half illustration (the editor's two crop rectangles), not the
-    // same art twice. Adventure / set-symbol decoration only applies to the single-face layout.
+    // crop of the combined two-half illustration. Adventure / set-symbol only apply single-face.
     let split = split_faces(cache_dir, &card.name);
     let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
     let adv = if split.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
-    // Content-hash cache (mirrors render_one): the headless-Chrome screenshot is by far the
-    // slow step, so skip it when nothing that affects this render changed. The editor revisits
-    // a card on every click — without this, each visit re-spawned Chrome, the "slow blink".
-    let hash = {
-        let canon = json!({
-            "name": card.name, "display_name": card.display_name, "mana_cost": card.mana_cost,
-            "type": card.type_line, "oracle_text": card.oracle_text, "flavor": card.flavor,
-            "power": card.power, "toughness": card.toughness, "loyalty": card.loyalty,
-            "set": card.set, "rarity": card.rarity, "errata": card.is_errata, "ci": card.color_identity,
-            "art_ref": art.art_ref, "artist": credit, "year": art.year,
-            "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
-            "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
-            "override": art_override_json(&db, id).to_string(),
-            "split": split.is_some(), "adv": adv.is_some(), "frame_kind": "eighth", "v": 2,
-        });
-        let mut h = Sha256::new();
-        h.update(canon.to_string().as_bytes());
-        format!("{:x}", h.finalize())
-    };
-    let hash_file = dir.join("card8.hash");
-    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
-        return Ok(out);
-    }
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
