@@ -57,6 +57,17 @@ pub fn art_window_aspect() -> f64 {
     (ART_WINDOW_FRAC[2] * f64::from(FACE_W)) / (ART_WINDOW_FRAC[3] * f64::from(FACE_H))
 }
 
+/// Saga art window (the tall scroll on the RIGHT half) — cardconjurer's `card.artBounds` for the
+/// regular Saga frame: {x:0.5, y:0.1124, width:0.4247, height:0.7253}. A Saga's hand-placed crop
+/// locks to THIS (much taller) aspect, not the wide ordinary window — else manual placement is
+/// the wrong shape and the scroll shows a stretched/mis-cropped slice.
+const SAGA_ART_FRAC: [f64; 4] = [0.5, 0.1124, 0.4247, 0.7253];
+
+/// Aspect (w/h) of the Saga art scroll — what a hand-positioned crop box locks to for a Saga.
+pub fn saga_window_aspect() -> f64 {
+    (SAGA_ART_FRAC[2] * f64::from(FACE_W)) / (SAGA_ART_FRAC[3] * f64::from(FACE_H))
+}
+
 // ---------------------------------------------------------------------------
 // assets
 // ---------------------------------------------------------------------------
@@ -93,6 +104,20 @@ fn asset_list() -> Vec<(String, &'static str)> {
             Box::leak(format!("frames8/pt/{letter}.png").into_boxed_str()),
         ));
     }
+    // Saga frames (cardconjurer's regular Saga pack) — the chapter abilities run down the left on
+    // a gilt lore-spine and the art is a tall scroll on the right. Used by the 8ED Saga renderer.
+    for (letter, file) in [
+        ("w", "sagaFrameW"), ("u", "sagaFrameU"), ("b", "sagaFrameB"), ("r", "sagaFrameR"),
+        ("g", "sagaFrameG"), ("m", "sagaFrameM"), ("a", "sagaFrameA"),
+    ] {
+        v.push((
+            format!("{CC}/img/frames/saga/regular/{file}.png"),
+            Box::leak(format!("frames8/saga/{letter}.png").into_boxed_str()),
+        ));
+    }
+    v.push((format!("{CC}/img/frames/saga/regular/l.png"), "frames8/saga/l.png"));
+    v.push((format!("{CC}/img/frames/saga/sagaChapter.png"), "frames8/saga/chapter.png"));
+    v.push((format!("{CC}/img/frames/saga/sagaDivider.png"), "frames8/saga/divider.png"));
     // old fonts (proprietary — kept out of git; personal-use only)
     v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
@@ -1439,6 +1464,11 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
         let _ = scryfall_latest(&name, &art_dir);
         split_faces(cache_dir, &name).is_some()
     };
+    // A Saga's art is the tall scroll on the right → its hand-placed crop locks to that aspect.
+    let is_saga_card = db
+        .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+        .map(|t| t.to_lowercase().contains("saga"))
+        .unwrap_or(false);
     let side = read_sidecar(&card_dir);
     let art_ref = side.as_ref().and_then(|v| v["art_ref"].as_str()).unwrap_or("");
     let manual = side.as_ref().and_then(|v| v["manual"].as_bool()).unwrap_or(false);
@@ -1546,8 +1576,9 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
     Ok(json!({
         "id": id,
         "name": name,
-        // A split locks each rectangle to ONE half's art-window aspect, not the full window.
-        "window_aspect": if is_split { split_window_aspect() } else { art_window_aspect() },
+        // A split locks each rectangle to ONE half's art-window aspect, not the full window;
+        // a Saga locks to the tall scroll aspect.
+        "window_aspect": if is_split { split_window_aspect() } else if is_saga_card { saga_window_aspect() } else { art_window_aspect() },
         "split": is_split,
         "split_names": split_names,
         "box": current_box,
@@ -1755,10 +1786,16 @@ pub fn art_upload(
 pub fn art_save_crop(
     editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
 ) -> Result<()> {
-    let name = {
+    let (name, is_saga_card) = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-        card_name(&db, id)?
+        let n = card_name(&db, id)?;
+        let saga = db
+            .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+            .map(|t| t.to_lowercase().contains("saga"))
+            .unwrap_or(false);
+        (n, saga)
     };
+    let crop_aspect = if is_saga_card { saga_window_aspect() } else { art_window_aspect() };
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
     let source = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
@@ -1789,7 +1826,7 @@ pub fn art_save_crop(
         "year": year,
         "proxy": source.to_string_lossy(),
         "box": bx,
-        "art_aspect": art_window_aspect(),
+        "art_aspect": crop_aspect,
         "manual": true,
         "source_rel": rel,
     });
@@ -3286,6 +3323,28 @@ fn frame_file_8th(c: &Card) -> &'static str {
     }
 }
 
+/// The real cardconjurer Saga frame PNG for the card's colour — same colour mapping as
+/// frame_file_8th but from the `frames8/saga/` set (land / artifact / mono / multi).
+fn saga_frame_8th(c: &Card) -> &'static str {
+    let t = c.type_line.to_lowercase();
+    if t.contains("land") {
+        return "frames8/saga/l.png";
+    }
+    if t.contains("artifact") {
+        return "frames8/saga/a.png";
+    }
+    let cols = frame_colors_8th(c);
+    match cols.as_slice() {
+        [] => "frames8/saga/a.png", // colourless Sagas don't exist; fall back to the artifact frame
+        ['W'] => "frames8/saga/w.png",
+        ['U'] => "frames8/saga/u.png",
+        ['B'] => "frames8/saga/b.png",
+        ['R'] => "frames8/saga/r.png",
+        ['G'] => "frames8/saga/g.png",
+        _ => "frames8/saga/m.png",
+    }
+}
+
 /// The WUBRG colours an 8ED frame should show: a manual identity wins, else the cost's
 /// colours (`card_colors` already falls back to the `colors` field). Empty = colourless.
 fn frame_colors_8th(c: &Card) -> Vec<char> {
@@ -3342,6 +3401,17 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
         let p = m.get_pixel(x, y).0;
         p[3] > 64 && i32::from(p[0]) - i32::from(p[1]) > 60 && i32::from(p[0]) - i32::from(p[2]) > 60
     };
+    // The m15 colour frames are deliberately muted, so stamping them raw leaves a colour-bearing
+    // artifact's bars looking washed-out grey. Push each stamped pixel's saturation up (keep its
+    // luma, scale the chroma) so a blue/red/etc. artifact reads as DISTINCTLY that colour.
+    let saturate = |p: image::Rgba<u8>| -> image::Rgba<u8> {
+        const FACTOR: f64 = 1.85;
+        let [r, g, b, a] = p.0;
+        let (rf, gf, bf) = (f64::from(r), f64::from(g), f64::from(b));
+        let l = 0.299 * rf + 0.587 * gf + 0.114 * bf;
+        let mix = |c: f64| (l + (c - l) * FACTOR).clamp(0.0, 255.0) as u8;
+        image::Rgba([mix(rf), mix(gf), mix(bf), a])
+    };
     let half = w / 2;
     for y in 0..h {
         for x in 0..w {
@@ -3351,7 +3421,7 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
                 } else {
                     &frames[0]
                 };
-                *base.get_pixel_mut(x, y) = *fr.get_pixel(x, y);
+                *base.get_pixel_mut(x, y) = saturate(*fr.get_pixel(x, y));
             }
         }
     }
@@ -4077,25 +4147,61 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
         format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
     };
     let year = if art.year.is_empty() { "2018".to_string() } else { art.year.clone() };
-    let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
+    // Credit line sits on the card's bottom marble border (below the type pill). The cardconjurer
+    // Saga borders are more saturated than the m15 set, so a flat ink would vanish on the darker
+    // colours. Dark ink + a cream halo stays legible on EVERY border (light cream → dark colour).
+    let (info_ink, info_shadow) = (
+        "#1a1206",
+        "0 0 5px rgba(245,241,230,0.85), 0 1px 1px rgba(245,241,230,0.9)",
+    );
     let tyw = match set_symbol_wfrac(set_svg) {
-        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
-        None => "78%".to_string(),
+        Some(wf) => format!("{:.2}%", (74.0 - wf).clamp(38.0, 74.0)),
+        None => "74%".to_string(),
     };
-    // The reminder strip (small italics) sits atop the chapter column, then one band per chapter
-    // group: its stone roman-numeral marker(s) on the lore-spine + the ability text.
+    let saga_dir = assets_dir.join("frames8").join("saga");
+    let div_img = format!("file://{}", saga_dir.join("divider.png").display());
+    let chip_img = format!("file://{}", saga_dir.join("chapter.png").display());
+    // The reminder strip (small italics) sits atop the chapter column. Then the chapter region
+    // (cardconjurer's abilities start at y=0.2896, down to just above the type pill) is split into
+    // equal bands — one per chapter group. Each band centres its ability text; its lore-counter
+    // stone(s) ride the gilt spine on the left, stacked (cardconjurer's spread) when one ability
+    // fires on several chapters. Dividers separate the bands.
     let mut rows = String::new();
     if !saga.reminder.is_empty() {
         rows.push_str(&format!(r#"<div class="saga-reminder">{}</div>"#, manaify(&saga.reminder, &mana_base)));
     }
-    for ch in &saga.chapters {
-        let chips: String = ch.nums.iter()
-            .map(|n| format!(r#"<span class="saga-chip">{}</span>"#, esc(n)))
-            .collect();
+    let n = saga.chapters.len().max(1) as f64;
+    let region_top = 0.2896_f64;
+    let region_bot = 0.820_f64;
+    let band_h = (region_bot - region_top) / n;
+    let chip_h = 0.0629_f64;
+    let spread = 0.0358_f64;
+    for (i, ch) in saga.chapters.iter().enumerate() {
+        let top = region_top + band_h * i as f64;
+        let cy = top + band_h / 2.0;
+        if i > 0 {
+            rows.push_str(&format!(r#"<div class="saga-div" style="top:{:.3}%"></div>"#, top * 100.0));
+        }
+        let body_top = top + 0.008;
+        let body_h = (band_h - 0.016).max(0.02);
         rows.push_str(&format!(
-            r#"<div class="saga-row"><div class="saga-chips">{}</div><div class="saga-body">{}</div></div>"#,
-            chips, rules_html(&ch.text, "", &mana_base),
+            r#"<div class="saga-body" style="top:{:.3}%;height:{:.3}%">{}</div>"#,
+            body_top * 100.0, body_h * 100.0, rules_html(&ch.text, "", &mana_base),
         ));
+        // stone(s): one per lore-counter in this group, vertically spread around the band centre.
+        let offsets: Vec<f64> = match ch.nums.len() {
+            0 | 1 => vec![0.0],
+            2 => vec![-spread, spread],
+            _ => vec![-2.0 * spread, 0.0, 2.0 * spread],
+        };
+        for (j, num) in ch.nums.iter().enumerate() {
+            let off = offsets.get(j).copied().unwrap_or(0.0);
+            let chip_top = cy + off - chip_h / 2.0;
+            rows.push_str(&format!(
+                r#"<div class="saga-chip" style="top:{:.3}%">{}</div>"#,
+                chip_top * 100.0, esc(num),
+            ));
+        }
     }
     let pairs: Vec<(&str, String)> = vec![
         ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
@@ -4104,9 +4210,10 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
         ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
         ("TYSZ", px(100.0 / f64::from(FACE_H))),
-        ("SBSZ", px(84.0 / f64::from(FACE_H))), ("SRSZ", px(52.0 / f64::from(FACE_H))),
-        ("CHSZ", px(60.0 / f64::from(FACE_H))),
+        ("SBSZ", px(84.0 / f64::from(FACE_H))), ("SRSZ", px(56.0 / f64::from(FACE_H))),
+        ("CHSZ", px(62.0 / f64::from(FACE_H))),
         ("TYW", tyw),
+        ("DIVIMG", div_img), ("CHIPIMG", chip_img),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
@@ -4245,7 +4352,8 @@ pub fn render_card_8th(
     } else if let Some(lvl) = leveler {
         compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else if let Some(sg) = saga {
-        compose_saga_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &sg, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        let saga_frame = assets_dir.join(saga_frame_8th(&card));
+        compose_saga_8th(&card, &art.path, &credit, &art.year, assets_dir, &saga_frame, &sg, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     }
