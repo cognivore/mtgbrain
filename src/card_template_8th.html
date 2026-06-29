@@ -37,47 +37,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .colorind { position:absolute; overflow:visible; }
 /* rules: VERTICALLY CENTRED in the text box (justify-content:center) — the same flex logic
    as the Seventh frame, so short text floats to the middle instead of pinning to the top. */
-.rules { left:%%RULESLEFT%%; top:62.77%; width:%%RULESWIDTH%%; height:26.91%;
+.rules { left:10%; top:62.77%; width:80%; height:26.91%;
    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.18; color:#0a0a0a;
    text-shadow:none; }
-/* adventure / prepare sub-box: a SELF-CONTAINED MINI 8ED FRAME occupying ONE HALF of the rules
-   area (the creature's own rules reflow into the OTHER half, RULESLEFT/RULESWIDTH). Per the real
-   "prepared" card, the sub-box has its OWN OUTER FRAME (rounded, double keyline, drop shadow) over
-   a parchment fill, holding a CARDNAME-style capsule bar for the spell name+cost, a matching type
-   capsule bar, and a centred rules panel. Adventures take the LEFT half; prepared spells the RIGHT
-   half (.adv.right) — and the right half STOPS ABOVE the P/T box so nothing overlaps it. */
-.adv { position:absolute; left:9.6%; top:63.0%; width:41.4%; height:26.5%; z-index:1;
-   display:flex; flex-direction:column; gap:8px; padding:11px 11px 13px; overflow:hidden; color:#0a0a0a;
-   background:linear-gradient(180deg,#efe9db 0%,#e4ddca 100%);
-   border:4px solid #0b0a06; border-radius:22px;
-   box-shadow: inset 0 0 0 2px #c9b079, 0 4px 11px rgba(0,0,0,0.5); }
-.adv.right { left:49%; height:24.0%; }   /* right half: a touch lower, ends ABOVE the P/T box (87.96%) */
-/* capsule bars = the MAIN FRAME's title/type TWIN bars, CUT IN HALF: a fully ROUNDED end on the
-   OUTER side and a CHOPPED (flat) end on the INNER (card-middle) side, with the keyline running all
-   the way around (silver bevel + double keyline, same spirit as the top-of-card bars). Mirrored for
-   the two halves: adventure (left half) rounds the LEFT end; prepare (right half) rounds the RIGHT. */
-.adv-cap { position:relative; flex:none; display:flex; align-items:center;
-   border:3px solid #0b0a06; border-radius:999px 7px 7px 999px;
-   background:linear-gradient(180deg,#ffffff 0%,#f3f0e6 46%,#d8d1bf 100%);
-   box-shadow: inset 0 0 0 2px rgba(255,255,255,0.85), inset 0 3px 2px rgba(255,255,255,0.92),
-               inset 0 -4px 5px rgba(0,0,0,0.17), 0 2px 4px rgba(0,0,0,0.45); }
-.adv.right .adv-cap { border-radius:7px 999px 999px 7px; }
-.adv-head { justify-content:space-between; gap:8px; padding:7px 20px; }
-.adv-title { font-family:'matrix'; font-size:60px; line-height:1; white-space:nowrap; overflow:hidden; }
-.adv-mana { font-size:52px; white-space:nowrap; flex:none; }
-.adv-type { font-family:'matrix'; font-size:48px; line-height:1; padding:6px 20px;
-   white-space:nowrap; overflow:hidden; }
-/* rules panel: parchment, and (the 7ED rule) text VERTICALLY CENTRED — short text floats to the
-   middle of the panel instead of pinning to the top. */
-.adv-rules { flex:1; overflow:hidden; padding:10px 16px;
-   border:3px solid #0b0a06; border-radius:12px; background:#f7f3ea;
-   font-family:'mplantin'; font-size:62px; line-height:1.16;
-   display:flex; flex-direction:column; justify-content:center; align-items:flex-start; text-align:left; }
-.adv-rules p { width:100%; margin:0 0 .35em; }
-.adv-rules p:last-child { margin-bottom:0; }
-.adv-rules i { font-style:italic; }
-.adv .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .rules p { margin:0 0 .42em; width:100%; }
 .rules p:last-child { margin-bottom:0; }
 .rules i { font-style:italic; }
@@ -109,7 +72,6 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box type" id="ty">%%TYPE%%</div>
     %%SETSYM%%
     <div class="box rules" id="rules">%%RULES%%</div>
-    %%ADVBOX%%
     %%PT%%
     %%ILLUS%%
     <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
@@ -130,9 +92,6 @@ function fit(){
   fitOneLine(document.querySelector('.titlerow'), document.getElementById('nm'));
   fitBox(document.getElementById('ty'));
   fitBox(document.getElementById('rules'));
-  fitBox(document.querySelector('.adv-rules'));
-  fitOneLine(document.querySelector('.adv-title'));
-  fitOneLine(document.querySelector('.adv-type'));
   document.querySelectorAll('.info').forEach(function(el){ fitOneLine(el, el.querySelector('span')); });
   const pt = document.querySelector('.pt');
   if(pt) fitOneLine(pt, pt.querySelector('span'));

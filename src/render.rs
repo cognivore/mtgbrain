@@ -57,6 +57,17 @@ pub fn art_window_aspect() -> f64 {
     (ART_WINDOW_FRAC[2] * f64::from(FACE_W)) / (ART_WINDOW_FRAC[3] * f64::from(FACE_H))
 }
 
+/// 8ED (pack8th) art window — `artBounds` {x:0.088, y:0.12, w:0.824, h:0.4348}; the modern frame's
+/// art hole is a touch TALLER and wider than the classic 7ED window. An ordinary 8ED card's
+/// hand-placed crop must lock to THIS aspect, not the 7ED one, or `cover` re-crops the boxed region
+/// (the bug the editor showed: 8ED cards were defaulting to the narrower 7ED proportions).
+const ART_WINDOW_FRAC_8TH: [f64; 4] = [0.088, 0.12, 0.824, 0.4348];
+
+/// Aspect (w/h) of the 8ED on-card art window.
+pub fn art_window_aspect_8th() -> f64 {
+    (ART_WINDOW_FRAC_8TH[2] * f64::from(FACE_W)) / (ART_WINDOW_FRAC_8TH[3] * f64::from(FACE_H))
+}
+
 /// Saga art window (the tall scroll on the RIGHT half) — cardconjurer's `card.artBounds` for the
 /// regular Saga frame: {x:0.5, y:0.1124, width:0.4247, height:0.7253}. A Saga's hand-placed crop
 /// locks to THIS (much taller) aspect, not the wide ordinary window — else manual placement is
@@ -76,6 +87,22 @@ const PW_ART_FRAC: [f64; 4] = [0.068, 0.101, 0.864, 0.8143];
 /// Aspect (w/h) of the planeswalker art window — what a hand-positioned crop box locks to.
 pub fn pw_window_aspect() -> f64 {
     (PW_ART_FRAC[2] * f64::from(FACE_W)) / (PW_ART_FRAC[3] * f64::from(FACE_H))
+}
+
+/// The art-window aspect a hand-placed crop locks to, by frame (8th vs classic) and type line.
+/// Special single-face layouts keep their own window on either frame; an ordinary card uses the
+/// wide classic window on the 7ED frame and the (taller/wider) pack8th window on the modern frame.
+/// Centralises what the crop modal, manual saves, override re-materialisation and uploads all need.
+fn manual_crop_aspect(eighth: bool, type_lc: &str) -> f64 {
+    if type_lc.contains("saga") {
+        saga_window_aspect()
+    } else if type_lc.contains("planeswalker") {
+        pw_window_aspect()
+    } else if eighth {
+        art_window_aspect_8th()
+    } else {
+        art_window_aspect()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +172,16 @@ fn asset_list() -> Vec<(String, &'static str)> {
     v.push((format!("{CC}/img/frames/planeswalker/planeswalkerPlus.png"), "frames8/pw/plus.png"));
     v.push((format!("{CC}/img/frames/planeswalker/planeswalkerMinus.png"), "frames8/pw/minus.png"));
     v.push((format!("{CC}/img/frames/planeswalker/planeswalkerNeutral.png"), "frames8/pw/neutral.png"));
+    // Adventure frames (cardconjurer's regular Adventure pack): a self-contained m15-style frame
+    // whose lower text area is an OPEN BOOK — a colour-headed sub-spell page on the LEFT, the
+    // creature's rules on the plain RIGHT page. A PREPARED spell mirrors the book (frame flipped
+    // horizontally at render time). Used by the 8ED adventure/prepare renderer.
+    for letter in ["w", "u", "b", "r", "g", "m", "a", "l"] {
+        v.push((
+            format!("{CC}/img/frames/adventure/regular/{letter}.png"),
+            Box::leak(format!("frames8/adv/{letter}.png").into_boxed_str()),
+        ));
+    }
     // old fonts (proprietary — kept out of git; personal-use only)
     v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
@@ -605,7 +642,10 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
                 if let (Some(bx), Some(proxy)) = (bx, &proxy) {
                     if proxy.exists() {
                         crop_exact(proxy, bx, &crop)?;
-                        let asp = v["art_aspect"].as_f64().unwrap_or_else(art_window_aspect);
+                        // Legacy manual sidecars predate stored aspect — fall back to THIS frame's
+                        // window (8ED back cube fetches `latest`, so it locks to the pack8th window).
+                        let asp = v["art_aspect"].as_f64()
+                            .unwrap_or_else(|| if latest { art_window_aspect_8th() } else { art_window_aspect() });
                         let art_ref = format!("{art_ref}#{}", crop_sig(proxy, &bx, asp, true));
                         return Ok(Art { path: crop, art_ref, artist, year });
                     }
@@ -1432,13 +1472,19 @@ fn printings_list(name: &str, art_dir: &Path) -> Vec<(String, String, String)> {
 /// runs at the TOP of every render so a hand-picked alternative art survives a cache wipe
 /// or an auto re-pick — the DB is the source of truth, the sidecar is just its view, so a
 /// chosen art can never be silently trampled back to the original.
-fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, card_dir: &Path) -> Result<()> {
+fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, card_dir: &Path, eighth: bool) -> Result<()> {
     let ov: String = db
         .query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
         .unwrap_or_default();
     if ov.trim().is_empty() {
         return Ok(());
     }
+    // Recompute the locked aspect the SAME way the editor's crop modal did (frame + layout aware),
+    // so the re-materialised sidecar agrees with the hand-placed box's shape.
+    let type_lc = db
+        .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+        .map(|t| t.to_lowercase())
+        .unwrap_or_default();
     let v: Value = serde_json::from_str(ov.trim()).unwrap_or_else(|_| json!({}));
     let (Some(rel), Some(bx)) = (v["rel"].as_str(), sidecar_box(&v)) else {
         return Ok(());
@@ -1457,7 +1503,7 @@ fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, 
         "year": v["year"].as_str().unwrap_or("2001"),
         "proxy": source.to_string_lossy(),
         "box": bx,
-        "art_aspect": art_window_aspect(),
+        "art_aspect": manual_crop_aspect(eighth, &type_lc),
         "manual": true,
         "source_rel": rel,
         "override": true,
@@ -1607,8 +1653,9 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
         "id": id,
         "name": name,
         // A split locks each rectangle to ONE half's art-window aspect, not the full window;
-        // a Saga locks to the tall scroll aspect; a planeswalker to its full-card portrait window.
-        "window_aspect": if is_split { split_window_aspect() } else if is_saga_card { saga_window_aspect() } else if is_pw_card { pw_window_aspect() } else { art_window_aspect() },
+        // a Saga locks to the tall scroll aspect; a planeswalker to its full-card portrait window;
+        // an ordinary 8ED card to the pack8th window (NOT the narrower classic 7ED window).
+        "window_aspect": if is_split { split_window_aspect() } else if is_saga_card { saga_window_aspect() } else if is_pw_card { pw_window_aspect() } else if eighth { art_window_aspect_8th() } else { art_window_aspect() },
         "split": is_split,
         "split_names": split_names,
         "box": current_box,
@@ -1659,10 +1706,10 @@ fn source_credit(name: &str, cache_dir: &Path, rel: &str, prev: Option<&Value>) 
     }
 }
 
-/// Largest centred crop box (fractions of the source) at the on-card art-window aspect, so
-/// the cropped region maps 1:1 into the art hole (no further `cover` cropping).
-fn window_fit_box(src_w: u32, src_h: u32) -> [f64; 4] {
-    let aspect = art_window_aspect();
+/// Largest centred crop box (fractions of the source) at the given art-window aspect, so the
+/// cropped region maps 1:1 into the art hole (no further `cover` cropping). The caller passes the
+/// frame/layout-correct aspect (`manual_crop_aspect`) — 8ED uploads must not lock to the 7ED window.
+fn window_fit_box(src_w: u32, src_h: u32, aspect: f64) -> [f64; 4] {
     let src_aspect = f64::from(src_w) / f64::from(src_h);
     if src_aspect > aspect {
         let w = aspect / src_aspect; // source is wider: trim the sides
@@ -1673,19 +1720,21 @@ fn window_fit_box(src_w: u32, src_h: u32) -> [f64; 4] {
     }
 }
 
-/// On-card art-window size in inches at the 800-DPI face (FACE_W=2000px=2.5in).
-fn art_window_inches() -> (f64, f64) {
+/// On-card art-window size in inches at the 800-DPI face (FACE_W=2000px=2.5in). The 8ED hole is
+/// slightly wider/shorter than the classic one, so the DPI readout uses the matching window.
+fn art_window_inches(eighth: bool) -> (f64, f64) {
+    let f = if eighth { ART_WINDOW_FRAC_8TH } else { ART_WINDOW_FRAC };
     (
-        ART_WINDOW_FRAC[2] * f64::from(FACE_W) / 800.0,
-        ART_WINDOW_FRAC[3] * f64::from(FACE_H) / 800.0,
+        f[2] * f64::from(FACE_W) / 800.0,
+        f[3] * f64::from(FACE_H) / 800.0,
     )
 }
 
 /// Effective print DPI of a source image as it will sit in the on-card art window, given
 /// the crop box (fractions of the source): the cropped pixels are scaled to fill the
 /// ~1.92×1.55in window, so the binding (worst) resolution is the smaller of the two axes.
-fn effective_art_dpi(src_w: u32, src_h: u32, bx: [f64; 4]) -> i64 {
-    let (win_w_in, win_h_in) = art_window_inches();
+fn effective_art_dpi(src_w: u32, src_h: u32, bx: [f64; 4], eighth: bool) -> i64 {
+    let (win_w_in, win_h_in) = art_window_inches(eighth);
     let dpi_w = (bx[2] * f64::from(src_w)) / win_w_in;
     let dpi_h = (bx[3] * f64::from(src_h)) / win_h_in;
     dpi_w.min(dpi_h).round() as i64
@@ -1727,10 +1776,18 @@ pub fn art_upload(
     let (sw, sh) = image::image_dimensions(src)
         .with_context(|| format!("decoding {} (is it a valid image?)", src.display()))?;
 
-    let name = {
+    let (name, type_lc) = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-        card_name(&db, id)?
+        let n = card_name(&db, id)?;
+        let t = db
+            .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+            .map(|t| t.to_lowercase())
+            .unwrap_or_default();
+        (n, t)
     };
+    // The default upload crop locks to the on-card window for THIS frame + layout (8ED ordinary
+    // cards use the pack8th window, not the 7ED one; sagas/walkers use their own).
+    let aspect = manual_crop_aspect(eighth, &type_lc);
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
 
@@ -1750,10 +1807,10 @@ pub fn art_upload(
             .with_context(|| format!("re-encoding art → {}", stored.display()))?;
     }
 
-    let bx = window_fit_box(sw, sh);
-    let dpi = effective_art_dpi(sw, sh, bx);
+    let bx = window_fit_box(sw, sh, aspect);
+    let dpi = effective_art_dpi(sw, sh, bx, eighth);
     let low = dpi < dpi_threshold;
-    let (win_w, win_h) = art_window_inches();
+    let (win_w, win_h) = art_window_inches(eighth);
     let warning = low.then(|| {
         format!(
             "{name:?} art is ~{dpi} DPI in the {win_w:.2}×{win_h:.2}in card art window \
@@ -1783,7 +1840,7 @@ pub fn art_upload(
         "art_ref": "upload:@upload",
         "artist": artist, "year": year,
         "proxy": stored.to_string_lossy(),
-        "box": bx, "art_aspect": art_window_aspect(),
+        "box": bx, "art_aspect": aspect,
         "manual": true, "source_rel": "@upload", "upload": true,
     });
     fs::write(card_dir.join("art.json"), side.to_string())?;
@@ -1825,13 +1882,7 @@ pub fn art_save_crop(
             .unwrap_or_default();
         (n, t)
     };
-    let crop_aspect = if type_lc.contains("saga") {
-        saga_window_aspect()
-    } else if type_lc.contains("planeswalker") {
-        pw_window_aspect()
-    } else {
-        art_window_aspect()
-    };
+    let crop_aspect = manual_crop_aspect(eighth, &type_lc);
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
     let source = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
@@ -3223,7 +3274,7 @@ pub fn render_one(
     let dir = cache_dir.join("cards").join(sanitize(&card.name));
     // Durable art override (editor DB) wins and is re-materialised every render so it can
     // never be trampled by a cache wipe / auto re-pick.
-    materialize_override(&db, cache_dir, id, &card.name, &dir)?;
+    materialize_override(&db, cache_dir, id, &card.name, &dir, false)?;
     let art = acquire_art(&card.name, cache_dir, &dir, backend, false)?;
     // Flavor text (italic, below rules) — from the cached Scryfall print metadata that
     // acquire_art just settled. An "flavor" override wins if the editor set one.
@@ -3394,6 +3445,69 @@ fn pw_frame_8th(c: &Card) -> &'static str {
         ['G'] => "frames8/pw/g.png",
         _ => "frames8/pw/m.png",
     }
+}
+
+/// The cardconjurer Adventure frame PNG for the card's colour — land → the land frame, then mono →
+/// that colour, multi → gold (`m`), colourless → the metal (`a`) frame. The frame already bakes in
+/// the open book (colour-headed page on the LEFT). A PREPARED spell flips it (see `adv_frame_resolved`).
+fn adv_frame_8th(c: &Card) -> &'static str {
+    let t = c.type_line.to_lowercase();
+    if t.contains("land") {
+        return "frames8/adv/l.png";
+    }
+    let cols = frame_colors_8th(c);
+    match cols.as_slice() {
+        [] => "frames8/adv/a.png",
+        ['W'] => "frames8/adv/w.png",
+        ['U'] => "frames8/adv/u.png",
+        ['B'] => "frames8/adv/b.png",
+        ['R'] => "frames8/adv/r.png",
+        ['G'] => "frames8/adv/g.png",
+        _ => "frames8/adv/m.png",
+    }
+}
+
+/// Resolve the adventure frame to a concrete file: the plain frame for an ADVENTURE (sub-spell on
+/// the LEFT page), or a horizontally-FLIPPED copy for a PREPARED spell (so the colour-headed page
+/// lands on the RIGHT). Flipped frames are generated once and cached under `frames8_gen/`.
+fn adv_frame_resolved(assets_dir: &Path, cache_dir: &Path, c: &Card, prepare: bool) -> PathBuf {
+    let rel = adv_frame_8th(c);
+    let base = assets_dir.join(rel);
+    if !prepare {
+        return base;
+    }
+    let stem = Path::new(rel).file_stem().and_then(|s| s.to_str()).unwrap_or("a");
+    let out_dir = cache_dir.join("frames8_gen");
+    let _ = fs::create_dir_all(&out_dir);
+    let out = out_dir.join(format!("adv_{stem}_flip.png"));
+    if out.exists() {
+        return out;
+    }
+    match image::open(&base) {
+        Ok(img) => {
+            let flipped = image::imageops::flip_horizontal(&img.to_rgba8());
+            if flipped.save(&out).is_ok() {
+                return out;
+            }
+            base
+        }
+        Err(_) => base,
+    }
+}
+
+/// A parsed adventure / prepared sub-spell: which page it sits on plus its printed fields.
+struct Adventure {
+    prepare: bool,
+    title: String,
+    mana: String,
+    type_line: String,
+    rules: String,
+}
+
+/// Parse the adventure / prepare sub-spell from the cached metadata. None for ordinary cards.
+fn adventure_parse(cache_dir: &Path, name: &str) -> Option<Adventure> {
+    let (kind, title, mana, type_line, rules) = adventure_face(cache_dir, name, name)?;
+    Some(Adventure { prepare: kind == "prepare", title, mana, type_line, rules })
 }
 
 /// The WUBRG colours an 8ED frame should show: a manual identity wins, else the cost's
@@ -3789,6 +3903,7 @@ const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
 const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
 const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
 const TEMPLATE_8TH_PW: &str = include_str!("card_template_8th_pw.html");
+const TEMPLATE_8TH_ADV: &str = include_str!("card_template_8th_adv.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -3951,7 +4066,7 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
     Ok(())
 }
 
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: Option<&(String, String, String, String, String)>) -> String {
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -4038,23 +4153,6 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
             (svg, format!("{pad}px"))
         },
     );
-    // adventure / prepare sub-box: a self-contained mini 8ED frame (capsule title bar + capsule
-    // type bar + parchment rules) occupying HALF the text box. ADVENTURES sit on the LEFT (creature
-    // rules reflow to the right); PREPARED spells sit on the RIGHT (creature rules to the left).
-    let (advbox, rules_left, rules_width) = match adv {
-        Some((kind, title, mana, ty, rules)) => {
-            let right = kind == "prepare";
-            let side = if right { "adv right" } else { "adv" };
-            let html = format!(
-                r#"<div class="{}"><div class="adv-cap adv-head"><span class="adv-title">{}</span><span class="adv-mana">{}</span></div><div class="adv-cap adv-type">{}</div><div class="adv-rules">{}</div></div>"#,
-                side, esc(title), manaify(mana, &mana_base), esc(ty), rules_html(rules, "", &mana_base),
-            );
-            // creature rules take the OTHER half: prepare → left half, adventure → right half.
-            let (rl, rw) = if right { ("10%", "37%") } else { ("53%", "37%") };
-            (html, rl.to_string(), rw.to_string())
-        }
-        None => (String::new(), "10%".to_string(), "80%".to_string()),
-    };
     // Type-line width reserves the set-symbol gutter: the symbol's right edge is right:10%, so
     // its left edge is 100-10-wf. Stop the type a hair (1.5%) before that; the JS fit() then
     // collapses an over-long type to fit (the Seventh-frame rule). No symbol → keep the bar's
@@ -4065,7 +4163,6 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     };
     let pairs: Vec<(&str, String)> = vec![
         ("COLORIND", colorind), ("TYPAD", typad), ("TYW", tyw),
-        ("ADVBOX", advbox), ("RULESLEFT", rules_left), ("RULESWIDTH", rules_width),
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),
@@ -4101,10 +4198,9 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     html
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
 fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>,
-    adv: Option<&(String, String, String, String, String)>) -> Result<()> {
+    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
@@ -4112,7 +4208,7 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), adv);
+    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref());
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -4328,7 +4424,9 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
         ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
         ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
+        // Set symbol rides the BOTTOM type bar (cardconjurer setSymbol y:0.8739), right-aligned —
+        // same level as a normal card's type-line mark, NOT floating in the middle of the art.
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.874, 6.5)),
         ("SAGAROWS", rows),
         ("ILLUS", illus), ("YEAR", year),
     ];
@@ -4543,6 +4641,119 @@ fn compose_pw_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets
     Ok(())
 }
 
+/// Build the ADVENTURE / PREPARE HTML in 8ED style over cardconjurer's open-book frame: the normal
+/// title/art/type/set-symbol, then the lower book — a colour-headed sub-spell page on one side and
+/// the creature's own rules on the other. An adventure puts the sub-spell on the LEFT page; a
+/// prepared spell on the RIGHT (the frame is flipped for it, so the columns swap to match).
+fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: &Adventure) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2019".to_string() } else { art.year.clone() };
+    // Credit rides the cardconjurer adventure border (more saturated than 8ED) — dark ink + a cream
+    // halo stays legible on every colour, exactly as on the Sagas.
+    let (info_ink, info_shadow) = (
+        "#1a1206",
+        "0 0 5px rgba(245,241,230,0.85), 0 1px 1px rgba(245,241,230,0.9)",
+    );
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (82.0 - wf).clamp(40.0, 82.0)),
+        None => "82%".to_string(),
+    };
+    let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
+        format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
+    } else {
+        String::new()
+    };
+    let ptboxdiv = if pt.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display())
+    };
+    // Page geometry. ADVENTURE: sub-spell on the LEFT, creature rules on the RIGHT. PREPARE: the
+    // frame is flipped, so mirror every column (x' = 100 - x - width) — the colour page is now right.
+    let (subhx, subrx, crx) = if adv.prepare {
+        ("51.86%", "51.99%", "8.66%")
+    } else {
+        ("8.14%", "8.54%", "52.67%")
+    };
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("PSZ", px(131.0 / f64::from(FACE_H))),
+        ("SUBTSZ", px(82.0 / f64::from(FACE_H))), ("SUBMSZ", px(78.0 / f64::from(FACE_H))),
+        ("SUBTYSZ", px(80.0 / f64::from(FACE_H))),
+        ("SBSZ", px(72.0 / f64::from(FACE_H))), ("CRSZ", px(78.0 / f64::from(FACE_H))),
+        ("TYW", tyw),
+        ("SUBHX", subhx.to_string()), ("SUBHW", "40%".to_string()),
+        ("SUBRX", subrx.to_string()), ("SUBRW", "39.47%".to_string()),
+        ("CRX", crx.to_string()), ("CRW", "38.67%".to_string()),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("PTBOXDIV", ptboxdiv), ("PT", pt),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.591, 7.5)),
+        ("SUBTITLE", esc(&adv.title)), ("SUBMANA", manaify(&adv.mana, &mana_base)),
+        ("SUBTYPE", esc(&adv.type_line)),
+        ("SUBRULES", rules_html(&adv.rules, "", &mana_base)),
+        ("CRERULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
+        ("ILLUS", illus), ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH_ADV.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compose_adv_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, ptbox_rel: &Path, adv: &Adventure, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let ptbox_abs = fs::canonicalize(ptbox_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html_8th_adv(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), adv);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-adv8-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
@@ -4603,7 +4814,7 @@ pub fn render_card_8th(
     }
 
     // ---- CACHE MISS: only now do the expensive art acquisition + screenshot. ----
-    materialize_override(&db, cache_dir, id, &card.name, &dir)?;
+    materialize_override(&db, cache_dir, id, &card.name, &dir, true)?;
     // 8ED back cube: fetch the LATEST high-DPI art, not the oldest printing.
     let art = acquire_art(&card.name, cache_dir, &dir, backend, true)?;
     // SET SYMBOL + FLAVOUR come from the card's EARLIEST printing (its debut set's mark, the
@@ -4631,7 +4842,7 @@ pub fn render_card_8th(
     let saga = if split.is_some() || leveler.is_some() { None } else { saga_parse(&card) };
     let pw = if split.is_some() || leveler.is_some() || saga.is_some() { None } else { planeswalker_parse(&card) };
     let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
-    let adv = if split.is_some() || leveler.is_some() || saga.is_some() || pw.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
+    let adv = if split.is_some() || leveler.is_some() || saga.is_some() || pw.is_some() { None } else { adventure_parse(cache_dir, &card.name) };
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
@@ -4643,8 +4854,12 @@ pub fn render_card_8th(
     } else if let Some(walker) = pw {
         // frame_rel is already the PW frame (set above); compose the loyalty layout over it.
         compose_pw_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &walker, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+    } else if let Some(adventure) = &adv {
+        // cardconjurer's open-book frame (flipped for a PREPARED spell so the colour page is right).
+        let adv_frame = adv_frame_resolved(assets_dir, cache_dir, &card, adventure.prepare);
+        compose_adv_8th(&card, &art.path, &credit, &art.year, assets_dir, &adv_frame, &ptbox_rel, adventure, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
-        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
+        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     }
     let _ = fs::write(&hash_file, &hash);
     Ok(out)

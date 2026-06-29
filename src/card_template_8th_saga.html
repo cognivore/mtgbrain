@@ -19,13 +19,16 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .titlerow .nm { font-family:'matrix'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
 .manacost { left:4%; right:7.0%; top:5.1%; height:5.0%; font-size:%%MSZ%%px; z-index:3;
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
-.type { left:8.7%; top:84.6%; width:%%TYW%%; height:4.4%; display:flex; align-items:center; z-index:3;
+/* Type bar — cardconjurer's regular-Saga type bounds (y:0.8481, height:0.0543); the text rides
+   the bottom marble pill exactly as on a normal card (was a touch high + short before). */
+.type { left:8.54%; top:84.81%; width:%%TYW%%; height:5.43%; display:flex; align-items:center; z-index:3;
    font-family:'matrix'; font-size:%%TYSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
-.setsym { position:absolute; right:7.7%; top:85.0%; width:11%; height:3.5%; overflow:visible; z-index:3; }
-/* reminder text — small italics atop the chapter column */
-.saga-reminder { position:absolute; left:8.67%; top:11.4%; width:40.4%; height:16.5%; z-index:2;
-   font-family:'mplantin'; font-style:italic; font-size:%%SRSZ%%px; line-height:1.12; color:#0a0a0a;
-   display:flex; align-items:flex-start; }
+.setsym { position:absolute; right:6.5%; top:85.0%; width:11%; height:3.5%; overflow:visible; z-index:3; }
+/* reminder text — small italics atop the chapter column, vertically CENTRED in its box (the 7ED
+   box rule) with generous top breathing room instead of squished against the title pill. */
+.saga-reminder { position:absolute; left:8.67%; top:11.6%; width:40.4%; height:16.2%; z-index:2;
+   font-family:'mplantin'; font-style:italic; font-size:%%SRSZ%%px; line-height:1.16; color:#0a0a0a;
+   display:flex; align-items:center; padding-top:0.6%; }
 /* one chapter ability band; top/height set inline per chapter */
 .saga-body { position:absolute; left:13.34%; width:35%; z-index:2; color:#0a0a0a;
    font-family:'mplantin'; font-size:%%SBSZ%%px; line-height:1.14;
