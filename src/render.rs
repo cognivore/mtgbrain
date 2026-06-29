@@ -21,6 +21,8 @@ use std::fs;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use base64::Engine;
@@ -156,17 +158,60 @@ pub fn assets(assets_dir: &Path, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
-    let status = Command::new("curl")
-        .args(["-sSL", "--fail", "--max-time", "90", "-A", "Mozilla/5.0", "-o"])
-        .arg(dst)
-        .arg(url)
-        .status()
-        .context("running curl")?;
-    if !status.success() {
-        bail!("curl failed for {url}");
+/// Scryfall asks API clients to leave 50–100 ms between requests and to back off on HTTP 429
+/// (see https://scryfall.com/docs/api — "Rate Limits and Good Citizenship"). A tight fetch-all
+/// loop with no spacing earns a 429 and silently drops every printing past the cut-off. This gate
+/// serialises Scryfall API calls and guarantees a minimum interval between them, process-wide.
+static SCRYFALL_GATE: Mutex<Option<Instant>> = Mutex::new(None);
+const SCRYFALL_MIN_INTERVAL: Duration = Duration::from_millis(120);
+
+/// Block until at least `SCRYFALL_MIN_INTERVAL` has elapsed since the previous Scryfall request,
+/// then stamp "now" as the latest request time. Only applied to `api.scryfall.com` URLs.
+fn scryfall_throttle() {
+    let mut last = SCRYFALL_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(prev) = *last {
+        let elapsed = prev.elapsed();
+        if elapsed < SCRYFALL_MIN_INTERVAL {
+            std::thread::sleep(SCRYFALL_MIN_INTERVAL - elapsed);
+        }
     }
-    Ok(())
+    *last = Some(Instant::now());
+}
+
+fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
+    let is_scryfall_api = url.contains("api.scryfall.com");
+    // Up to 5 attempts; back off on 429 / 5xx (the codes worth retrying). Non-retryable
+    // failures (4xx other than 429, network errors) bail immediately.
+    let mut backoff = Duration::from_millis(750);
+    for attempt in 1..=5u32 {
+        if is_scryfall_api {
+            scryfall_throttle();
+        }
+        let out = Command::new("curl")
+            .args([
+                "-sSL", "--max-time", "90", "-A", "Mozilla/5.0",
+                "-w", "%{http_code}", "-o",
+            ])
+            .arg(dst)
+            .arg(url)
+            .output()
+            .context("running curl")?;
+        let code: u32 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap_or(0);
+        // curl itself failed (network/timeout) → code 0; treat as transient.
+        if out.status.success() && (200..300).contains(&code) {
+            return Ok(());
+        }
+        let retryable = code == 429 || code == 0 || (500..600).contains(&code);
+        if !retryable || attempt == 5 {
+            // Drop the partial/error body curl may have written to `dst`.
+            let _ = fs::remove_file(dst);
+            bail!("curl failed for {url} (HTTP {code}, attempt {attempt})");
+        }
+        eprintln!("  curl {url}: HTTP {code} — backing off {:.1}s (attempt {attempt}/5)", backoff.as_secs_f32());
+        std::thread::sleep(backoff);
+        backoff *= 2;
+    }
+    unreachable!()
 }
 
 fn curl_post_json(url: &str, body: &str) -> Result<String> {
@@ -1826,9 +1871,18 @@ pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, 
     };
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     let art_dir = cache_dir.join("art");
-    // Pre-cache every printing's art_crop (cheap; powers the alternative-printing thumbnails).
+    // Pre-cache every printing's art_crop (powers the alternative-printing thumbnails). The
+    // Scryfall calls are self-throttled (see curl_to_file) so a long printing list no longer
+    // earns a 429 mid-loop; any printing that still fails is logged, not silently dropped.
+    let mut failed = Vec::new();
     for (set, _, _) in printings_list(&name, &art_dir) {
-        let _ = scryfall_printing(&name, &set, &art_dir);
+        if let Err(e) = scryfall_printing(&name, &set, &art_dir) {
+            eprintln!("  fetch-all {name:?}: printing [{set}] failed: {e}");
+            failed.push(set);
+        }
+    }
+    if !failed.is_empty() {
+        eprintln!("  fetch-all {name:?}: {} printing(s) not fetched: {}", failed.len(), failed.join(", "));
     }
     // Download all MPCfill proxies, if a backend is configured.
     match backend {
