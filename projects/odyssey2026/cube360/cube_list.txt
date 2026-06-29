@@ -1,7 +1,6 @@
 Mystic Penitent
 Suntail Hawk
 Beloved Chaplain
-Mystic Familiar
 Mystic Visionary
 Patrol Hound
 Phantom Nomad
@@ -15,13 +14,10 @@ Mesa Enchantress
 Militant Monk
 Nomad Decoy
 Pianna, Nomad Captain
-Vigilant Sentry
 Academy Rector
 Auriok Salvagers
-Battlewise Aven
 Blessed Orator
 Commander Eesha
-Mystic Zealot
 Valor
 Phantom Flock
 Wayward Angel
@@ -89,7 +85,6 @@ Stroke of Genius
 Dismiss
 Rewind
 Turnabout
-Aquitect's Will
 Careful Study
 Mystic Speculation
 Mana Severance
@@ -170,7 +165,6 @@ Jackal Pup
 Spikeshot Elder
 Minotaur Explorer
 Balthor the Stout
-Barbarian Lunatic
 Dwarven Bloodboiler
 Dwarven Recruiter
 Flamewave Invoker
@@ -233,7 +227,6 @@ Zoologist
 Arrogant Wurm
 Gorilla Titan
 Rabid Elephant
-Giant Warthog
 Nut Collector
 Thriss, Nantuko Primus
 Krosan Reclamation
@@ -286,7 +279,6 @@ Crawlspace
 Crucible of Worlds
 Ensnaring Bridge
 Iron Maiden
-Misers' Cage
 Monument to Endurance
 Static Orb
 Storage Matrix
@@ -303,7 +295,6 @@ Teferi's Puzzle Box
 Trading Post
 Memory Jar
 Mind's Eye
-Contagion Engine
 Mirror Universe
 Soul Conduit
 Possessed Portal
@@ -379,7 +370,6 @@ Mirari's Wake
 Psychotic Haze
 Brain Gorgers
 Chainer's Edict
-Embolden
 Dematerialize
 Deep Reconnaissance
 Hollow One
@@ -413,7 +403,6 @@ Vexing Arcanix
 Sadistic Hypnotist
 Shower of Coals
 Kirtar's Wrath
-Yawgmoth Demon
 Glimpse the Unthinkable
 Rain of Filth
 Compulsion
@@ -425,7 +414,6 @@ Naturalize
 Feed the Swarm
 Chaos Warp
 Vampire Hexmage
-Tranquility
 Thought Scour
 Mental Note
 False Memories
@@ -448,3 +436,179 @@ Underworld Breach
 Reclamation Sage
 Trygon Predator
 Pick Your Poison
+Hall of Heliod's Generosity
+Woodripper
+Rejuvenation Chamber
+Skyshroud Ridgeback
+Jolting Merfolk
+Cloudskate
+Rusting Golem
+Lim-Dûl's Paladin
+Dread Slag
+Gobhobbler Rats
+Twinstrike
+Reviving Vapors
+Phantatog
+Hanna, Ship's Navigator
+Unfulfilled Desires
+Golgari Germination
+Martyrs' Tomb
+Goblin Legionnaire
+Dueling Grounds
+Hunting Grounds
+Mogg Fanatic
+Mystic Snake
+Gaea's Skyfolk
+Aether Mutation
+Temporal Spring
+Yavimaya's Embrace
+Meddling Mage
+Great Whale
+Seedborn Muse
+Karn, Silver Golem
+Graveborn Muse
+Weathered Wayfarer
+Ravenous Baloth
+Rotlung Reanimator
+Aura Thief
+Sylvan Safekeeper
+Captain Sisay
+Lord of the Undead
+Kangee, Aerie Keeper
+Anurid Brushhopper
+Draco
+Desolation Angel
+Noxious Ghoul
+Faith Healer
+Seton, Krosan Protector
+Windborn Muse
+Plague Spitter
+Scion of Darkness
+Chainer, Dementia Master
+Clone
+Thought Devourer
+Planar Guide
+Doomed Necromancer
+Crypt Angel
+Tethered Griffin
+Albino Troll
+Fear of Surveillance
+Owlin Historian
+Eidolon of Rhetoric
+Armored Skaab
+Wall of Lost Thoughts
+Guildpact Informant
+Faerie Vandal
+Slithering Shade
+Ragamuffyn
+Demon's Jester
+Headless Specter
+Slaughterhouse Bouncer
+Hell Mongrel
+Necromancer's Familiar
+Magmatic Channeler
+Anje's Ravager
+Stromkirk Occultist
+Conspiracy Theorist
+Turntimber Sower
+World Shaper
+Vinelasher Kudzu
+Scurry Oak
+Ant Queen
+Thraben Doomsayer
+Essence Channeler
+Syndic of Tithes
+Knight of Obligation
+Aegis of the Gods
+Glorifier of Dusk
+Cephalid Inkmage
+Fallaji Archaeologist
+Organ Hoarder
+Nightveil Sprite
+Watcher for Tomorrow
+Tideforce Elemental
+Vizier of Tumbling Sands
+Persistent Petitioners
+River Herald Scout
+Clattering Augur
+Garza's Assassin
+Faerie Dreamthief
+Asylum Visitor
+Grave Scrabbler
+Twins of Maurer Estate
+Cabal Initiate
+Cult Conscript
+Forsaken Miner
+Postmortem Professor
+Stromkirk Condemned
+Abyssal Nocturnus
+Reckless Barbarian
+Generator Servant
+Treasonous Ogre
+Evendo Brushrazer
+Rubble Rouser
+Sparkspitter
+Dismissive Pyromancer
+Bloodrage Brawler
+Skophos Reaver
+Wolf of Devil's Breach
+Mishra, Excavation Prodigy
+Aquastrand Spider
+Pollenbright Druid
+Bloom Hulk
+Deathcap Cultivator
+Deeproot Wayfinder
+Elvish Regrower
+Floodhound
+Alexi, Zephyr Mage
+Arc Mage
+Avenger en-Dal
+Balloon Peddler
+Bog Witch
+Bola Warrior
+Cackling Witch
+Charm Peddler
+Deepwood Drummer
+Deepwood Elder
+Devout Witness
+Diplomatic Escort
+Divining Witch
+Firefright Mage
+Flowstone Channeler
+Ghost Tactician
+Greenseeker
+Hammer Mage
+Harvest Mage
+Instigator
+Jaya Ballard, Task Mage
+Jolrael, Empress of Beasts
+Kris Mage
+Latulla, Keldon Overseer
+Mageta the Lion
+Netter en-Dal
+Notorious Assassin
+Overtaker
+Plague Witch
+Ridged Kusite
+Rushwood Herbalist
+Seismic Mage
+Silverglade Pathfinder
+Sophic Centaur
+Stampede Driver
+Stronghold Biologist
+Stronghold Machinist
+Tolarian Sentinel
+Tonic Peddler
+Toymaker
+Trickster Mage
+Undertaker
+Waterfront Bouncer
+Tranquility
+Vigilant Sentry
+Mystic Familiar
+Battlewise Aven
+Mystic Zealot
+Icatian Javelineers
+Abuelo's Awakening
+Tragic Poet
+Cunning Survivor
