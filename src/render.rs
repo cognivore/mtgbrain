@@ -68,6 +68,16 @@ pub fn saga_window_aspect() -> f64 {
     (SAGA_ART_FRAC[2] * f64::from(FACE_W)) / (SAGA_ART_FRAC[3] * f64::from(FACE_H))
 }
 
+/// Planeswalker art window — cardconjurer's `card.artBounds` for the regular PW frame:
+/// {x:0.068, y:0.101, width:0.864, height:0.8143}. The art is nearly full-card (a portrait
+/// window), so a hand-placed crop locks to THIS (tall) aspect, not the wide ordinary window.
+const PW_ART_FRAC: [f64; 4] = [0.068, 0.101, 0.864, 0.8143];
+
+/// Aspect (w/h) of the planeswalker art window — what a hand-positioned crop box locks to.
+pub fn pw_window_aspect() -> f64 {
+    (PW_ART_FRAC[2] * f64::from(FACE_W)) / (PW_ART_FRAC[3] * f64::from(FACE_H))
+}
+
 // ---------------------------------------------------------------------------
 // assets
 // ---------------------------------------------------------------------------
@@ -118,6 +128,23 @@ fn asset_list() -> Vec<(String, &'static str)> {
     v.push((format!("{CC}/img/frames/saga/regular/l.png"), "frames8/saga/l.png"));
     v.push((format!("{CC}/img/frames/saga/sagaChapter.png"), "frames8/saga/chapter.png"));
     v.push((format!("{CC}/img/frames/saga/sagaDivider.png"), "frames8/saga/divider.png"));
+    // Planeswalker frames (cardconjurer's regular PW pack): a near-full-card art window, a title
+    // pill, a type pill, and the bottom-right loyalty shield baked in. The loyalty abilities ride
+    // translucent panels over the lower art; their cost badges are the separate plus/minus/neutral
+    // PNGs. Used by the 8ED planeswalker renderer.
+    for (letter, file) in [
+        ("w", "planeswalkerFrameW"), ("u", "planeswalkerFrameU"), ("b", "planeswalkerFrameB"),
+        ("r", "planeswalkerFrameR"), ("g", "planeswalkerFrameG"), ("m", "planeswalkerFrameM"),
+        ("a", "planeswalkerFrameA"),
+    ] {
+        v.push((
+            format!("{CC}/img/frames/planeswalker/regular/{file}.png"),
+            Box::leak(format!("frames8/pw/{letter}.png").into_boxed_str()),
+        ));
+    }
+    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerPlus.png"), "frames8/pw/plus.png"));
+    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerMinus.png"), "frames8/pw/minus.png"));
+    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerNeutral.png"), "frames8/pw/neutral.png"));
     // old fonts (proprietary — kept out of git; personal-use only)
     v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
@@ -1464,11 +1491,14 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
         let _ = scryfall_latest(&name, &art_dir);
         split_faces(cache_dir, &name).is_some()
     };
-    // A Saga's art is the tall scroll on the right → its hand-placed crop locks to that aspect.
-    let is_saga_card = db
+    // A Saga's art is the tall scroll on the right, a planeswalker's is the near-full-card portrait
+    // window → each locks its hand-placed crop to its own aspect.
+    let type_lc = db
         .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
-        .map(|t| t.to_lowercase().contains("saga"))
-        .unwrap_or(false);
+        .map(|t| t.to_lowercase())
+        .unwrap_or_default();
+    let is_saga_card = type_lc.contains("saga");
+    let is_pw_card = type_lc.contains("planeswalker");
     let side = read_sidecar(&card_dir);
     let art_ref = side.as_ref().and_then(|v| v["art_ref"].as_str()).unwrap_or("");
     let manual = side.as_ref().and_then(|v| v["manual"].as_bool()).unwrap_or(false);
@@ -1577,8 +1607,8 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
         "id": id,
         "name": name,
         // A split locks each rectangle to ONE half's art-window aspect, not the full window;
-        // a Saga locks to the tall scroll aspect.
-        "window_aspect": if is_split { split_window_aspect() } else if is_saga_card { saga_window_aspect() } else { art_window_aspect() },
+        // a Saga locks to the tall scroll aspect; a planeswalker to its full-card portrait window.
+        "window_aspect": if is_split { split_window_aspect() } else if is_saga_card { saga_window_aspect() } else if is_pw_card { pw_window_aspect() } else { art_window_aspect() },
         "split": is_split,
         "split_names": split_names,
         "box": current_box,
@@ -1786,16 +1816,22 @@ pub fn art_upload(
 pub fn art_save_crop(
     editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
 ) -> Result<()> {
-    let (name, is_saga_card) = {
+    let (name, type_lc) = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let n = card_name(&db, id)?;
-        let saga = db
+        let t = db
             .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
-            .map(|t| t.to_lowercase().contains("saga"))
-            .unwrap_or(false);
-        (n, saga)
+            .map(|t| t.to_lowercase())
+            .unwrap_or_default();
+        (n, t)
     };
-    let crop_aspect = if is_saga_card { saga_window_aspect() } else { art_window_aspect() };
+    let crop_aspect = if type_lc.contains("saga") {
+        saga_window_aspect()
+    } else if type_lc.contains("planeswalker") {
+        pw_window_aspect()
+    } else {
+        art_window_aspect()
+    };
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     fs::create_dir_all(&card_dir)?;
     let source = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
@@ -3345,6 +3381,21 @@ fn saga_frame_8th(c: &Card) -> &'static str {
     }
 }
 
+/// The real cardconjurer Planeswalker frame PNG for the card's colour — mono → that colour,
+/// multi → gold (`m`), colourless / pure-artifact → the metal (`a`) frame.
+fn pw_frame_8th(c: &Card) -> &'static str {
+    let cols = frame_colors_8th(c);
+    match cols.as_slice() {
+        [] => "frames8/pw/a.png",
+        ['W'] => "frames8/pw/w.png",
+        ['U'] => "frames8/pw/u.png",
+        ['B'] => "frames8/pw/b.png",
+        ['R'] => "frames8/pw/r.png",
+        ['G'] => "frames8/pw/g.png",
+        _ => "frames8/pw/m.png",
+    }
+}
+
 /// The WUBRG colours an 8ED frame should show: a manual identity wins, else the cost's
 /// colours (`card_colors` already falls back to the `colors` field). Empty = colourless.
 fn frame_colors_8th(c: &Card) -> Vec<char> {
@@ -3677,9 +3728,67 @@ fn saga_parse(c: &Card) -> Option<Saga> {
     Some(Saga { reminder, chapters })
 }
 
+/// One ability line of a planeswalker: an optional loyalty activation cost (`+1`, `−7`, `0`;
+/// `None` = a static/passive line, which prints with no cost badge) and its rules text.
+struct PwAbility {
+    cost: Option<String>,
+    text: String,
+}
+
+/// A parsed planeswalker: its starting loyalty (from the card's `loyalty`) and ordered ability
+/// lines. `None` for non-walkers.
+struct Planeswalker {
+    loyalty: String,
+    abilities: Vec<PwAbility>,
+}
+
+/// Is `tok` a loyalty activation cost? `+N`, `−N`/`-N`, `0`, or an X variant (`+X`, `−X`) — the
+/// only thing valid left of the colon on a planeswalker ability line.
+fn is_loyalty_cost(tok: &str) -> bool {
+    if tok.is_empty() || tok.len() > 4 {
+        return false;
+    }
+    let mut ch = tok.chars();
+    let first = ch.next().unwrap();
+    let rest: String = ch.collect();
+    match first {
+        '+' | '-' | '−' => !rest.is_empty() && (rest == "X" || rest.chars().all(|d| d.is_ascii_digit())),
+        '0'..='9' => tok.chars().all(|d| d.is_ascii_digit()),
+        _ => false,
+    }
+}
+
+/// Parse a planeswalker from a card whose type line carries "Planeswalker". Each oracle line is
+/// either a loyalty ability (`+1: …`, `−2: …`, `0: …`) or a static/passive line (no leading cost,
+/// e.g. "Flash") that prints without a badge. Scryfall keeps each loyalty ability on one line, so a
+/// no-cost line is always its own ability, never a wrap of the previous one. `None` for non-walkers.
+fn planeswalker_parse(c: &Card) -> Option<Planeswalker> {
+    if !c.type_line.to_lowercase().contains("planeswalker") {
+        return None;
+    }
+    let text = c.oracle_text.replace("\r\n", "\n");
+    let mut abilities: Vec<PwAbility> = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        let head = line.split(':').next().unwrap_or("").trim();
+        if line.contains(':') && is_loyalty_cost(head) {
+            let rest = line[line.find(':').unwrap() + 1..].trim().to_string();
+            // Print the proper MTG minus glyph for negative costs.
+            let cost = head.replace('-', "−");
+            abilities.push(PwAbility { cost: Some(cost), text: rest });
+        } else {
+            abilities.push(PwAbility { cost: None, text: line.to_string() });
+        }
+    }
+    if abilities.is_empty() {
+        return None;
+    }
+    Some(Planeswalker { loyalty: c.loyalty.clone(), abilities })
+}
+
 const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
 const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
 const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
+const TEMPLATE_8TH_PW: &str = include_str!("card_template_8th_pw.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -4261,6 +4370,179 @@ fn compose_saga_8th(card: &Card, art_path: &Path, artist: &str, year: &str, asse
     Ok(())
 }
 
+fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, pw: &Planeswalker) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2015".to_string() } else { art.year.clone() };
+    // Credit line sits on the card's coloured bottom marble border. The PW borders are saturated
+    // colour, so (as for Sagas) dark ink + a cream halo stays legible on EVERY colour.
+    let (info_ink, info_shadow) = (
+        "#1a1206",
+        "0 0 5px rgba(245,241,230,0.85), 0 1px 1px rgba(245,241,230,0.9)",
+    );
+    // The type bar shares its right end with the set symbol — reserve the symbol's width so a long
+    // "Legendary Planeswalker — …" collapses (shrinks) instead of sliding under the mark.
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (72.0 - wf).clamp(38.0, 72.0)),
+        None => "72%".to_string(),
+    };
+    let pw_dir = assets_dir.join("frames8").join("pw");
+
+    // The lower art carries the loyalty abilities on translucent alternating panels (cardconjurer's
+    // light/dark ability lines), one band per ability. The visible band region runs from just under
+    // the type pill to just above the bottom border; bands are sized in proportion to their text so
+    // a long ability gets more height and all abilities share one type size. The cost badge for each
+    // ability rides the band's vertical centre, overhanging the panel's left edge onto the frame.
+    const REGION_TOP: f64 = 0.620;
+    const REGION_BOT: f64 = 0.900;
+    const PANEL_X: f64 = 0.1167;
+    const PANEL_W: f64 = 0.8094;
+    const TEXT_RIGHT: f64 = PANEL_X + PANEL_W; // 0.9261 — abilities run to the panel's right edge
+    // Panels extend past the visible region (up under the type pill, down under the bottom border);
+    // the opaque frame caps the excess, guaranteeing no art shows between a panel and a border.
+    const PANEL_TOP_EXT: f64 = 0.5950;
+    const PANEL_BOT_EXT: f64 = 0.9550;
+
+    let n = pw.abilities.len().max(1);
+    let weights: Vec<f64> = pw
+        .abilities
+        .iter()
+        .map(|a| (a.text.chars().count() as f64 + 30.0).max(58.0))
+        .collect();
+    let total_w: f64 = weights.iter().sum::<f64>().max(1.0);
+    let region_h = REGION_BOT - REGION_TOP;
+    // Every band gets a MIN_BAND floor (so each ability's cost badge keeps vertical clearance), then
+    // the remaining height is shared by text weight (long abilities get more room → one type size).
+    // If the floors alone overflow the region (very many abilities), fall back to equal bands.
+    const MIN_BAND: f64 = 0.050;
+    let extra = region_h - MIN_BAND * n as f64;
+    let band_h: Vec<f64> = if extra <= 0.0 {
+        vec![region_h / n as f64; n]
+    } else {
+        weights.iter().map(|w| MIN_BAND + extra * w / total_w).collect()
+    };
+    // Band boundaries: bounds[0]=REGION_TOP, …, bounds[n]=REGION_BOT.
+    let mut bounds: Vec<f64> = vec![REGION_TOP];
+    let mut acc = REGION_TOP;
+    for h in &band_h {
+        acc += *h;
+        bounds.push(acc);
+    }
+
+    let light = "rgba(245,244,238,0.88)";
+    let dark = "rgba(178,178,178,0.90)";
+    let mut panels = String::new();
+    let mut abilities = String::new();
+    let mut badges = String::new();
+    for (i, ab) in pw.abilities.iter().enumerate() {
+        let band_top = bounds[i];
+        let band_bot = bounds[i + 1];
+        let band_cy = (band_top + band_bot) / 2.0;
+        let p_top = if i == 0 { PANEL_TOP_EXT } else { band_top };
+        let p_bot = if i == n - 1 { PANEL_BOT_EXT } else { band_bot };
+        let bg = if i % 2 == 0 { light } else { dark };
+        // A thin dark keyline separates panels (the torn edge of a printed walker, in the 8ED idiom).
+        let border = if i > 0 { "border-top:3px solid rgba(8,8,8,0.34);" } else { "" };
+        panels.push_str(&format!(
+            r#"<div class="pw-panel" style="top:{:.3}%;height:{:.3}%;background:{};{}"></div>"#,
+            p_top * 100.0, (p_bot - p_top) * 100.0, bg, border,
+        ));
+        let has_cost = ab.cost.is_some();
+        let text_left = if has_cost { 0.18 } else { 0.136 };
+        let text_w = TEXT_RIGHT - text_left;
+        abilities.push_str(&format!(
+            r#"<div class="pw-ab" style="left:{:.3}%;width:{:.3}%;top:{:.3}%;height:{:.3}%">{}</div>"#,
+            text_left * 100.0, text_w * 100.0, band_top * 100.0, (band_bot - band_top) * 100.0,
+            rules_html(&ab.text, "", &mana_base),
+        ));
+        if let Some(cost) = &ab.cost {
+            // cardconjurer anchors the badge at "placement" (here the band centre); the image top
+            // sits a touch above it and the glyph nudges toward the badge's visual centre.
+            let (file, top_off, h, nudge) = if cost.starts_with('+') {
+                ("plus.png", 0.0258, 0.0724, 0.006)
+            } else if cost.starts_with('−') || cost.starts_with('-') {
+                ("minus.png", 0.0153, 0.0705, -0.002)
+            } else {
+                ("neutral.png", 0.0153, 0.0610, 0.003)
+            };
+            let bimg = format!("file://{}", pw_dir.join(file).display());
+            badges.push_str(&format!(
+                r#"<div class="pw-badge" style="top:{:.3}%;height:{:.3}%;background-image:url('{}')"><span style="transform:translateY({}px)">{}</span></div>"#,
+                (band_cy - top_off) * 100.0, h * 100.0, bimg,
+                (nudge * f64::from(FACE_H)) as i32, esc(cost),
+            ));
+        }
+    }
+
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("ABSZ", px(90.0 / f64::from(FACE_H))),
+        ("BADGESZ", px(80.0 / f64::from(FACE_H))), ("LOYSZ", px(104.0 / f64::from(FACE_H))),
+        ("TYW", tyw),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.600, 6.5)),
+        ("PWPANELS", panels), ("PWABILITIES", abilities), ("PWBADGES", badges),
+        ("LOYALTY", esc(&pw.loyalty)),
+        ("ILLUS", illus), ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH_PW.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compose_pw_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, pw: &Planeswalker, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html_8th_pw(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), pw);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-pw8-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
@@ -4274,7 +4556,10 @@ pub fn render_card_8th(
     let frame_rel = {
         let t = card.type_line.to_lowercase();
         let cols = frame_colors_8th(&card);
-        if t.contains("artifact") && !t.contains("land") && !cols.is_empty() {
+        if t.contains("planeswalker") {
+            // Planeswalkers use the cardconjurer PW frame (its own art window + loyalty shield).
+            assets_dir.join(pw_frame_8th(&card))
+        } else if t.contains("artifact") && !t.contains("land") && !cols.is_empty() {
             colored_artifact_frame(assets_dir, cache_dir, &cols)
                 .unwrap_or_else(|| assets_dir.join(frame_file_8th(&card)))
         } else {
@@ -4344,8 +4629,9 @@ pub fn render_card_8th(
     let split = split_faces(cache_dir, &card.name);
     let leveler = if split.is_some() { None } else { leveler_parse(&card) };
     let saga = if split.is_some() || leveler.is_some() { None } else { saga_parse(&card) };
+    let pw = if split.is_some() || leveler.is_some() || saga.is_some() { None } else { planeswalker_parse(&card) };
     let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
-    let adv = if split.is_some() || leveler.is_some() || saga.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
+    let adv = if split.is_some() || leveler.is_some() || saga.is_some() || pw.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
@@ -4354,6 +4640,9 @@ pub fn render_card_8th(
     } else if let Some(sg) = saga {
         let saga_frame = assets_dir.join(saga_frame_8th(&card));
         compose_saga_8th(&card, &art.path, &credit, &art.year, assets_dir, &saga_frame, &sg, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+    } else if let Some(walker) = pw {
+        // frame_rel is already the PW frame (set above); compose the loyalty layout over it.
+        compose_pw_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &walker, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     }
