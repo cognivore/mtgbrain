@@ -1270,6 +1270,9 @@ fn resolve_source(name: &str, cache_dir: &Path, card_dir: &Path, rel: &str) -> R
     let art_dir = cache_dir.join("art");
     match rel {
         "@scryfall" => Ok(scryfall_oldest(name, &art_dir)?.0),
+        // The newest printing's art_crop — for SPLIT cards this is the combined two-half
+        // illustration the crop editor slices into a left + right window.
+        "@latest" => Ok(scryfall_latest(name, &art_dir)?.0),
         "@current" => read_sidecar(card_dir)
             .and_then(|v| v["proxy"].as_str().map(PathBuf::from))
             .filter(|p| p.exists())
@@ -1376,6 +1379,13 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     let card_dir = cache_dir.join("cards").join(sanitize(&name));
     let mpc_dir = card_dir.join("mpcfill");
     let art_dir = cache_dir.join("art");
+    // SPLIT cards (" // " in the name): the crop editor slices the combined two-half art with
+    // TWO rectangles. Make sure the combined art + its metadata are cached, then confirm the
+    // layout really is split before switching the modal into two-rectangle mode.
+    let is_split = name.contains(" // ") && {
+        let _ = scryfall_latest(&name, &art_dir);
+        split_faces(cache_dir, &name).is_some()
+    };
     let side = read_sidecar(&card_dir);
     let art_ref = side.as_ref().and_then(|v| v["art_ref"].as_str()).unwrap_or("");
     let manual = side.as_ref().and_then(|v| v["manual"].as_bool()).unwrap_or(false);
@@ -1403,7 +1413,15 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     // Sources, in pick order: Scryfall original, then every alternative PRINTING (with its
     // own artist — the "Greed → 7ED" case), then every cached MPCfill proxy (DPI-labelled).
     let mut sources: Vec<Value> = Vec::new();
-    {
+    if is_split {
+        // A split has no single "original art" — the combined newest art_crop is the source
+        // both half-rectangles are sliced from.
+        sources.push(json!({
+            "rel": "@latest", "kind": "scryfall",
+            "label": "Combined split art (newest printing)", "artist": "", "year": "",
+            "blocked": false,
+        }));
+    } else {
         let (a, y) = scryfall_oldest(&name, &art_dir).map_or_else(
             |_| (String::new(), String::new()),
             |(_, a, y, _)| (a, y),
@@ -1446,13 +1464,28 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     }
 
     // Current source: the durable override wins; else infer from the sidecar's proxy path.
-    let current_rel = override_rel.clone().or_else(|| match &proxy {
-        Some(p) if p.starts_with(&mpc_dir) => rel_of(p),
-        Some(p) if p.starts_with(&art_dir) => Some("@scryfall".to_string()),
-        Some(_) => Some("@current".to_string()),
-        None => None,
+    let current_rel = override_rel.clone().or_else(|| {
+        if is_split {
+            return Some("@latest".to_string());
+        }
+        match &proxy {
+            Some(p) if p.starts_with(&mpc_dir) => rel_of(p),
+            Some(p) if p.starts_with(&art_dir) => Some("@scryfall".to_string()),
+            Some(_) => Some("@current".to_string()),
+            None => None,
+        }
     });
     let current_box = sidecar_box(&ov).or_else(|| sidecar_box(side.as_ref().unwrap_or(&json!({}))));
+    // Split's RIGHT-half box (the editor's second rectangle), from the override then sidecar.
+    let box2 = box_field(&ov, "box2").or_else(|| side.as_ref().and_then(|v| box_field(v, "box2")));
+    // The two half names label the crop rectangles + their live previews ("Bind" / "Liberate").
+    let split_names: Vec<String> = if is_split {
+        split_faces(cache_dir, &name)
+            .map(|h| vec![h[0].0.clone(), h[1].0.clone()])
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
     let artist = ov["artist"].as_str()
         .or_else(|| side.as_ref().and_then(|v| v["artist"].as_str()))
         .unwrap_or("");
@@ -1460,8 +1493,12 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     Ok(json!({
         "id": id,
         "name": name,
-        "window_aspect": art_window_aspect(),
+        // A split locks each rectangle to ONE half's art-window aspect, not the full window.
+        "window_aspect": if is_split { split_window_aspect() } else { art_window_aspect() },
+        "split": is_split,
+        "split_names": split_names,
         "box": current_box,
+        "box2": box2,
         "art_aspect": side.as_ref().and_then(|v| v["art_aspect"].as_f64()),
         "manual": manual || override_rel.is_some(),
         "override": override_rel.is_some(),
@@ -1662,7 +1699,7 @@ pub fn art_upload(
 /// in fractions of the source image and is expected to already carry the art-window
 /// aspect (the editor locks it). Bumps `updated_at` so the editor preview cache-busts.
 pub fn art_save_crop(
-    editor_db: &Path, cache_dir: &Path, id: i64, rel: &str, bx: [f64; 4],
+    editor_db: &Path, cache_dir: &Path, id: i64, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
 ) -> Result<()> {
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
@@ -1705,13 +1742,23 @@ pub fn art_save_crop(
     if let Some(a) = auto {
         side["auto"] = a;
     }
+    // A SPLIT card carries a SECOND box — the right half's crop of the combined art. (The
+    // render slices both halves from the source at render time; the single art.png below is
+    // just the left/primary crop, harmless for the rotated split layout.)
+    if let Some(b2) = bx2 {
+        side["box2"] = json!(b2);
+    }
     fs::write(card_dir.join("art.json"), side.to_string())?;
     crop_exact(&source, bx, &card_dir.join("art.png"))?;
 
     // DURABLE: record the choice in the editor DB (the source of truth). The sidecar lives
     // in the gitignored cache and can be wiped/re-picked; the DB override can't be trampled
     // — every render re-materialises the sidecar from it (see materialize_override).
-    let override_json = json!({"rel": rel, "box": bx, "artist": artist, "year": year}).to_string();
+    let mut override_val = json!({"rel": rel, "box": bx, "artist": artist, "year": year});
+    if let Some(b2) = bx2 {
+        override_val["box2"] = json!(b2);
+    }
+    let override_json = override_val.to_string();
     let w = Connection::open(editor_db)?;
     let _ = w.execute(
         "UPDATE cube_cards SET art_override=?2, updated_at=datetime('now') WHERE id=?1",
@@ -1951,6 +1998,24 @@ fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
         d["set"].as_str().unwrap_or("").to_string(),
         d["rarity"].as_str().unwrap_or("").to_string(),
     )
+}
+
+/// Ensure the OLDEST-first prints metadata (`<name>.json`) is cached — the file
+/// `card_set_rarity` and `card_flavor` read (data[0] = earliest printing). The 8ED path
+/// fetches only `__latest.json` (the newest high-DPI art), so without this its set-symbol
+/// and flavour sources would be missing. Metadata only — no art download. Same exact-name
+/// search as `scryfall_oldest`; a 404 (split / DFC names) just leaves the file absent.
+fn ensure_prints_meta(name: &str, art_dir: &Path) {
+    let meta = art_dir.join(format!("{}.json", sanitize(name)));
+    if meta.metadata().map(|m| m.len() >= 64).unwrap_or(false) {
+        return;
+    }
+    let _ = fs::create_dir_all(art_dir);
+    let url = format!(
+        "https://api.scryfall.com/cards/search?order=released&dir=asc&unique=prints&q={}",
+        percent(&format!("!\"{name}\" game:paper"))
+    );
+    let _ = curl_to_file(&url, &meta);
 }
 
 /// Cache + return the Scryfall set-symbol SVG — a clean MONOCOLOUR silhouette.
@@ -3158,16 +3223,91 @@ fn frame_file_8th(c: &Card) -> &'static str {
     }
 }
 
+/// The WUBRG colours an 8ED frame should show: a manual identity wins, else the cost's
+/// colours (`card_colors` already falls back to the `colors` field). Empty = colourless.
+fn frame_colors_8th(c: &Card) -> Vec<char> {
+    if c.ci_manual {
+        ci_letters(&c.color_identity)
+    } else {
+        card_colors(c)
+    }
+}
+
+/// Build (and cache) a COLOURED-ARTIFACT 8ED frame: the artifact base (`a.png`) with the
+/// card's colour overlaid on the "twin" bars — the title + type pills — through
+/// cardconjurer's region masks. A colour PAIR splits the twins left/right (left colour on
+/// the left half of each bar, right colour on the right); 3+ colours use the gold (`m`)
+/// frame. This is the real modern colour-artifact look — a metal card whose name/type bars
+/// carry its colour — instead of a plain artifact frame plus a colour-indicator dot. Cached
+/// at `<cache>/frames8_gen/a_<COLS>.png`; None (caller falls back to `a.png`) if an asset is
+/// missing.
+fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) -> Option<PathBuf> {
+    if cols.is_empty() {
+        return None;
+    }
+    let key: String = cols.iter().collect();
+    let out_dir = cache_dir.join("frames8_gen");
+    let _ = fs::create_dir_all(&out_dir);
+    let out = out_dir.join(format!("a_{key}.png"));
+    if out.exists() {
+        return Some(out);
+    }
+    let mut base = image::open(assets_dir.join("frames8/a.png")).ok()?.to_rgba8();
+    let (w, h) = base.dimensions();
+    let load_fit = |rel: String| -> Option<image::RgbaImage> {
+        let img = image::open(assets_dir.join(rel)).ok()?.to_rgba8();
+        Some(if img.dimensions() == (w, h) {
+            img
+        } else {
+            image::imageops::resize(&img, w, h, image::imageops::FilterType::Triangle)
+        })
+    };
+    let title = load_fit("frames8/mask_title.png".into())?;
+    let typ = load_fit("frames8/mask_type.png".into())?;
+    // Colour layer(s): 1 → that colour; 2 → left/right split twins; 3+ → gold.
+    let frames: Vec<image::RgbaImage> = if cols.len() >= 3 {
+        vec![load_fit("frames8/m.png".into())?]
+    } else {
+        cols.iter().filter_map(|ch| load_fit(color_frame_8th(*ch).into())).collect()
+    };
+    if frames.is_empty() {
+        return None;
+    }
+    // The masks are 1-bit palette PNGs (saturated-RED shape on a transparent/white field);
+    // treat a pixel as in-region if it's that opaque red — robust to either background.
+    let inmask = |m: &image::RgbaImage, x: u32, y: u32| -> bool {
+        let p = m.get_pixel(x, y).0;
+        p[3] > 64 && i32::from(p[0]) - i32::from(p[1]) > 60 && i32::from(p[0]) - i32::from(p[2]) > 60
+    };
+    let half = w / 2;
+    for y in 0..h {
+        for x in 0..w {
+            if inmask(&title, x, y) || inmask(&typ, x, y) {
+                let fr = if frames.len() == 2 {
+                    if x < half { &frames[0] } else { &frames[1] }
+                } else {
+                    &frames[0]
+                };
+                *base.get_pixel_mut(x, y) = *fr.get_pixel(x, y);
+            }
+        }
+    }
+    base.save(&out).ok()?;
+    Some(out)
+}
+
 /// The matching 8th P/T box art (overlaid at pack8th's PT bounds).
 fn pt_box_8th(c: &Card) -> &'static str {
     let t = c.type_line.to_lowercase();
     if t.contains("land") {
         return "frames8/pt/l.png";
     }
-    if t.contains("artifact") {
+    let cols = frame_colors_8th(c);
+    // A COLOURED artifact takes its colour's P/T box (matching its twin frame); a colourless
+    // artifact keeps the metal one.
+    if t.contains("artifact") && cols.is_empty() {
         return "frames8/pt/a.png";
     }
-    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
     match cols.as_slice() {
         [] => "frames8/pt/a.png",
         [one] => match one {
@@ -3296,7 +3436,74 @@ fn frame_for_cost_8th(mana_cost: &str) -> &'static str {
     }
 }
 
-fn build_split_html(halves: &[(String, String, String, String); 2], art_abs: &Path, assets_dir: &Path) -> String {
+/// Art-window aspect of ONE split half. The rotated stage is FACE_H×FACE_W; each of the two
+/// halves is FACE_H/2 wide × FACE_W tall, and its art window is 82.4% × 43.48% of that (the
+/// split template's `.sh-art`). The crop editor locks each of the two rectangles to this.
+fn split_window_aspect() -> f64 {
+    (0.824 * f64::from(FACE_H) / 2.0) / (0.4348 * f64::from(FACE_W))
+}
+
+/// Read the durable DB art-override JSON for a card (`{}` if none).
+fn art_override_json(db: &Connection, id: i64) -> Value {
+    db.query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| {
+        r.get::<_, String>(0)
+    })
+    .ok()
+    .filter(|s| !s.trim().is_empty())
+    .and_then(|s| serde_json::from_str(&s).ok())
+    .unwrap_or_else(|| json!({}))
+}
+
+/// A 4-tuple `[x,y,w,h]` box from a JSON value's named key (e.g. "box2").
+fn box_field(v: &Value, key: &str) -> Option<[f64; 4]> {
+    v[key].as_array().filter(|a| a.len() == 4).map(|a| {
+        let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+        [g(0), g(1), g(2), g(3)]
+    })
+}
+
+/// The two half-crop boxes for a split card (fractions of the combined source). The durable
+/// DB override wins, then the cache sidecar; absent → the source split 50/50 left|right.
+fn split_boxes(db: &Connection, id: i64, card_dir: &Path) -> ([f64; 4], [f64; 4]) {
+    let both = |v: &Value| -> Option<([f64; 4], [f64; 4])> {
+        Some((box_field(v, "box")?, box_field(v, "box2")?))
+    };
+    if let Some(b) = both(&art_override_json(db, id)) {
+        return b;
+    }
+    if let Some(b) = read_sidecar(card_dir).as_ref().and_then(both) {
+        return b;
+    }
+    ([0.0, 0.0, 0.5, 1.0], [0.5, 0.0, 0.5, 1.0])
+}
+
+/// The combined split-art source image: the durable override's chosen source if pinned, else
+/// the newest printing's art_crop (the two-half illustration the halves are sliced from).
+fn split_source(db: &Connection, id: i64, name: &str, cache_root: &Path, card_dir: &Path) -> Result<PathBuf> {
+    if let Some(rel) = art_override_json(db, id)["rel"].as_str() {
+        if let Ok(p) = resolve_source(name, cache_root, card_dir, rel) {
+            if p.exists() {
+                return Ok(p);
+            }
+        }
+    }
+    Ok(scryfall_latest(name, &cache_root.join("art"))?.0)
+}
+
+/// Crop the combined split art into the two half-window images `(left, right)` the rotated
+/// split layout shows — each an EXACT crop of its saved (or default left|right) box.
+fn split_half_arts(db: &Connection, id: i64, name: &str, cache_root: &Path, card_dir: &Path) -> Result<(PathBuf, PathBuf)> {
+    fs::create_dir_all(card_dir)?;
+    let source = split_source(db, id, name, cache_root, card_dir)?;
+    let (b1, b2) = split_boxes(db, id, card_dir);
+    let left = card_dir.join("split_l.png");
+    let right = card_dir.join("split_r.png");
+    crop_exact(&source, b1, &left)?;
+    crop_exact(&source, b2, &right)?;
+    Ok((left, right))
+}
+
+fn build_split_html(halves: &[(String, String, String, String); 2], art1_abs: &Path, art2_abs: &Path, assets_dir: &Path) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -3305,14 +3512,14 @@ fn build_split_html(halves: &[(String, String, String, String); 2], art_abs: &Pa
     } else {
         String::new()
     };
-    let art_uri = format!("file://{}", art_abs.display());
     let frame_uri = |cost: &str| format!("file://{}", assets_dir.join(frame_for_cost_8th(cost)).display());
     let pairs: Vec<(&str, String)> = vec![
         ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
         ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("ART1", art_uri.clone()), ("ART2", art_uri),
+        ("ART1", format!("file://{}", art1_abs.display())),
+        ("ART2", format!("file://{}", art2_abs.display())),
         ("FRAME1", frame_uri(&halves[0].1)), ("FRAME2", frame_uri(&halves[1].1)),
         ("N1", esc(&halves[0].0)), ("M1", manaify(&halves[0].1, &mana_base)),
         ("T1", esc(&halves[0].2)), ("R1", rules_html(&halves[0].3, "", &mana_base)),
@@ -3326,11 +3533,12 @@ fn build_split_html(halves: &[(String, String, String, String); 2], art_abs: &Pa
     html
 }
 
-fn compose_split_8th(halves: &[(String, String, String, String); 2], art_path: &Path, assets_dir: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: &Path, art2_path: &Path, assets_dir: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
-    let art_abs = fs::canonicalize(art_path)?;
-    let html = build_split_html(halves, &art_abs, &assets_abs);
+    let art1_abs = fs::canonicalize(art1_path)?;
+    let art2_abs = fs::canonicalize(art2_path)?;
+    let html = build_split_html(halves, &art1_abs, &art2_abs, &assets_abs);
     let html_path = std::env::temp_dir().join(format!("mtgbrain-split-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -3390,15 +3598,14 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         let is_land = t.contains("land");
         let is_artifact = t.contains("artifact");
         let ci = ci_letters(&c.color_identity);
-        let cost = card_colors(c);
-        let letters: Vec<char> = if c.ci_manual && !ci.is_empty() {
-            if is_land && ci.len() == 1 { vec![] } else { ci }
-        } else if is_land {
+        let letters: Vec<char> = if is_artifact && !is_land {
+            // Coloured artifacts now carry their colour in the TWIN frame (title/type bars),
+            // not a colour-indicator dot; colourless artifacts have nothing to show.
             vec![]
-        } else if is_artifact && !cost.is_empty() {
-            cost
-        } else if is_artifact && !ci.is_empty() {
-            ci
+        } else if c.ci_manual && !ci.is_empty() {
+            // A hand-declared identity the frame can't otherwise convey (e.g. a costless gold
+            // card). A mono-colour land already shows it through its tinted land frame.
+            if is_land && ci.len() == 1 { vec![] } else { ci }
         } else {
             vec![]
         };
@@ -3458,6 +3665,13 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("W", W.to_string()), ("H", H.to_string()),
         ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        // Font sizes as fractions of the FACE height (the Seventh frame's px() approach), so
+        // 8ED typography scales with the canvas instead of baking in fixed pixels.
+        ("TSZ", px(120.0 / f64::from(FACE_H))),  // card name (matrix)
+        ("MSZ", px(111.0 / f64::from(FACE_H))),  // mana cost
+        ("TYSZ", px(100.0 / f64::from(FACE_H))), // type line (matrix)
+        ("RSZ", px(101.0 / f64::from(FACE_H))),  // rules / flavour (mplantin)
+        ("PSZ", px(131.0 / f64::from(FACE_H))),  // power / toughness (matrix)
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("PTBOXDIV", ptboxdiv),
@@ -3520,7 +3734,19 @@ pub fn render_card_8th(
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
     let mut card = load_card(&db, id)?;
-    let frame_rel = assets_dir.join(frame_file_8th(&card));
+    // Colour-bearing artifacts get a composited TWIN frame (artifact metal + the card's
+    // colour on the title/type bars); everything else uses its self-contained colour/type
+    // frame. The colourless artifact, lands, and ordinary colours fall through to frame_file_8th.
+    let frame_rel = {
+        let t = card.type_line.to_lowercase();
+        let cols = frame_colors_8th(&card);
+        if t.contains("artifact") && !t.contains("land") && !cols.is_empty() {
+            colored_artifact_frame(assets_dir, cache_dir, &cols)
+                .unwrap_or_else(|| assets_dir.join(frame_file_8th(&card)))
+        } else {
+            assets_dir.join(frame_file_8th(&card))
+        }
+    };
     let ptbox_rel = assets_dir.join(pt_box_8th(&card));
     if !frame_rel.exists() {
         bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
@@ -3529,19 +3755,33 @@ pub fn render_card_8th(
     materialize_override(&db, cache_dir, id, &card.name, &dir)?;
     // 8ED back cube: fetch the LATEST high-DPI art, not the oldest printing.
     let art = acquire_art(&card.name, cache_dir, &dir, backend, true)?;
+    // SET SYMBOL + FLAVOUR come from the card's EARLIEST printing (its debut set's mark, the
+    // original flavour) — like the old-frame path — even though the ART above is the latest
+    // high-DPI scan. acquire_art only cached `__latest.json`, so make sure the oldest-first
+    // prints metadata (`<name>.json`, what card_set_rarity / card_flavor read) exists first.
+    // Editor-DB overrides still win (only fill when empty). The set symbol carries a white
+    // keyline so even a black common mark reads on the darkest frame.
+    ensure_prints_meta(&card.name, &cache_dir.join("art"));
     if card.flavor.is_empty() && !card.flavor_overridden {
         card.flavor = card_flavor(&card.name, &cache_dir.join("art"));
     }
-    // The back cube wears ONE consistent set symbol — the 8th-Edition mark — gold by
-    // default so it reads on every frame colour (a real card's per-set/rarity symbol would
-    // be invisible black-on-black for many of these).
-    card.set = "8ed".to_string();
-    if card.rarity.is_empty() { card.rarity = "rare".to_string(); }
+    if card.set.is_empty() || card.rarity.is_empty() {
+        let (set, rarity) = card_set_rarity(&card.name, &cache_dir.join("art"));
+        if card.set.is_empty() {
+            card.set = set;
+        }
+        if card.rarity.is_empty() {
+            card.rarity = rarity;
+        }
+    }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
     let out = dir.join("card8.png");
-    // SPLIT cards (Bind // Liberate) get the rotated two-half layout, not a normal frame.
+    // SPLIT cards (Bind // Liberate) get the rotated two-half layout: each half shows its OWN
+    // crop of the combined two-half illustration (the editor's two crop rectangles), not the
+    // same art twice.
     if let Some(halves) = split_faces(cache_dir, &card.name) {
-        compose_split_8th(&halves, &art.path, assets_dir, &out, chrome, &format!("8-{id}"))?;
+        let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
+        compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
         return Ok(out);
     }
     let set_svg = set_symbol_svg(&card.set, cache_dir);

@@ -175,6 +175,15 @@
   .cropbox .ne { right:-9px; top:-9px; cursor:nesw-resize; }
   .cropbox .sw { left:-9px; bottom:-9px; cursor:nesw-resize; }
   .cropbox .se { right:-9px; bottom:-9px; cursor:nwse-resize; }
+  /* SPLIT cards: two rectangles (left half + right half). Don't dim outside (two windows);
+     give the right-half box its own amber colour and highlight the one arrows will nudge. */
+  .cropbox-b { border-color:var(--amber); }
+  .cropbox-b .ch { background:var(--amber); }
+  .cropstage.split .cropbox { box-shadow:none; }
+  .cropstage.split .cropbox.active { border-width:3px; }
+  .cropbox .cbl { position:absolute; left:3px; top:3px; font:700 12px system-ui;
+     color:#fff; background:rgba(0,0,0,.55); padding:1px 6px; border-radius:4px;
+     pointer-events:none; white-space:nowrap; }
   .cropside { flex:none; width:360px; display:flex; flex-direction:column; gap:8px;
               position:relative; z-index:3; background:var(--panel); max-height:80vh; }
   .croplabel { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-top:6px; }
@@ -266,7 +275,7 @@ Combine: space = AND, OR, -negate, (parens).  e.g.  c:b t:creature -o:flying">
   <div class="cropdlg">
     <div class="crophead">
       <b id="croptitle">Adjust crop</b>
-      <span class="crophint">drag box to move · corners resize · arrows nudge (⇧ = bigger) · <kbd>Enter</kbd> save · <kbd>Esc</kbd> close</span>
+      <span class="crophint" id="crophint">drag box to move · corners resize · arrows nudge (⇧ = bigger) · <kbd>Enter</kbd> save · <kbd>Esc</kbd> close</span>
       <button id="cropx" class="cropclose">✕ close</button>
     </div>
     <div class="cropbody">
@@ -274,14 +283,22 @@ Combine: space = AND, OR, -negate, (parens).  e.g.  c:b t:creature -o:flying">
         <div id="cropstage" class="cropstage">
           <img id="cropimg" alt="underlying art">
           <div id="cropbox" class="cropbox">
+            <span class="cbl" id="cbl1"></span>
+            <span class="ch nw"></span><span class="ch ne"></span>
+            <span class="ch sw"></span><span class="ch se"></span>
+          </div>
+          <div id="cropbox2" class="cropbox cropbox-b" style="display:none">
+            <span class="cbl" id="cbl2"></span>
             <span class="ch nw"></span><span class="ch ne"></span>
             <span class="ch sw"></span><span class="ch se"></span>
           </div>
         </div>
       </div>
       <div class="cropside">
-        <div class="croplabel">Live preview — exactly what the card art window shows</div>
+        <div class="croplabel" id="croplivelabel">Live preview — exactly what the card art window shows</div>
         <div id="croplive" class="croplive"></div>
+        <div class="croplabel" id="croplive2label" style="display:none">Right half</div>
+        <div id="croplive2" class="croplive" style="display:none"></div>
         <div class="cropsrchead">
           <span class="croplabel" style="margin:0">Source — click a tile</span>
           <button id="cropfetch" class="cropfetchbtn" title="Download every MPCfill candidate (≥600 DPI) + alternative printings">⤓ Fetch all</button>
@@ -1023,7 +1040,11 @@ document.addEventListener("keydown", e => {
 // art; the boxed region is exactly what the card shows (WYSIWYG). Saving writes a manual
 // crop that every later render uses; "reset to auto" restores the heuristic pick.
 let cropOpen = false, cropMeta = null, cropAspect = 1.236, cropR = 1, cropDrag = null, cropCurRel = null;
-let cb = { x:0.1, y:0.12, w:0.78, h:0.5 };   // current box, fractions of the source image
+// SPLIT cards crop TWO rectangles (left half + right half) over the combined art; everything
+// else crops one. `cropBoxes` holds 1 or 2 boxes (fractions of the source); `cropActive` is
+// the box the arrow keys nudge.
+let cropSplit = false, cropActive = 0;
+let cropBoxes = [{ x:0.1, y:0.12, w:0.78, h:0.5 }];
 const clmp = (v,a,b) => Math.max(a, Math.min(b, v));
 
 async function openCrop(id){
@@ -1033,7 +1054,26 @@ async function openCrop(id){
   if (meta.error){ alert("Crop editor: "+meta.error); return; }
   cropMeta = meta;
   cropAspect = meta.window_aspect || 1.236;
-  document.getElementById("croptitle").textContent = "Adjust crop — " + (meta.name||"");
+  cropSplit = !!meta.split;
+  cropActive = 0;
+  const names = meta.split_names || [];
+  document.getElementById("croptitle").textContent =
+    (cropSplit ? "Adjust split crop — " : "Adjust crop — ") + (meta.name||"");
+  // Reveal / hide the 2nd rectangle + 2nd live preview; relabel for the two halves.
+  document.getElementById("cropstage").classList.toggle("split", cropSplit);
+  document.getElementById("cropbox2").style.display = cropSplit ? "block" : "none";
+  document.getElementById("croplive2label").style.display = cropSplit ? "block" : "none";
+  document.getElementById("croplive2").style.display = cropSplit ? "block" : "none";
+  document.getElementById("cbl1").textContent = cropSplit ? (names[0] || "Left") : "";
+  document.getElementById("cbl2").textContent = names[1] || "Right";
+  document.getElementById("croplivelabel").textContent = cropSplit
+    ? ("Left half" + (names[0] ? " — " + names[0] : ""))
+    : "Live preview — exactly what the card art window shows";
+  document.getElementById("croplive2label").textContent =
+    "Right half" + (names[1] ? " — " + names[1] : "");
+  document.getElementById("crophint").innerHTML = cropSplit
+    ? `click a box to select · drag to move · corners resize · arrows nudge the selected box · <kbd>Enter</kbd> save · <kbd>Esc</kbd> close`
+    : `drag box to move · corners resize · arrows nudge (⇧ = bigger) · <kbd>Enter</kbd> save · <kbd>Esc</kbd> close`;
   const saveB = document.getElementById("cropsave");
   const fetchB = document.getElementById("cropfetch");
   fetchB.disabled = false; fetchB.textContent = "⤓ Fetch all"; fetchB.onclick = cropFetchAll;
@@ -1045,7 +1085,7 @@ async function openCrop(id){
   cropMessage();
   document.getElementById("cropmodal").style.display = "flex";
   cropOpen = true;
-  loadCropSource(curRel, meta.box);
+  loadCropSource(curRel, meta.box, meta.box2);
 }
 
 // Status line; a blocklisted-artist warning takes priority.
@@ -1103,8 +1143,9 @@ function selectSource(rel){
   document.querySelectorAll("#cropsources .srctile").forEach(t =>
     t.classList.toggle("sel", t.dataset.rel === rel));
   cropMessage();
-  // Keep the saved box only for the source the crop currently came from; else default-centre.
-  loadCropSource(rel, rel === cropMeta.current_rel ? cropMeta.box : null);
+  // Keep the saved box(es) only for the source the crop currently came from; else default.
+  const keep = rel === cropMeta.current_rel;
+  loadCropSource(rel, keep ? cropMeta.box : null, keep ? cropMeta.box2 : null);
 }
 
 async function cropFetchAll(){
@@ -1119,19 +1160,29 @@ async function cropFetchAll(){
   fetchB.disabled = false; fetchB.textContent = "⤓ Fetch all";
 }
 
-function loadCropSource(rel, box){
+function loadCropSource(rel, box, box2){
   const img = document.getElementById("cropimg");
   img.onload = () => {
     cropR = img.clientWidth / img.clientHeight;       // display pixel aspect (= natural)
-    if (box && box.length === 4){
-      // Normalise the stored box to the window aspect, keeping its centre.
-      let [x,y,w,h] = box;
-      const h2 = w * cropR / cropAspect;
-      cb = clampBox({ x, y: y + (h - h2)/2, w, h: h2 });
+    // A stored box → normalise to the window aspect keeping its centre; else default-centre.
+    const fit = (b) => { let [x,y,w,h] = b; const h2 = w * cropR / cropAspect; return clampBox({ x, y: y + (h - h2)/2, w, h: h2 }); };
+    if (cropSplit){
+      // Two rectangles: each ≈ half the source at the half-window aspect, centred in its half.
+      let w = 0.46, h = w * cropR / cropAspect;
+      if (h > 0.94){ h = 0.94; w = h * cropAspect / cropR; }
+      const y = (1 - h)/2;
+      const defL = clampBox({ x: clmp(0.25 - w/2, 0, 1-w), y, w, h });
+      const defR = clampBox({ x: clmp(0.75 - w/2, 0, 1-w), y, w, h });
+      cropBoxes = [
+        (box  && box.length  === 4) ? fit(box)  : defL,
+        (box2 && box2.length === 4) ? fit(box2) : defR,
+      ];
+    } else if (box && box.length === 4){
+      cropBoxes = [ fit(box) ];
     } else {
       let w = 0.86, h = w * cropR / cropAspect;
       if (h > 0.94){ h = 0.94; w = h * cropAspect / cropR; }
-      cb = clampBox({ x:(1-w)/2, y:(1-h)/2, w, h });
+      cropBoxes = [ clampBox({ x:(1-w)/2, y:(1-h)/2, w, h }) ];
     }
     drawCrop();
   };
@@ -1149,34 +1200,48 @@ function clampBox(b){
 }
 
 function drawCrop(){
-  const img = document.getElementById("cropimg"), box = document.getElementById("cropbox");
+  const img = document.getElementById("cropimg");
   const iw = img.clientWidth, ih = img.clientHeight;
-  box.style.left = (cb.x*iw)+"px"; box.style.top = (cb.y*ih)+"px";
-  box.style.width = (cb.w*iw)+"px"; box.style.height = (cb.h*ih)+"px";
-  // Live preview: paint exactly the boxed sub-rectangle into a window-aspect tile.
-  const live = document.getElementById("croplive");
+  const ids = [["cropbox","croplive"], ["cropbox2","croplive2"]];
+  const n = cropSplit ? 2 : 1;
   const Wp = 264, Hp = Math.round(Wp / cropAspect);
-  live.style.width = Wp+"px"; live.style.height = Hp+"px";
-  live.style.backgroundImage = `url("${img.src}")`;
-  live.style.backgroundSize = `${Wp/cb.w}px ${Hp/cb.h}px`;
-  live.style.backgroundPosition = `${-cb.x*Wp/cb.w}px ${-cb.y*Hp/cb.h}px`;
+  for (let i = 0; i < n; i++){
+    const cb = cropBoxes[i];
+    const box = document.getElementById(ids[i][0]);
+    box.style.left = (cb.x*iw)+"px"; box.style.top = (cb.y*ih)+"px";
+    box.style.width = (cb.w*iw)+"px"; box.style.height = (cb.h*ih)+"px";
+    box.classList.toggle("active", cropSplit && i === cropActive);
+    // Live preview: paint exactly the boxed sub-rectangle into a window-aspect tile.
+    const live = document.getElementById(ids[i][1]);
+    live.style.width = Wp+"px"; live.style.height = Hp+"px";
+    live.style.backgroundImage = `url("${img.src}")`;
+    live.style.backgroundSize = `${Wp/cb.w}px ${Hp/cb.h}px`;
+    live.style.backgroundPosition = `${-cb.x*Wp/cb.w}px ${-cb.y*Hp/cb.h}px`;
+  }
 }
 
-function cropStartMove(e){
+function cropStartMove(e, idx){
   e.preventDefault(); e.stopPropagation();
+  cropActive = idx || 0;
+  const cb = cropBoxes[cropActive];
   const r = document.getElementById("cropimg").getBoundingClientRect();
-  cropDrag = { mode:"move", sx:e.clientX, sy:e.clientY, ox:cb.x, oy:cb.y, r };
+  cropDrag = { mode:"move", idx:cropActive, sx:e.clientX, sy:e.clientY, ox:cb.x, oy:cb.y, r };
+  drawCrop();
 }
-function cropStartResize(e, corner){
+function cropStartResize(e, corner, idx){
   e.preventDefault(); e.stopPropagation();
+  cropActive = idx || 0;
+  const cb = cropBoxes[cropActive];
   const r = document.getElementById("cropimg").getBoundingClientRect();
-  cropDrag = { mode:"resize", corner,
+  cropDrag = { mode:"resize", idx:cropActive, corner,
     ax: corner.includes("e") ? cb.x : cb.x + cb.w,   // anchor = the OPPOSITE corner
     ay: corner.includes("s") ? cb.y : cb.y + cb.h, r };
+  drawCrop();
 }
 function cropOnMove(e){
   if (!cropDrag) return;
   const r = cropDrag.r;
+  const cb = cropBoxes[cropDrag.idx];
   if (cropDrag.mode === "move"){
     const dx = (e.clientX-cropDrag.sx)/r.width, dy = (e.clientY-cropDrag.sy)/r.height;
     cb.x = clmp(cropDrag.ox+dx, 0, 1-cb.w);
@@ -1194,7 +1259,7 @@ function cropOnMove(e){
     w = Math.min(w, roomX); let h = w * cropR / cropAspect;
     if (h > roomY){ h = roomY; w = h * cropAspect / cropR; }
     w = Math.max(w, 0.04); h = w * cropR / cropAspect;
-    cb = { x: cropDrag.corner.includes("e") ? cropDrag.ax : cropDrag.ax - w,
+    cropBoxes[cropDrag.idx] = { x: cropDrag.corner.includes("e") ? cropDrag.ax : cropDrag.ax - w,
            y: cropDrag.corner.includes("s") ? cropDrag.ay : cropDrag.ay - h, w, h };
   }
   drawCrop();
@@ -1205,11 +1270,18 @@ async function cropSave(){
   if (document.getElementById("cropsave").disabled) return;
   const rel = cropCurRel || "@current";
   const id = cropMeta.id;
+  const b0 = cropBoxes[0];
+  const body = { rel, box:[b0.x, b0.y, b0.w, b0.h] };
+  // SPLIT: also send the right-half rectangle as box2.
+  if (cropSplit && cropBoxes[1]){
+    const b1 = cropBoxes[1];
+    body.box2 = [b1.x, b1.y, b1.w, b1.h];
+  }
   let r;
   try {
     r = await (await fetch(`/api/art/${id}`, { method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ rel, box:[cb.x, cb.y, cb.w, cb.h] }) })).json();
+      body: JSON.stringify(body) })).json();
   } catch(e){ document.getElementById("cropmsg").textContent = "Save failed: "+e; return; }
   if (r.error){ document.getElementById("cropmsg").textContent = "Save failed: "+r.error; return; }
   closeCrop(); selectId(id);                 // updated_at bumped → preview re-renders
@@ -1227,11 +1299,15 @@ function closeCrop(){
   cropOpen = false; cropDrag = null;
 }
 
-// Wire the crop modal once (its DOM is static).
+// Wire the crop modal once (its DOM is static). Both rectangles (box 0 + the split box 1)
+// share the same move/resize handlers, distinguished by their index.
 (function wireCrop(){
-  document.getElementById("cropbox").addEventListener("pointerdown", cropStartMove);
-  document.querySelectorAll("#cropbox .ch").forEach(h =>
-    h.addEventListener("pointerdown", e => cropStartResize(e, h.classList[1])));
+  [["cropbox",0], ["cropbox2",1]].forEach(([elId, idx]) => {
+    const el = document.getElementById(elId);
+    el.addEventListener("pointerdown", e => cropStartMove(e, idx));
+    el.querySelectorAll(".ch").forEach(h =>
+      h.addEventListener("pointerdown", e => cropStartResize(e, h.classList[1], idx)));
+  });
   document.addEventListener("pointermove", cropOnMove);
   document.addEventListener("pointerup", cropEndDrag);
   document.getElementById("cropsave").onclick = cropSave;
@@ -1241,12 +1317,14 @@ function closeCrop(){
   document.getElementById("cropmodal").addEventListener("mousedown", e => {
     if (e.target.id === "cropmodal") closeCrop();   // click backdrop to dismiss
   });
-  // Capture phase: the modal owns the keyboard while open.
+  // Capture phase: the modal owns the keyboard while open. Arrows nudge the ACTIVE box
+  // (the last one clicked; box 0 by default).
   document.addEventListener("keydown", e => {
     if (!cropOpen) return;
     if (e.key === "Escape"){ closeCrop(); e.preventDefault(); return; }
     if (e.key === "Enter"){ cropSave(); e.preventDefault(); return; }
     const step = e.shiftKey ? 0.01 : 0.002;
+    const cb = cropBoxes[cropActive] || cropBoxes[0];
     let moved = true;
     if (e.key === "ArrowLeft")  cb.x = clmp(cb.x-step, 0, 1-cb.w);
     else if (e.key === "ArrowRight") cb.x = clmp(cb.x+step, 0, 1-cb.w);

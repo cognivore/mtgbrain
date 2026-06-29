@@ -692,18 +692,23 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                             }
                         }
                     }
-                    // Save a hand-placed crop: {rel, box:[x,y,w,h]}.
+                    // Save a hand-placed crop: {rel, box:[x,y,w,h], box2?:[x,y,w,h]}.
+                    // box2 is a SPLIT card's RIGHT-half rectangle (the left half is `box`).
                     (Method::Post, [_], Some(id)) => {
                         let mut body = String::new();
                         req.as_reader().read_to_string(&mut body).ok();
                         let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
                         let rel = v["rel"].as_str().unwrap_or("@current").to_string();
-                        let bx = v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
-                            let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
-                            [g(0), g(1), g(2), g(3)]
-                        });
+                        let parse_box = |k: &str| {
+                            v[k].as_array().filter(|a| a.len() == 4).map(|a| {
+                                let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+                                [g(0), g(1), g(2), g(3)]
+                            })
+                        };
+                        let bx = parse_box("box");
+                        let bx2 = parse_box("box2");
                         match bx {
-                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, &rel, bx) {
+                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, &rel, bx, bx2) {
                                 Ok(()) => json_response(&json!({"ok": true})),
                                 Err(e) => json_response(&json!({"error": e.to_string()})),
                             },
