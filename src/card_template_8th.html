@@ -35,10 +35,22 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    matching colour frame, decorated with the same keyline + inner-border filter as the
    set symbol. Sits to the LEFT of the type line; type text is indented past it (TYPAD). */
 .colorind { position:absolute; overflow:visible; }
-.rules { left:10%; top:62.77%; width:80%; height:26.91%;
+.rules { left:%%RULESLEFT%%; top:62.77%; width:%%RULESWIDTH%%; height:26.91%;
    display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:101px; line-height:1.18; color:#0a0a0a;
    text-shadow:none; }
+/* adventure / prepare sub-box: the spell half, in the LEFT of the rules area; the creature's
+   own rules reflow into the right half (RULESLEFT/RULESWIDTH). Tinted inset + pinline. */
+.adv { position:absolute; left:10%; top:62.77%; width:40%; height:26.91%;
+   border:3px solid rgba(20,16,10,0.6); border-radius:7px; background:rgba(20,16,10,0.085);
+   padding:16px 18px; display:flex; flex-direction:column; color:#0a0a0a; }
+.adv-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.adv-title { font-family:'matrix'; font-size:70px; line-height:1; white-space:nowrap; overflow:hidden; }
+.adv-mana { font-size:60px; white-space:nowrap; flex:none; }
+.adv-type { font-family:'matrix'; font-size:58px; line-height:1; margin:8px 0 10px; white-space:nowrap; overflow:hidden; }
+.adv-rules { font-family:'mplantin'; font-size:70px; line-height:1.16; flex:1; overflow:hidden; }
+.adv-rules i { font-style:italic; }
+.adv .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .rules p { margin:0 0 .42em; width:100%; }
 .rules p:last-child { margin-bottom:0; }
 .rules i { font-style:italic; }
@@ -70,6 +82,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box type" id="ty">%%TYPE%%</div>
     %%SETSYM%%
     <div class="box rules" id="rules">%%RULES%%</div>
+    %%ADVBOX%%
     %%PT%%
     %%ILLUS%%
     <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
@@ -90,6 +103,9 @@ function fit(){
   fitOneLine(document.querySelector('.titlerow'), document.getElementById('nm'));
   fitBox(document.getElementById('ty'));
   fitBox(document.getElementById('rules'));
+  fitBox(document.querySelector('.adv-rules'));
+  fitOneLine(document.querySelector('.adv-title'));
+  fitOneLine(document.querySelector('.adv-type'));
   document.querySelectorAll('.info').forEach(function(el){ fitOneLine(el, el.querySelector('span')); });
   const pt = document.querySelector('.pt');
   if(pt) fitOneLine(pt, pt.querySelector('span'));

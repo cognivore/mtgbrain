@@ -621,11 +621,27 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
             "https://api.scryfall.com/cards/search?order=released&dir=desc&unique=prints&q={}",
             percent(&format!("!\"{name}\" game:paper"))
         );
-        curl_to_file(&meta_url, &meta_file)?;
+        // Scryfall 404s a no-match exact search (e.g. a DFC FRONT-face name like "Value
+        // Town"); the `named?exact=` endpoint resolves it. Fall back tolerantly.
+        if curl_to_file(&meta_url, &meta_file).is_err() {
+            let named_url = format!("https://api.scryfall.com/cards/named?exact={}", percent(name));
+            curl_to_file(&named_url, &meta_file)?;
+        }
     }
-    let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
+    let mut v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
         .with_context(|| format!("parsing Scryfall metadata for {name}"))?;
-    let prints = v["data"].as_array().with_context(|| format!("no Scryfall print found for {name}"))?;
+    // Normalise to a `data` array — a single `named` card has no `data` wrapper.
+    let prints: Vec<Value> = match v["data"].as_array() {
+        Some(arr) if !arr.is_empty() => arr.clone(),
+        _ if v["name"].is_string() => vec![v.clone()],
+        _ => vec![],
+    };
+    // If it came from `named` (single card), rewrite the cache as {data:[card]} so the
+    // adventure-face reader (expects data[0].card_faces) sees it too.
+    if v["data"].as_array().map_or(true, |a| a.is_empty()) && !prints.is_empty() {
+        v = json!({ "data": prints.clone() });
+        let _ = fs::write(&meta_file, v.to_string());
+    }
     let art_crop_of = |c: &Value| -> Option<String> {
         c["image_uris"]["art_crop"]
             .as_str()
@@ -3212,7 +3228,30 @@ fn set_symbol_svg_html(set_svg: Option<&Path>, rarity: &str, center_frac: f64, r
         .unwrap_or_default()
 }
 
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>) -> String {
+/// The spell ("adventure" / "prepare") half of a two-part card — (title, mana, type, rules) —
+/// read from the cached Scryfall metadata. `front` is the main face's name (what the editor
+/// card renders); the other face is the sub-spell. None for normal single-part cards.
+fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(String, String, String, String)> {
+    let meta = cache_dir.join("art").join(format!("{}__latest.json", sanitize(card_name)));
+    let v: Value = serde_json::from_str(&fs::read_to_string(meta).ok()?).ok()?;
+    let card = v["data"].as_array()?.first()?;
+    if !matches!(card["layout"].as_str().unwrap_or(""), "adventure" | "prepare") {
+        return None;
+    }
+    let faces = card["card_faces"].as_array()?;
+    if faces.len() < 2 {
+        return None;
+    }
+    let other = faces.iter().find(|f| f["name"].as_str() != Some(front))?;
+    Some((
+        other["name"].as_str().unwrap_or_default().to_string(),
+        other["mana_cost"].as_str().unwrap_or_default().to_string(),
+        other["type_line"].as_str().unwrap_or_default().to_string(),
+        other["oracle_text"].as_str().unwrap_or_default().to_string(),
+    ))
+}
+
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: Option<&(String, String, String, String)>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -3300,8 +3339,20 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
             (svg, format!("{pad}px"))
         },
     );
+    // adventure / prepare sub-box: the spell half on the LEFT, creature rules reflow right.
+    let (advbox, rules_left, rules_width) = match adv {
+        Some((title, mana, ty, rules)) => {
+            let html = format!(
+                r#"<div class="adv"><div class="adv-head"><span class="adv-title">{}</span><span class="adv-mana">{}</span></div><div class="adv-type">{}</div><div class="adv-rules">{}</div></div>"#,
+                esc(title), manaify(mana, &mana_base), esc(ty), rules_html(rules, "", &mana_base),
+            );
+            (html, "53%".to_string(), "37%".to_string())
+        }
+        None => (String::new(), "10%".to_string(), "80%".to_string()),
+    };
     let pairs: Vec<(&str, String)> = vec![
         ("COLORIND", colorind), ("TYPAD", typad),
+        ("ADVBOX", advbox), ("RULESLEFT", rules_left), ("RULESWIDTH", rules_width),
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),
@@ -3331,8 +3382,10 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>,
+    adv: Option<&(String, String, String, String)>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
@@ -3340,7 +3393,7 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref());
+    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), adv);
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -3388,8 +3441,9 @@ pub fn render_card_8th(
     if card.rarity.is_empty() { card.rarity = "rare".to_string(); }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
     let set_svg = set_symbol_svg(&card.set, cache_dir);
+    let adv = adventure_face(cache_dir, &card.name, &card.name);
     let out = dir.join("card8.png");
-    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     Ok(out)
 }
 
