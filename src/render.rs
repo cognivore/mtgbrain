@@ -3551,8 +3551,65 @@ fn leveler_parse(c: &Card) -> Option<Leveler> {
     })
 }
 
+/// One chapter band of a Saga: the lore-counter number(s) it fires on (e.g. ["I"] or ["II","III"])
+/// and the ability text. Several numbers means the same effect repeats at each of those chapters.
+struct SagaChapter {
+    nums: Vec<String>,
+    text: String,
+}
+
+/// A parsed Saga (Dominaria-style enchantment): the parenthetical reminder ("As this Saga
+/// enters …") and the ordered chapter bands. `None` for non-Sagas.
+struct Saga {
+    reminder: String,
+    chapters: Vec<SagaChapter>,
+}
+
+/// Roman-numeral chapter label (I, II, III, IV, …) — the only thing valid left of a chapter's dash.
+fn is_roman(s: &str) -> bool {
+    !s.is_empty() && s.chars().all(|c| matches!(c, 'I' | 'V' | 'X'))
+}
+
+/// Parse a Saga from a card whose type line carries the "Saga" subtype. The Scryfall shape is a
+/// leading parenthetical reminder, then one line per chapter group: `I, II — <effect>` (em dash).
+/// A line that is neither the reminder nor a chapter header is treated as a continuation of the
+/// previous chapter's text.
+fn saga_parse(c: &Card) -> Option<Saga> {
+    if !c.type_line.to_lowercase().contains("saga") {
+        return None;
+    }
+    let text = c.oracle_text.replace("\r\n", "\n");
+    let mut reminder = String::new();
+    let mut chapters: Vec<SagaChapter> = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        if reminder.is_empty() && chapters.is_empty() && line.starts_with('(') {
+            reminder = line.to_string();
+            continue;
+        }
+        if let Some(idx) = line.find('—') {
+            let lhs = line[..idx].trim();
+            let rhs = line[idx + '—'.len_utf8()..].trim();
+            let nums: Vec<String> =
+                lhs.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            if !nums.is_empty() && nums.iter().all(|n| is_roman(n)) {
+                chapters.push(SagaChapter { nums, text: rhs.to_string() });
+                continue;
+            }
+        }
+        if let Some(last) = chapters.last_mut() {
+            last.text.push('\n');
+            last.text.push_str(line);
+        }
+    }
+    if chapters.is_empty() {
+        return None;
+    }
+    Some(Saga { reminder, chapters })
+}
+
 const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
 const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
+const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -4004,6 +4061,99 @@ fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, ass
     Ok(())
 }
 
+fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, saga: &Saga) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2018".to_string() } else { art.year.clone() };
+    let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
+        None => "78%".to_string(),
+    };
+    // The reminder strip (small italics) sits atop the chapter column, then one band per chapter
+    // group: its stone roman-numeral marker(s) on the lore-spine + the ability text.
+    let mut rows = String::new();
+    if !saga.reminder.is_empty() {
+        rows.push_str(&format!(r#"<div class="saga-reminder">{}</div>"#, manaify(&saga.reminder, &mana_base)));
+    }
+    for ch in &saga.chapters {
+        let chips: String = ch.nums.iter()
+            .map(|n| format!(r#"<span class="saga-chip">{}</span>"#, esc(n)))
+            .collect();
+        rows.push_str(&format!(
+            r#"<div class="saga-row"><div class="saga-chips">{}</div><div class="saga-body">{}</div></div>"#,
+            chips, rules_html(&ch.text, "", &mana_base),
+        ));
+    }
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))),
+        ("SBSZ", px(84.0 / f64::from(FACE_H))), ("SRSZ", px(52.0 / f64::from(FACE_H))),
+        ("CHSZ", px(60.0 / f64::from(FACE_H))),
+        ("TYW", tyw),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
+        ("SAGAROWS", rows),
+        ("ILLUS", illus), ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH_SAGA.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compose_saga_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, saga: &Saga, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html_8th_saga(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), saga);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-saga8-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
@@ -4086,13 +4236,16 @@ pub fn render_card_8th(
     // sub-frame). Everything else is the ordinary 8ED layout. Set-symbol/adventure only single-face.
     let split = split_faces(cache_dir, &card.name);
     let leveler = if split.is_some() { None } else { leveler_parse(&card) };
+    let saga = if split.is_some() || leveler.is_some() { None } else { saga_parse(&card) };
     let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
-    let adv = if split.is_some() || leveler.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
+    let adv = if split.is_some() || leveler.is_some() || saga.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
     } else if let Some(lvl) = leveler {
         compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+    } else if let Some(sg) = saga {
+        compose_saga_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &sg, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     }
