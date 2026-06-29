@@ -1,0 +1,88 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="%%MANA_CSS%%">
+<style>
+@font-face { font-family:'matrix'; src:url('%%MATRIX%%'); }
+@font-face { font-family:'mplantin'; src:url('%%MPLANTIN%%'); }
+%%ITALIC_FACE%%
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
+.face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; }
+.layer { position:absolute; left:0; top:0; width:100%; height:100%; }
+.art { position:absolute; left:8.8%; top:12%; width:82.4%; height:43.48%;
+       background-size:cover; background-position:center; }
+.frame { background-size:100% 100%; }
+.box { position:absolute; color:#0a0a0a; text-shadow:none; }
+.titlerow { left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex; align-items:center; }
+.titlerow .nm { font-family:'matrix'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+.manacost { left:4%; right:8.8%; top:6.29%; height:4.29%; font-size:%%MSZ%%px;
+   display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
+.type { left:10%; top:57.2%; width:%%TYW%%; height:3.85%; padding-left:%%TYPAD%%;
+   display:flex; align-items:center; font-family:'matrix'; font-size:%%TYSZ%%px; line-height:1;
+   white-space:nowrap; overflow:hidden; }
+.colorind { position:absolute; overflow:visible; }
+.setsym { position:absolute; right:7%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
+/* ---- LEVELER section: a "Level up {cost}" band then one band per LEVEL tier; each band shows
+   its own P/T in a cream 8ED-style pill on the right. The bands are split by thin keylines, the
+   way the Rise-of-the-Eldrazi leveler frame divides its tiers — rendered in the 8ED idiom. ---- */
+.lvl { position:absolute; left:9.2%; top:61.9%; width:81.6%; height:27.9%;
+   display:flex; flex-direction:column; color:#0a0a0a; }
+.lvl-band { flex:1 1 0; position:relative; border-top:3px solid #0d0c08; padding:6px 134px 2px 6px; overflow:hidden; }
+.lvl-band:first-child { border-top:none; }
+.lvl-up { font-family:'mplantin'; font-size:%%LSZ%%px; line-height:1.12; }
+.lvl-up .lu-rem { font-style:italic; }
+.lvl-badge { font-family:'matrix'; font-size:%%LBSZ%%px; line-height:1.05; display:block; margin-bottom:3px; white-space:nowrap; }
+.lvl-abil { font-family:'mplantin'; font-size:%%LSZ%%px; line-height:1.14; }
+.lvl-abil p { margin:0 0 .28em; }
+.lvl-abil p:last-child { margin-bottom:0; }
+.lvl-abil i { font-style:italic; }
+.lvl-pt { position:absolute; right:2px; top:50%; transform:translateY(-50%);
+   font-family:'matrix'; font-size:%%LBSZ%%px; line-height:1; text-align:center; width:122px; padding:7px 0;
+   background:linear-gradient(180deg,#fdfcf6 0%,#cfc8b5 100%); border:3px solid #0d0c08; border-radius:11px;
+   font-feature-settings:"smcp"; box-shadow:0 2px 4px rgba(0,0,0,0.32); }
+.lvl .ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em; margin:0 0.02em;
+   filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+.info { position:absolute; left:9.4%; width:81.07%; text-align:left; color:%%INFOINK%%;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
+.illus { top:92.0%; font-family:'matrix'; font-size:46px; }
+.legal { top:93.3%; font-size:30px; letter-spacing:.01em; }
+.ms-img { width:0.78em; height:0.78em; vertical-align:-0.14em; filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+.manacost .ms-img { margin-left:0.07em; vertical-align:-0.02em; }
+.manacost span { display:inline-flex; align-items:center; line-height:1; }
+</style></head>
+<body>
+  <div class="face">
+    <div class="art" style="background-image:url('%%ART%%')"></div>
+    <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
+    %%COLORIND%%
+    <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
+    <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
+    <div class="box type" id="ty">%%TYPE%%</div>
+    %%SETSYM%%
+    <div class="lvl" id="lvl">%%LVLBANDS%%</div>
+    %%ILLUS%%
+    <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
+  </div>
+<script>
+function fitOne(el, span){ if(!el) return; const t = span || el;
+  let s = parseFloat(getComputedStyle(t).fontSize);
+  for(let i=0; i<120 && t.scrollWidth > el.clientWidth && s > 8; i++){ s -= 1; t.style.fontSize = s + 'px'; } }
+function fitBox(el){ if(!el) return; let s = parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0; i<140 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) && s > 10; i++){ s -= 1; el.style.fontSize = s + 'px'; } }
+function fit(){
+  fitOne(document.querySelector('.titlerow'), document.getElementById('nm'));
+  fitBox(document.getElementById('ty'));
+  // Each band is overflow:hidden and a fixed flex share, so it clips internally without growing
+  // the container. Shrink ALL leveler text uniformly until NO band's content overflows its band.
+  var bands = Array.prototype.slice.call(document.querySelectorAll('.lvl-band'));
+  function overflow(){ return bands.some(function(b){ return b.scrollHeight > b.clientHeight + 1; }); }
+  for(var i=0; i<300 && overflow(); i++){
+    document.querySelectorAll('.lvl-up,.lvl-abil,.lvl-badge').forEach(function(e){
+      var s = parseFloat(getComputedStyle(e).fontSize); if(s > 8) e.style.fontSize = (s - 1) + 'px'; });
+  }
+  document.querySelectorAll('.info').forEach(function(el){ fitOne(el, el.querySelector('span')); });
+  document.documentElement.setAttribute('data-fit','done');
+}
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); } else { window.onload = fit; }
+setTimeout(fit, 1200);
+</script>
+</body></html>

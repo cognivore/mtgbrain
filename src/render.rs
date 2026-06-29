@@ -3425,7 +3425,75 @@ fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(Str
     ))
 }
 
+/// One LEVEL tier of a leveler card: the level range (e.g. "1-4", "5+"), its P/T, and abilities.
+struct LevelTier {
+    range: String,
+    pt: String,
+    abilities: String,
+}
+
+/// A parsed Level-up creature (Rise of the Eldrazi "leveler"): the level-up cost + reminder, any
+/// base-level abilities, the base P/T, and the level tiers. None for non-levelers.
+struct Leveler {
+    cost: String,
+    reminder: String,
+    base_abilities: String,
+    base_pt: String,
+    tiers: Vec<LevelTier>,
+}
+
+/// Parse a leveler from a card's oracle text. The Scryfall shape is:
+///   `Level up {cost} ({cost}: …reminder…)`  then repeating  `LEVEL x-y` / `p/t` / abilities.
+/// The base P/T is the card's own printed power/toughness.
+fn leveler_parse(c: &Card) -> Option<Leveler> {
+    let text = c.oracle_text.replace("\r\n", "\n");
+    let lines: Vec<String> = text.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
+    if lines.is_empty() || !lines[0].starts_with("Level up") {
+        return None;
+    }
+    let after = lines[0].trim_start_matches("Level up").trim();
+    let (cost, reminder) = match after.find(" (") {
+        Some(i) => (after[..i].trim().to_string(), after[i..].trim().to_string()),
+        None => (after.to_string(), String::new()),
+    };
+    let mut idx = 1;
+    let mut base: Vec<String> = Vec::new();
+    while idx < lines.len() && !lines[idx].starts_with("LEVEL ") {
+        base.push(lines[idx].clone());
+        idx += 1;
+    }
+    let mut tiers: Vec<LevelTier> = Vec::new();
+    while idx < lines.len() {
+        let range = lines[idx].trim_start_matches("LEVEL").trim().to_string();
+        idx += 1;
+        let pt = if idx < lines.len() && lines[idx].contains('/') && lines[idx].len() <= 9 {
+            let p = lines[idx].clone();
+            idx += 1;
+            p
+        } else {
+            String::new()
+        };
+        let mut abil: Vec<String> = Vec::new();
+        while idx < lines.len() && !lines[idx].starts_with("LEVEL ") {
+            abil.push(lines[idx].clone());
+            idx += 1;
+        }
+        tiers.push(LevelTier { range, pt, abilities: abil.join("\n") });
+    }
+    if tiers.is_empty() {
+        return None;
+    }
+    Some(Leveler {
+        cost,
+        reminder,
+        base_abilities: base.join("\n"),
+        base_pt: format!("{}/{}", c.power, c.toughness),
+        tiers,
+    })
+}
+
 const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
+const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -3766,6 +3834,104 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
     Ok(())
 }
 
+/// Build the LEVELER (Level-up creature) HTML in 8ED style: normal title/art/type/set-symbol,
+/// then a level section — a "Level up {cost}" band plus one band per LEVEL tier, each carrying
+/// its own P/T pill on the right. (No bottom-right P/T box: every level's P/T is in its band.)
+fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
+    let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
+        None => "78%".to_string(),
+    };
+    // BASE band: "Level up {cost} (reminder)" + any base-level abilities + the base P/T pill.
+    let mut bands = String::from(r#"<div class="lvl-band"><div class="lvl-up">Level up "#);
+    bands.push_str(&manaify(&lvl.cost, &mana_base));
+    if !lvl.reminder.is_empty() {
+        bands.push_str(&format!(r#" <span class="lu-rem">{}</span>"#, manaify(&lvl.reminder, &mana_base)));
+    }
+    bands.push_str("</div>");
+    if !lvl.base_abilities.trim().is_empty() {
+        bands.push_str(&format!(r#"<div class="lvl-abil">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
+    }
+    bands.push_str(&format!(r#"<span class="lvl-pt">{}</span></div>"#, esc(&lvl.base_pt)));
+    // One band per LEVEL tier: range badge, abilities, P/T pill.
+    for t in &lvl.tiers {
+        bands.push_str(&format!(
+            r#"<div class="lvl-band"><div class="lvl-badge">LEVEL {}</div><div class="lvl-abil">{}</div><span class="lvl-pt">{}</span></div>"#,
+            esc(&t.range), rules_html(&t.abilities, "", &mana_base), esc(&t.pt),
+        ));
+    }
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))),
+        ("LSZ", px(86.0 / f64::from(FACE_H))), ("LBSZ", px(66.0 / f64::from(FACE_H))),
+        ("TYW", tyw), ("TYPAD", "0".to_string()), ("COLORIND", String::new()),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
+        ("LVLBANDS", bands),
+        ("ILLUS", illus), ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH_LEVEL.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
+    frame_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let frame_abs = fs::canonicalize(frame_rel)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
+    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
+    let html = build_html_8th_level(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-level8-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
@@ -3812,7 +3978,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 3,
+            "frame_kind": "eighth", "v": 4,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
@@ -3843,14 +4009,18 @@ pub fn render_card_8th(
         }
     }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
-    // SPLIT cards (Bind // Liberate) get the rotated two-half layout: each half shows its OWN
-    // crop of the combined two-half illustration. Adventure / set-symbol only apply single-face.
+    // Three special single-face layouts, mutually exclusive: SPLIT (rotated two halves, each its
+    // own crop), LEVELER (Level-up creature → tiered level bands), and ADVENTURE/PREPARE (spell
+    // sub-frame). Everything else is the ordinary 8ED layout. Set-symbol/adventure only single-face.
     let split = split_faces(cache_dir, &card.name);
+    let leveler = if split.is_some() { None } else { leveler_parse(&card) };
     let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
-    let adv = if split.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
+    let adv = if split.is_some() || leveler.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
+    } else if let Some(lvl) = leveler {
+        compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     }
