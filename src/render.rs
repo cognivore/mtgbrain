@@ -621,11 +621,14 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
             "https://api.scryfall.com/cards/search?order=released&dir=desc&unique=prints&q={}",
             percent(&format!("!\"{name}\" game:paper"))
         );
-        // Scryfall 404s a no-match exact search (e.g. a DFC FRONT-face name like "Value
-        // Town"); the `named?exact=` endpoint resolves it. Fall back tolerantly.
+        // Scryfall 404s a no-match exact search (a DFC FRONT name like "Value Town", or a
+        // SPLIT combined name like "Bind // Liberate"); resolve via named?exact then ?fuzzy.
         if curl_to_file(&meta_url, &meta_file).is_err() {
-            let named_url = format!("https://api.scryfall.com/cards/named?exact={}", percent(name));
-            curl_to_file(&named_url, &meta_file)?;
+            let exact = format!("https://api.scryfall.com/cards/named?exact={}", percent(name));
+            let fuzzy = format!("https://api.scryfall.com/cards/named?fuzzy={}", percent(name));
+            if curl_to_file(&exact, &meta_file).is_err() {
+                curl_to_file(&fuzzy, &meta_file)?;
+            }
         }
     }
     let mut v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
@@ -3251,6 +3254,101 @@ fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(Str
     ))
 }
 
+const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
+
+/// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
+/// from the cached card_faces. None for non-split cards.
+fn split_faces(cache_dir: &Path, name: &str) -> Option<[(String, String, String, String); 2]> {
+    let meta = cache_dir.join("art").join(format!("{}__latest.json", sanitize(name)));
+    let v: Value = serde_json::from_str(&fs::read_to_string(meta).ok()?).ok()?;
+    let card = v["data"].as_array()?.first()?;
+    if card["layout"].as_str() != Some("split") {
+        return None;
+    }
+    let faces = card["card_faces"].as_array()?;
+    if faces.len() < 2 {
+        return None;
+    }
+    let face = |i: usize| {
+        let f = &faces[i];
+        (
+            f["name"].as_str().unwrap_or_default().to_string(),
+            f["mana_cost"].as_str().unwrap_or_default().to_string(),
+            f["type_line"].as_str().unwrap_or_default().to_string(),
+            f["oracle_text"].as_str().unwrap_or_default().to_string(),
+        )
+    };
+    Some([face(0), face(1)])
+}
+
+/// 8ED colour frame chosen from a mana-cost string's WUBRG pips.
+fn frame_for_cost_8th(mana_cost: &str) -> &'static str {
+    let mut cols: Vec<char> = Vec::new();
+    for ch in mana_cost.chars() {
+        if "WUBRG".contains(ch) && !cols.contains(&ch) {
+            cols.push(ch);
+        }
+    }
+    match cols.len() {
+        0 => "frames8/c.png",
+        1 => color_frame_8th(cols[0]),
+        _ => "frames8/m.png",
+    }
+}
+
+fn build_split_html(halves: &[(String, String, String, String); 2], art_abs: &Path, assets_dir: &Path) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let art_uri = format!("file://{}", art_abs.display());
+    let frame_uri = |cost: &str| format!("file://{}", assets_dir.join(frame_for_cost_8th(cost)).display());
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("ART1", art_uri.clone()), ("ART2", art_uri),
+        ("FRAME1", frame_uri(&halves[0].1)), ("FRAME2", frame_uri(&halves[1].1)),
+        ("N1", esc(&halves[0].0)), ("M1", manaify(&halves[0].1, &mana_base)),
+        ("T1", esc(&halves[0].2)), ("R1", rules_html(&halves[0].3, "", &mana_base)),
+        ("N2", esc(&halves[1].0)), ("M2", manaify(&halves[1].1, &mana_base)),
+        ("T2", esc(&halves[1].2)), ("R2", rules_html(&halves[1].3, "", &mana_base)),
+    ];
+    let mut html = TEMPLATE_8TH_SPLIT.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+fn compose_split_8th(halves: &[(String, String, String, String); 2], art_path: &Path, assets_dir: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let assets_abs = fs::canonicalize(assets_dir)?;
+    let art_abs = fs::canonicalize(art_path)?;
+    let html = build_split_html(halves, &art_abs, &assets_abs);
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-split-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars", "--no-default-browser-check",
+            "--no-first-run", "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw", "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"), &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (split)");
+    }
+    Ok(())
+}
+
 fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: Option<&(String, String, String, String)>) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
@@ -3440,9 +3538,14 @@ pub fn render_card_8th(
     card.set = "8ed".to_string();
     if card.rarity.is_empty() { card.rarity = "rare".to_string(); }
     let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let out = dir.join("card8.png");
+    // SPLIT cards (Bind // Liberate) get the rotated two-half layout, not a normal frame.
+    if let Some(halves) = split_faces(cache_dir, &card.name) {
+        compose_split_8th(&halves, &art.path, assets_dir, &out, chrome, &format!("8-{id}"))?;
+        return Ok(out);
+    }
     let set_svg = set_symbol_svg(&card.set, cache_dir);
     let adv = adventure_face(cache_dir, &card.name, &card.name);
-    let out = dir.join("card8.png");
     compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     Ok(out)
 }

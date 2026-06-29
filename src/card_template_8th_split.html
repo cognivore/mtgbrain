@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="%%MANA_CSS%%">
+<style>
+@font-face { font-family:'matrix'; src:url('%%MATRIX%%'); }
+@font-face { font-family:'mplantin'; src:url('%%MPLANTIN%%'); }
+%%ITALIC_FACE%%
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
+.face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; background:#000; }
+/* the card is read ROTATED 90°: a 2800×2000 landscape stage holding two half-cards,
+   rotated to fill the portrait face (turn the physical card clockwise to read). */
+.srot { position:absolute; left:50%; top:50%; width:%%FH%%px; height:%%FW%%px;
+        transform:translate(-50%,-50%) rotate(90deg); display:flex; }
+.sh { width:50%; height:100%; position:relative; }
+.sh-in { width:100%; height:100%; position:relative; overflow:hidden; }
+/* each half uses the real 8ED colour-frame PNG + 8ED geometry (the half is card-aspect) */
+.sh-art { position:absolute; left:8.8%; top:12%; width:82.4%; height:43.48%;
+          background-size:cover; background-position:center; }
+.sh-frame { position:absolute; left:0; top:0; width:100%; height:100%;
+            background-size:100% 100%; background-repeat:no-repeat; pointer-events:none; }
+.sh-title { position:absolute; left:9%; top:6.29%; width:82.4%; height:4.29%; display:flex;
+            align-items:center; justify-content:space-between; gap:8px;
+            font-family:'matrix'; font-size:86px; color:#0a0a0a; white-space:nowrap; }
+.sh-title .nm { overflow:hidden; }
+.sh-title .mc { font-size:80px; flex:none; }
+.sh-type { position:absolute; left:10%; top:57.2%; width:78%; height:3.85%; display:flex; align-items:center;
+           font-family:'matrix'; font-size:77px; color:#0a0a0a; white-space:nowrap; overflow:hidden; }
+.sh-rules { position:absolute; left:10%; top:62.77%; width:80%; height:31%; font-family:'mplantin';
+            font-size:76px; line-height:1.16; color:#0a0a0a; overflow:hidden; }
+.sh-rules i { font-style:italic; }
+.ms-img { width:0.78em; height:0.78em; vertical-align:-0.16em; margin:0 0.02em;
+          filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+</style></head>
+<body>
+  <div class="face"><div class="srot">
+    <div class="sh"><div class="sh-in">
+      <div class="sh-art" style="background-image:url('%%ART1%%')"></div>
+      <div class="sh-frame" style="background-image:url('%%FRAME1%%')"></div>
+      <div class="sh-title"><span class="nm" id="n1">%%N1%%</span><span class="mc">%%M1%%</span></div>
+      <div class="sh-type" id="t1">%%T1%%</div>
+      <div class="sh-rules" id="r1">%%R1%%</div>
+    </div></div>
+    <div class="sh"><div class="sh-in">
+      <div class="sh-art" style="background-image:url('%%ART2%%')"></div>
+      <div class="sh-frame" style="background-image:url('%%FRAME2%%')"></div>
+      <div class="sh-title"><span class="nm" id="n2">%%N2%%</span><span class="mc">%%M2%%</span></div>
+      <div class="sh-type" id="t2">%%T2%%</div>
+      <div class="sh-rules" id="r2">%%R2%%</div>
+    </div></div>
+  </div></div>
+<script>
+function fitBox(el){ if(!el) return; let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<140 && (el.scrollHeight>el.clientHeight||el.scrollWidth>el.clientWidth)&&s>10;i++){s-=1;el.style.fontSize=s+'px';} }
+function fitOne(el){ if(!el) return; let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<120 && el.scrollWidth>el.clientWidth&&s>8;i++){s-=1;el.style.fontSize=s+'px';} }
+function fit(){ ['r1','r2'].forEach(id=>fitBox(document.getElementById(id)));
+  ['n1','n2','t1','t2'].forEach(id=>fitOne(document.getElementById(id)));
+  document.documentElement.setAttribute('data-fit','done'); }
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}else{window.onload=fit;}
+setTimeout(fit,1200);
+</script>
+</body></html>
