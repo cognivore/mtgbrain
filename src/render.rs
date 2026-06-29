@@ -3380,6 +3380,28 @@ fn set_symbol_svg_html(set_svg: Option<&Path>, rarity: &str, center_frac: f64, r
         .unwrap_or_default()
 }
 
+/// The on-card width (percent of FACE_W) the set symbol will occupy — mirrors the w_px sizing
+/// inside `set_symbol_svg_html`. Used to reserve type-line space so a long type collapses
+/// (shrinks to fit) instead of sliding under the symbol — the Seventh-frame rule. None → no
+/// symbol on the bar, so the type may use the full width.
+fn set_symbol_wfrac(set_svg: Option<&Path>) -> Option<f64> {
+    set_svg
+        .and_then(|p| fs::read(p).ok())
+        .and_then(|bytes| set_symbol_ink(&bytes))
+        .map(|(_png, ink_aspect)| {
+            let aspect = ink_aspect.clamp(0.25, 6.0);
+            let w_px = if aspect >= 1.45 {
+                let mut w = 250.0_f64;
+                let mut h = w / aspect;
+                if h > 92.0 { h = 92.0; w = h * aspect; }
+                w
+            } else {
+                100.0_f64 * aspect
+            };
+            w_px / f64::from(FACE_W) * 100.0
+        })
+}
+
 /// The spell ("adventure" / "prepare") half of a two-part card — (title, mana, type, rules) —
 /// read from the cached Scryfall metadata. `front` is the main face's name (what the editor
 /// card renders); the other face is the sub-spell. None for normal single-part cards.
@@ -3664,8 +3686,16 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         }
         None => (String::new(), "10%".to_string(), "80%".to_string()),
     };
+    // Type-line width reserves the set-symbol gutter: the symbol's right edge is right:10%, so
+    // its left edge is 100-10-wf. Stop the type a hair (1.5%) before that; the JS fit() then
+    // collapses an over-long type to fit (the Seventh-frame rule). No symbol → keep the bar's
+    // default 78%. Type box starts at left:10%, hence TYW = (symbol_left - gap) - 10.
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
+        None => "78%".to_string(),
+    };
     let pairs: Vec<(&str, String)> = vec![
-        ("COLORIND", colorind), ("TYPAD", typad),
+        ("COLORIND", colorind), ("TYPAD", typad), ("TYW", tyw),
         ("ADVBOX", advbox), ("RULESLEFT", rules_left), ("RULESWIDTH", rules_width),
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
@@ -3804,7 +3834,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "split": split.is_some(), "adv": adv.is_some(), "frame_kind": "eighth", "v": 1,
+            "split": split.is_some(), "adv": adv.is_some(), "frame_kind": "eighth", "v": 2,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
