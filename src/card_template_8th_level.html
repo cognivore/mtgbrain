@@ -21,16 +21,25 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    white-space:nowrap; overflow:hidden; }
 .colorind { position:absolute; overflow:visible; }
 .setsym { position:absolute; right:7%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
+/* The creature's printed BASE power/toughness rides the standard 8ED corner P/T box (NOT the
+   Level-up band) — same coords/asset as the ordinary 8ED frame. */
+.ptbox { position:absolute; left:72.27%; top:87.96%; width:21.47%; height:8.39%; z-index:10;
+         background-size:100% 100%; background-repeat:no-repeat; }
+.pt { position:absolute; left:76.67%; top:89.53%; width:13.67%; height:4.43%; z-index:11;
+   display:flex; align-items:center; justify-content:center;
+   font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; font-feature-settings:"smcp"; color:#0a0a0a; }
 /* ---- LEVELER section: a "Level up {cost}" band then one band per LEVEL tier; each band shows
    its own P/T in a cream 8ED-style pill on the right. The bands are split by thin keylines, the
    way the Rise-of-the-Eldrazi leveler frame divides its tiers — rendered in the 8ED idiom. ---- */
-.lvl { position:absolute; left:9.2%; top:61.9%; width:81.6%; height:27.9%;
+.lvl { position:absolute; left:9.2%; top:61.9%; width:81.6%; height:25.5%;
    display:flex; flex-direction:column; color:#0a0a0a; }
 /* each tier band centres its own content VERTICALLY (the 7ED rule), so a short tier floats to the
    middle of its band instead of pinning to the top. */
 .lvl-band { flex:1 1 0; position:relative; border-top:3px solid #0d0c08; padding:6px 134px 2px 6px; overflow:hidden;
    display:flex; flex-direction:column; justify-content:center; }
 .lvl-band:first-child { border-top:none; }
+/* the base (Level-up) band no longer carries a P/T pill, so reclaim the right padding. */
+.lvl-base { padding-right:6px; }
 .lvl-up { font-family:'mplantin'; font-size:%%LSZ%%px; line-height:1.12; }
 .lvl-up .lu-rem { font-style:italic; }
 .lvl-badge { font-family:'matrix'; font-size:%%LBSZ%%px; line-height:1.05; display:block; margin-bottom:3px; white-space:nowrap; }
@@ -62,6 +71,8 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box type" id="ty">%%TYPE%%</div>
     %%SETSYM%%
     <div class="lvl" id="lvl">%%LVLBANDS%%</div>
+    %%PTBOXDIV%%
+    %%PT%%
     %%ILLUS%%
     <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
   </div>

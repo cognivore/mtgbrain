@@ -3901,7 +3901,7 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
 /// Build the LEVELER (Level-up creature) HTML in 8ED style: normal title/art/type/set-symbol,
 /// then a level section — a "Level up {cost}" band plus one band per LEVEL tier, each carrying
 /// its own P/T pill on the right. (No bottom-right P/T box: every level's P/T is in its band.)
-fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
+fn build_html_8th_level(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -3922,8 +3922,10 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: 
         Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
         None => "78%".to_string(),
     };
-    // BASE band: "Level up {cost} (reminder)" + any base-level abilities + the base P/T pill.
-    let mut bands = String::from(r#"<div class="lvl-band"><div class="lvl-up">Level up "#);
+    // BASE band: "Level up {cost} (reminder)" + any base-level abilities. The base P/T is NOT
+    // shown here — it rides the standard corner P/T box below (see ptbox/pt), so this band has
+    // no pill and reclaims its right padding (.lvl-base).
+    let mut bands = String::from(r#"<div class="lvl-band lvl-base"><div class="lvl-up">Level up "#);
     bands.push_str(&manaify(&lvl.cost, &mana_base));
     if !lvl.reminder.is_empty() {
         bands.push_str(&format!(r#" <span class="lu-rem">{}</span>"#, manaify(&lvl.reminder, &mana_base)));
@@ -3932,7 +3934,10 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: 
     if !lvl.base_abilities.trim().is_empty() {
         bands.push_str(&format!(r#"<div class="lvl-abil">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
     }
-    bands.push_str(&format!(r#"<span class="lvl-pt">{}</span></div>"#, esc(&lvl.base_pt)));
+    bands.push_str("</div>");
+    // Standard 8ED corner P/T box carrying the printed base P/T.
+    let ptboxdiv = format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display());
+    let pt = format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&lvl.base_pt));
     // One band per LEVEL tier: range badge, abilities, P/T pill.
     for t in &lvl.tiers {
         bands.push_str(&format!(
@@ -3948,6 +3953,7 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: 
         ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
         ("TYSZ", px(100.0 / f64::from(FACE_H))),
         ("LSZ", px(86.0 / f64::from(FACE_H))), ("LBSZ", px(66.0 / f64::from(FACE_H))),
+        ("PSZ", px(131.0 / f64::from(FACE_H))),
         ("TYW", tyw), ("TYPAD", "0".to_string()), ("COLORIND", String::new()),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
@@ -3956,6 +3962,7 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: 
         ("TYPE", esc(&c.type_line)),
         ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
         ("LVLBANDS", bands),
+        ("PTBOXDIV", ptboxdiv), ("PT", pt),
         ("ILLUS", illus), ("YEAR", year),
     ];
     let mut html = TEMPLATE_8TH_LEVEL.to_string();
@@ -3967,14 +3974,15 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: 
 
 #[allow(clippy::too_many_arguments)]
 fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    frame_rel: &Path, ptbox_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
+    let ptbox_abs = fs::canonicalize(ptbox_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_level(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
+    let html = build_html_8th_level(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
     let html_path = std::env::temp_dir().join(format!("mtgbrain-level8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -4084,7 +4092,7 @@ pub fn render_card_8th(
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
         compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
     } else if let Some(lvl) = leveler {
-        compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
     }
