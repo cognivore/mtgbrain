@@ -41,16 +41,24 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
    text-align:left; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.18; color:#0a0a0a;
    text-shadow:none; }
-/* adventure / prepare sub-box: the spell half, in the LEFT of the rules area; the creature's
-   own rules reflow into the right half (RULESLEFT/RULESWIDTH). Tinted inset + pinline. */
-.adv { position:absolute; left:10%; top:62.77%; width:40%; height:26.91%;
-   border:3px solid rgba(20,16,10,0.6); border-radius:7px; background:rgba(20,16,10,0.085);
-   padding:16px 18px; display:flex; flex-direction:column; color:#0a0a0a; }
-.adv-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
-.adv-title { font-family:'matrix'; font-size:70px; line-height:1; white-space:nowrap; overflow:hidden; }
-.adv-mana { font-size:60px; white-space:nowrap; flex:none; }
-.adv-type { font-family:'matrix'; font-size:58px; line-height:1; margin:8px 0 10px; white-space:nowrap; overflow:hidden; }
-.adv-rules { font-family:'mplantin'; font-size:70px; line-height:1.16; flex:1; overflow:hidden; }
+/* adventure / prepare sub-box: the spell half is a self-contained MINI 8ED FRAME in the LEFT of
+   the rules area (the creature's own rules reflow into the right half, RULESLEFT/RULESWIDTH).
+   It echoes the main frame: dark keyline border, a cream title twin (name + cost), a cream type
+   twin, and a parchment rules panel — so the sub-spell reads as its own framed card, not a tint. */
+.adv { position:absolute; left:9.6%; top:61.7%; width:41.4%; height:28.1%;
+   border:4px solid #0d0c08; border-radius:12px; background:#d8d2c3;
+   display:flex; flex-direction:column; overflow:hidden; color:#0a0a0a;
+   box-shadow:0 3px 8px rgba(0,0,0,0.42); }
+.adv-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
+   padding:8px 14px 6px; background:linear-gradient(180deg,#fdfcf6 0%,#e7e1d2 55%,#d3ccba 100%);
+   border-bottom:3px solid #0d0c08; }
+.adv-title { font-family:'matrix'; font-size:62px; line-height:1; white-space:nowrap; overflow:hidden; }
+.adv-mana { font-size:54px; white-space:nowrap; flex:none; }
+.adv-type { font-family:'matrix'; font-size:50px; line-height:1; padding:6px 14px;
+   background:linear-gradient(180deg,#f2eee2 0%,#d6cfbd 100%); border-bottom:3px solid #0d0c08;
+   white-space:nowrap; overflow:hidden; }
+.adv-rules { font-family:'mplantin'; font-size:64px; line-height:1.17; flex:1; overflow:hidden;
+   padding:10px 14px; background:#f0ebe0; }
 .adv-rules i { font-style:italic; }
 .adv .ms-img { vertical-align:-0.16em; margin:0 0.02em; }
 .rules p { margin:0 0 .42em; width:100%; }
