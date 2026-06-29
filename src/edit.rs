@@ -732,7 +732,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 match id_from(p, "/api/render/") {
                     Some(id) => match if rc.is_eighth() {
                         crate::render::render_card_8th(
-                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, rc.backend.as_deref(),
+                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, force, rc.backend.as_deref(),
                         )
                     } else {
                         crate::render::render_one(

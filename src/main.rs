@@ -407,7 +407,7 @@ fn main() -> Result<()> {
                 let out = if eighth {
                     render::render_card_8th(
                         &edb, &common.assets, &common.cache, &common.chrome, *id,
-                        common.art_backend.as_deref(),
+                        common.force, common.art_backend.as_deref(),
                     )?
                 } else {
                     render::render_one(

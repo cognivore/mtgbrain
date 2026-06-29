@@ -3729,7 +3729,7 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
 
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, backend: Option<&str>,
+    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
@@ -3778,15 +3778,40 @@ pub fn render_card_8th(
     let out = dir.join("card8.png");
     // SPLIT cards (Bind // Liberate) get the rotated two-half layout: each half shows its OWN
     // crop of the combined two-half illustration (the editor's two crop rectangles), not the
-    // same art twice.
-    if let Some(halves) = split_faces(cache_dir, &card.name) {
-        let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
-        compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
+    // same art twice. Adventure / set-symbol decoration only applies to the single-face layout.
+    let split = split_faces(cache_dir, &card.name);
+    let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
+    let adv = if split.is_some() { None } else { adventure_face(cache_dir, &card.name, &card.name) };
+    // Content-hash cache (mirrors render_one): the headless-Chrome screenshot is by far the
+    // slow step, so skip it when nothing that affects this render changed. The editor revisits
+    // a card on every click — without this, each visit re-spawned Chrome, the "slow blink".
+    let hash = {
+        let canon = json!({
+            "name": card.name, "display_name": card.display_name, "mana_cost": card.mana_cost,
+            "type": card.type_line, "oracle_text": card.oracle_text, "flavor": card.flavor,
+            "power": card.power, "toughness": card.toughness, "loyalty": card.loyalty,
+            "set": card.set, "rarity": card.rarity, "errata": card.is_errata, "ci": card.color_identity,
+            "art_ref": art.art_ref, "artist": credit, "year": art.year,
+            "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            "override": art_override_json(&db, id).to_string(),
+            "split": split.is_some(), "adv": adv.is_some(), "frame_kind": "eighth", "v": 1,
+        });
+        let mut h = Sha256::new();
+        h.update(canon.to_string().as_bytes());
+        format!("{:x}", h.finalize())
+    };
+    let hash_file = dir.join("card8.hash");
+    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
         return Ok(out);
     }
-    let set_svg = set_symbol_svg(&card.set, cache_dir);
-    let adv = adventure_face(cache_dir, &card.name, &card.name);
-    compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
+    if let Some(halves) = split {
+        let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
+        compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
+    } else {
+        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), adv.as_ref())?;
+    }
+    let _ = fs::write(&hash_file, &hash);
     Ok(out)
 }
 
