@@ -432,6 +432,12 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
         let method = req.method().clone();
         let url = req.url().to_string();
         let path = url.split('?').next().unwrap_or("").to_string();
+        // Browser's cached validator, for conditional GETs on card images (snappy nav).
+        let if_none_match = req
+            .headers()
+            .iter()
+            .find(|h| h.field.equiv("If-None-Match"))
+            .map(|h| h.value.as_str().to_string());
 
         let resp = match (&method, path.as_str()) {
             (Method::Get, "/") => html_response(INDEX_HTML),
@@ -726,10 +732,14 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     _ => not_found(),
                 }
             }
-            // On-demand old-frame render (cached by content hash). ?foil=1, &force=1.
+            // On-demand render (cached by content hash). ?foil=1, &force=1, &full=1.
+            // By default serves a small cached JPEG preview (~40× smaller than the print PNG)
+            // with ETag + Cache-Control so navigation is snappy and revisits are 304s; `full=1`
+            // (the "full DPI" link) serves the original print PNG.
             (Method::Get, p) if p.starts_with("/api/render/") => {
                 let foil = url.contains("foil=1");
                 let force = url.contains("force=1");
+                let want_full = url.contains("full=1");
                 match id_from(p, "/api/render/") {
                     Some(id) => match if rc.is_eighth() {
                         crate::render::render_card_8th(
@@ -741,11 +751,25 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                             rc.backend.as_deref(),
                         )
                     } {
-                        Ok(path) => match std::fs::read(&path) {
-                            Ok(bytes) => Response::from_data(bytes)
-                                .with_header(header("Content-Type", "image/png")),
-                            Err(_) => not_found(),
-                        },
+                        Ok(full_path) => {
+                            let (serve_path, mime) = if want_full {
+                                (full_path.clone(), "image/png")
+                            } else {
+                                match crate::render::card_preview(&full_path, 760) {
+                                    Ok(p) => (p, "image/jpeg"),
+                                    Err(_) => (full_path.clone(), "image/png"),
+                                }
+                            };
+                            let etag = file_etag(&serve_path);
+                            if etag.is_some() && etag == if_none_match {
+                                Response::from_data(Vec::new())
+                                    .with_status_code(304)
+                                    .with_header(header("ETag", etag.as_deref().unwrap_or("")))
+                                    .with_header(header("Cache-Control", "private, max-age=86400"))
+                            } else {
+                                image_response(&serve_path, mime, etag)
+                            }
+                        }
                         Err(e) => Response::from_string(e.to_string()).with_status_code(500),
                     },
                     None => not_found(),
@@ -1029,6 +1053,36 @@ fn json_response(v: &Value) -> Response<std::io::Cursor<Vec<u8>>> {
 
 fn not_found() -> Response<std::io::Cursor<Vec<u8>>> {
     Response::from_string("not found").with_status_code(404)
+}
+
+/// Cheap, strong-enough ETag for a cached image: its byte length + mtime. Lets the editor
+/// answer a revisit with `304 Not Modified` (zero bytes) instead of re-shipping the file.
+fn file_etag(path: &std::path::Path) -> Option<String> {
+    let m = std::fs::metadata(path).ok()?;
+    let secs = m
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    Some(format!("\"{:x}-{:x}\"", m.len(), secs))
+}
+
+/// Serve a cached image file with caching headers so the browser keeps it and revalidates
+/// cheaply (see [`file_etag`]). Falls back to 404 if the file vanished between stat and read.
+fn image_response(path: &std::path::Path, mime: &str, etag: Option<String>) -> Response<std::io::Cursor<Vec<u8>>> {
+    match std::fs::read(path) {
+        Ok(bytes) => {
+            let mut r = Response::from_data(bytes)
+                .with_header(header("Content-Type", mime))
+                .with_header(header("Cache-Control", "private, max-age=86400"));
+            if let Some(tag) = etag {
+                r = r.with_header(header("ETag", tag.as_str()));
+            }
+            r
+        }
+        Err(_) => not_found(),
+    }
 }
 
 /// Read one query-string parameter (percent-decoded) from a request URL.

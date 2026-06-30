@@ -401,13 +401,13 @@ function img(){
   const v = encodeURIComponent(C.updated_at || "");
   const src = `/api/render/${C.id}?foil=${f}&v=${v}`;
   return `<div class="imgwrap">
-    <img class="cardimg" alt="old-frame render" src="${src}"
+    <img class="cardimg" alt="old-frame render" src="${src}" decoding="async"
          onload="this.classList.add('loaded')"
          onerror="this.classList.remove('loaded');this.classList.add('err')">
     <div class="imgctl">
       <button id="foiltog" class="imgbtn ${foilView?'on':''}">✦ foil</button>
       <button id="rerender" class="imgbtn">↻ re-render</button>
-      <a class="imgbtn" href="${src}" target="_blank">⤢ full DPI</a>
+      <a class="imgbtn" href="${src}&full=1" target="_blank">⤢ full DPI</a>
     </div>
     <div class="imgctl">
       <button id="cropbtn" class="imgbtn" title="Reposition the underlying art (fix a bad crop)">🎯 adjust crop</button>

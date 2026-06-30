@@ -451,7 +451,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 12,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 13,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -1522,6 +1522,35 @@ fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, 
 /// the empty `cards/` dir on the 8th server and shows no MPCfill sources (only Scryfall prints).
 fn frame_card_dir(cache_dir: &Path, name: &str, eighth: bool) -> PathBuf {
     cache_dir.join(if eighth { "cards8" } else { "cards" }).join(sanitize(name))
+}
+
+/// Screen-sized JPEG preview cached next to a full-res print PNG, for snappy editor
+/// navigation. The print render is ~2176×2960 / ~5 MB; the editor only ever shows it at
+/// ~320px, so shipping the full PNG on every card-flip is the latency. This caches a
+/// `<png-stem>.preview.jpg` (downscaled to `max_w`, ~40× smaller) and rebuilds it only when
+/// the source PNG is newer. Returns the preview path. Cheap: a single decode + resize, run
+/// once per render, then served straight from disk on every subsequent view.
+pub fn card_preview(full_png: &Path, max_w: u32) -> Result<PathBuf> {
+    let preview = full_png.with_extension("preview.jpg");
+    let fresh = matches!(
+        (
+            fs::metadata(&preview).and_then(|m| m.modified()),
+            fs::metadata(full_png).and_then(|m| m.modified()),
+        ),
+        (Ok(p), Ok(s)) if s <= p
+    );
+    if !preview.exists() || !fresh {
+        let img = image::open(full_png)
+            .with_context(|| format!("opening {} for preview", full_png.display()))?;
+        // thumbnail() preserves aspect ratio inside the box; height bound is generous so width
+        // is the constraint (cards are portrait). Skip upscaling tiny sources.
+        let scaled = if img.width() > max_w { img.thumbnail(max_w, max_w * 4) } else { img };
+        scaled
+            .to_rgb8()
+            .save_with_format(&preview, image::ImageFormat::Jpeg)
+            .with_context(|| format!("writing preview {}", preview.display()))?;
+    }
+    Ok(preview)
 }
 
 pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Result<Value> {
@@ -3325,6 +3354,7 @@ pub fn render_one(
     let set_svg = set_symbol_svg(&card.set, cache_dir);
     compose(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
         &format!("{id}{}", u8::from(foil)), set_svg.as_deref())?;
+    let _ = card_preview(&out, 760); // pre-warm the editor's nav-size preview
     Ok(out)
 }
 
@@ -4824,7 +4854,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 5,
+            "frame_kind": "eighth", "v": 6,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
@@ -4883,6 +4913,7 @@ pub fn render_card_8th(
         compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     }
     let _ = fs::write(&hash_file, &hash);
+    let _ = card_preview(&out, 760); // pre-warm the editor's nav-size preview
     Ok(out)
 }
 
