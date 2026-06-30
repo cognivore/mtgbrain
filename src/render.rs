@@ -4886,7 +4886,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 7,
+            "frame_kind": "eighth", "v": 8,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
