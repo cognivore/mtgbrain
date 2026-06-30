@@ -451,7 +451,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 11,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 12,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
