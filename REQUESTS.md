@@ -5,6 +5,22 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
+## ◐ 6. 8ED pips — inconsistent drop shadow (title vs textbox)
+**Asked:** 2026-06-30. Name-box pips looked shadowed while textbox pips looked flat.
+Root cause: pip SVGs have no baked shadow; the only shadow was a fixed `1px` `.ms-img`
+filter, near-invisible at 2176px render scale and reading differently on the light title
+bar vs white textbox. **Fix:** all 8th templates now use one em-scaled drop-shadow
+(`0.035em 0.045em 0.01em rgba(0,0,0,0.5)`) so it scales with pip size and matches everywhere.
+Bumped 8ED cache v7→v8; re-rendering the cube to apply.
+
+## Note (2026-06-30): editor backend / clobbering
+The running editor backends were the **pre-fix binary** and re-rendered (clobbered) corrected
+`cards8/` PNGs on view (stale cache version → cache miss → old-logic render). Killed both;
+relaunch on the rebuilt binary picks up all fixes AND the snappy preview path. Old-frame cube
+was not clobbered (only the 8ED editor was browsed).
+
+---
+
 ## ◐ 5. Colorless / Eldrazi (devoid) frame is ugly — use modern cardconjurer colorless frame
 **Asked:** 2026-06-30. The tan/brown "colorless" 8ED frame (e.g. *Vexing Scuttler*) looks bad.
 Use the modern M15 **devoid / Eldrazi** frame for colorless non-artifact cards.
