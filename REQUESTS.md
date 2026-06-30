@@ -5,6 +5,19 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
+## ☑ 8. Import the real cardconjurer Level Up frame (replace synthesized leveler)
+**Asked:** 2026-07-01. Replace our CSS-band leveler with the authentic levelers/regular frame,
+custom-geometry approach (like devoid). Done: `card_template_8th_leveler_cc.html` with geometry
+measured from the frame (art x.0767 y.1129 w.846 h.4419); level-up cost band + base P/T + two
+tier bands mapped onto the frame's baked P/T pill banners. Only 1 leveler in the cube
+(Hedron-Field Purists) — verified. `leveler_frame_8th` + `build_html_8th_leveler_cc`.
+
+## ☑ 7. Devoid geometry polish + pip shadow direction
+**Asked:** 2026-07-01. Devoid fixes: title/mana lowered onto the nameplate, type text down +
+set symbol right, P/T anchored in the textbox bottom-right corner, Illus/legal dropped into the
+bottom margin. Pip drop-shadow flipped to fall **left+bottom** (was right+bottom), a touch more
+pronounced — across ALL 8th templates (applied cube-wide via the v9 re-render).
+
 ## ☑ 6. 8ED pips — inconsistent drop shadow (title vs textbox)
 **Asked:** 2026-06-30. Name-box pips looked shadowed while textbox pips looked flat.
 Root cause: pip SVGs have no baked shadow; the only shadow was a fixed `1px` `.ms-img`
