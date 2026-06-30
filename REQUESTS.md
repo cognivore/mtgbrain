@@ -5,12 +5,18 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
-## ☐ 5. Colorless / Eldrazi (devoid) frame is ugly — use modern cardconjurer colorless frame
-**Asked:** 2026-06-30. The tan/brown "colorless" 8ED frame (e.g. *Vexing Scuttler*, an
-Eldrazi with Emerge) looks bad. Pull the **devoid / Eldrazi colourless frame** from the more
-modern cardconjurer asset set and use it for colorless/devoid (non-artifact) cards.
-**Scope:** download the modern colorless frame asset; wire `frame_file_8th` (and PT box) to
-select it for colorless non-artifact cards; re-render affected cards.
+## ◐ 5. Colorless / Eldrazi (devoid) frame is ugly — use modern cardconjurer colorless frame
+**Asked:** 2026-06-30. The tan/brown "colorless" 8ED frame (e.g. *Vexing Scuttler*) looks bad.
+Use the modern M15 **devoid / Eldrazi** frame for colorless non-artifact cards.
+**Done so far:** M15 devoid frames + PT downloaded to `assets/frames8/devoid/` (w/u/b/r/g/m/a/l
++ pt). Only 3 colorless cards in the cube (Vexing Scuttler, Endless One, Gaea's Will).
+**Blocker (proven by a test render):** the M15 devoid frame uses **M15 geometry**; dropped into
+the 8th template (`card_template_8th.html`) the title bar misaligns — a doubled/clipped title.
+The 8th text positions (title 6.29%, art hole, type 57.2%, rules 62.77%) don't match M15.
+**Plan:** give devoid colorless cards their **own template + geometry** (a `card_template_8th_devoid.html`
+with M15 art-hole / title / type / textbox / PT positions), like the saga/pw/adventure special
+layouts — then re-render the 3 cards. The frame-select hook (`devoid_frame_8th`) was wired then
+backed out to avoid shipping a broken title; see the `TODO(devoid)` in `frame_file_8th`.
 
 ## ☐ 4. 8ED cube — MPC downloads / publish parity (BOTH)
 **Asked:** 2026-06-30. The 8ED (`pointless-b-side`) cube has no export path: `render_selfhost`

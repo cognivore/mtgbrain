@@ -3455,6 +3455,10 @@ fn frame_file_8th(c: &Card) -> &'static str {
     }
     let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
     match cols.len() {
+        // TODO(devoid): colourless cards want the modern M15 devoid/Eldrazi frame
+        // (assets in assets/frames8/devoid/), but that frame uses M15 geometry — dropping
+        // it into this 8th template misaligns the title bar. Needs its own template +
+        // geometry (like saga/pw). Until then keep the flat 8ED colourless frame. See REQUESTS.md.
         0 => "frames8/c.png",
         1 => color_frame_8th(cols[0]),
         _ => "frames8/m.png",
