@@ -3234,7 +3234,28 @@ fn manaify(text: &str, mana_base: &str) -> String {
                 }
                 sym.push(c2);
             }
-            out.push_str(&mana_icon(&sym, mana_base));
+            // GLUE trailing punctuation to the pip: a mana symbol is a replaced inline
+            // `<img>`, so the browser happily breaks the line between it and a following
+            // "." / "," etc., orphaning the mark to the next line ("…pay {2}\n. When you
+            // do…"). Wrap the pip plus any immediately-following sentence punctuation in a
+            // `white-space:nowrap` span so the mark always rides with its symbol.
+            let icon = mana_icon(&sym, mana_base);
+            let mut glued = String::new();
+            while let Some(&p) = chars.peek() {
+                // NB: never glue ')' — reminder_italic() post-processes parentheses into
+                // <i>…</i>, and swallowing a ')' here would interleave the span and <i> tags.
+                if matches!(p, '.' | ',' | ';' | ':' | '!' | '?') {
+                    glued.push_str(&esc_char(p));
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            if glued.is_empty() {
+                out.push_str(&icon);
+            } else {
+                out.push_str(&format!(r#"<span style="white-space:nowrap">{icon}{glued}</span>"#));
+            }
         } else {
             out.push_str(&esc_char(ch));
         }
@@ -4803,7 +4824,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 4,
+            "frame_kind": "eighth", "v": 5,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
