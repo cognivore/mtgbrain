@@ -18,20 +18,20 @@ with M15 art-hole / title / type / textbox / PT positions), like the saga/pw/adv
 layouts — then re-render the 3 cards. The frame-select hook (`devoid_frame_8th`) was wired then
 backed out to avoid shipping a broken title; see the `TODO(devoid)` in `frame_file_8th`.
 
-## ☐ 4. 8ED cube — MPC downloads / publish parity (BOTH)
+## ◐ 4. 8ED cube — MPC downloads / publish parity (BOTH)
 **Asked:** 2026-06-30. The 8ED (`pointless-b-side`) cube has no export path: `render_selfhost`
 + `publish.sh` are hard-coded to the old-frame `cards/` dir; the 8ED cube renders to `cards8/`
 which nothing reads. Wanted: **(a)** a local MPC bundle — stage `cards8/*/card8.png` as
 `<Card-Name>.png` in `render-cache/mpc-8ed/`; **(b)** full publish parity — 8ED selfhost crops,
 S3 sync, CubeCobra CSV.
 
-## ☐ 3. Browser navigation is slow — make card preview snappy
+## ☑ 3. Browser navigation is slow — make card preview snappy
 **Asked:** 2026-06-30. Navigating cards in the editor re-downloads the full ~5 MB,
 2176×2960 print PNG every time with **no HTTP caching**, displayed at 320px. Fix: serve a
 downscaled (~760px) cached JPEG preview by default (full PNG via `?full=1`), add
 `ETag` + `Cache-Control` + `304 Not Modified` to `/api/render` so revisits are instant.
 
-## ◐ 2. Inline mana pips sit too low in text boxes
+## ☑ 2. Inline mana pips sit too low in text boxes
 **Asked:** 2026-06-30. Inline mana symbols/costs in rules boxes were dropped below the text
 mid-line (`vertical-align:-0.16em`/`-0.14em`). Bumped all body-text `.ms-img` to `-0.07em`
 across every 8th template (title `.manacost` left at `-0.02em`). **Pending the batched

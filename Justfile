@@ -103,17 +103,21 @@ bside_db := "data/pointless-b-side.sqlite"
 bside_bucket := "s3://social-doma-dev-media/odyssey2026-bside"
 bside_base := "https://s3.us-east-1.amazonaws.com/social-doma-dev-media/odyssey2026-bside"
 
-# Local MPC download bundle for the 8ED cube: every print-ready card8.png staged as
-# render-cache/mpc-8ed/<Card-Name>.png — hand this folder straight to MakePlayingCards.
+# Local MPC download bundle for the 8ED cube: every ACTIVE card's print-ready card8.png
+# staged as render-cache/mpc-8ed/<Card-Name>.png — hand this folder to MakePlayingCards.
+# Driven off the DB's active card list (removed/stale render dirs are excluded).
 mpc-bundle-8ed:
     #!/usr/bin/env bash
     set -euo pipefail
-    stage=render-cache/mpc-8ed; rm -rf "$stage"; mkdir -p "$stage"; n=0
-    for f in render-cache/cards8/*/card8.png; do
-      [ -e "$f" ] || continue
-      ln -f "$f" "$stage/$(basename "$(dirname "$f")").png"; n=$((n+1))
-    done
-    echo "MPC bundle: $n cards -> $stage"
+    stage=render-cache/mpc-8ed; rm -rf "$stage"; mkdir -p "$stage"; n=0; miss=0
+    # sanitize() parity: Unicode-alphanumeric or '-' kept, others -> '_', trimmed.
+    while IFS= read -r name; do
+      [ -n "$name" ] || continue
+      dir=$(python3 -c "import sys,re; s=''.join(c if (c.isalnum() or c=='-') else '_' for c in sys.argv[1]); print(s.strip('_'))" "$name")
+      src="render-cache/cards8/$dir/card8.png"
+      if [ -e "$src" ]; then ln -f "$src" "$stage/$dir.png"; n=$((n+1)); else echo "  (no render) $name"; miss=$((miss+1)); fi
+    done < <(sqlite3 {{bside_db}} "SELECT name FROM cube_cards WHERE in_db_found=1 AND removed=0 ORDER BY name;")
+    echo "MPC bundle: $n cards -> $stage  ($miss missing a render)"
 
 # Build the Scryfall-format selfhost crops for the 8ED cube (from card8.png).
 selfhost-8ed:
