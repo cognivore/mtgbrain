@@ -21,7 +21,7 @@ was not clobbered (only the 8ED editor was browsed).
 
 ---
 
-## ◐ 5. Colorless / Eldrazi (devoid) frame is ugly — use modern cardconjurer colorless frame
+## ☑ 5. Colorless / Eldrazi (devoid) frame — modern M15 devoid frame + custom geometry
 **Asked:** 2026-06-30. The tan/brown "colorless" 8ED frame (e.g. *Vexing Scuttler*) looks bad.
 Use the modern M15 **devoid / Eldrazi** frame for colorless non-artifact cards.
 **Done so far:** M15 devoid frames + PT downloaded to `assets/frames8/devoid/` (w/u/b/r/g/m/a/l

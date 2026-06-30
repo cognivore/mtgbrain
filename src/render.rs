@@ -141,6 +141,16 @@ fn asset_list() -> Vec<(String, &'static str)> {
             Box::leak(format!("frames8/pt/{letter}.png").into_boxed_str()),
         ));
     }
+    // Modern M15 DEVOID (Eldrazi colourless) frames — used for colourless Eldrazi via the
+    // dedicated devoid layout (its own M15 geometry; see card_template_8th_devoid.html). The
+    // pack has no pure-colourless variant, so a no-identity Eldrazi takes the `a` frame.
+    for (up, lo) in [("W", "w"), ("U", "u"), ("B", "b"), ("R", "r"), ("G", "g"), ("M", "m"), ("A", "a"), ("L", "l")] {
+        v.push((
+            format!("{CC}/img/frames/m15/devoid/m15DevoidFrame{up}.png"),
+            Box::leak(format!("frames8/devoid/{lo}.png").into_boxed_str()),
+        ));
+    }
+    v.push((format!("{CC}/img/frames/m15/devoid/m15DevoidPT.png"), "frames8/devoid/pt.png"));
     // Saga frames (cardconjurer's regular Saga pack) — the chapter abilities run down the left on
     // a gilt lore-spine and the art is a tall scroll on the right. Used by the 8ED Saga renderer.
     for (letter, file) in [
@@ -3483,14 +3493,44 @@ fn frame_file_8th(c: &Card) -> &'static str {
     }
     let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
     match cols.len() {
-        // TODO(devoid): colourless cards want the modern M15 devoid/Eldrazi frame
-        // (assets in assets/frames8/devoid/), but that frame uses M15 geometry — dropping
-        // it into this 8th template misaligns the title bar. Needs its own template +
-        // geometry (like saga/pw). Until then keep the flat 8ED colourless frame. See REQUESTS.md.
+        // Colourless cards are handled by the devoid layout (is_devoid_8th) BEFORE this is
+        // reached; `c.png` is only the fallback if that path is somehow skipped.
         0 => "frames8/c.png",
         1 => color_frame_8th(cols[0]),
         _ => "frames8/m.png",
     }
+}
+
+/// A colourless, non-artifact, non-land, non-walker card → render in the modern M15 devoid
+/// (Eldrazi) frame and geometry instead of the flat 8ED `c.png`. Detected the same way
+/// frame_file_8th decides "colourless", so the two stay in lock-step.
+fn is_devoid_8th(c: &Card) -> bool {
+    let t = c.type_line.to_lowercase();
+    if t.contains("land") || t.contains("artifact") || t.contains("planeswalker") {
+        return false;
+    }
+    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    if !cols.is_empty() {
+        return false; // a colour in its cost → its normal coloured frame
+    }
+    // Colourless: the devoid/Eldrazi frame is for actual Eldrazi or genuinely colourless cards
+    // (empty identity) — NOT a coloured card whose mana cost is merely missing in the data
+    // (e.g. a green sorcery with a blank cost would otherwise read as colourless).
+    t.contains("eldrazi") || ci_letters(&c.color_identity).is_empty()
+}
+
+/// The M15 devoid frame tinted by colour identity (a colourless devoid card carries a colour
+/// hint — blue-emerge Vexing Scuttler → the U devoid frame); no identity → neutral `m`.
+fn devoid_frame_8th(c: &Card) -> String {
+    // The M15 devoid pack has no pure-colourless variant; a truly colourless Eldrazi (no
+    // identity, e.g. Endless One) takes the neutral tan/bronze artifact variant — the classic
+    // colourless-Eldrazi look — not the gold `m` (which reads as multicolour).
+    let key = match ci_letters(&c.color_identity).as_slice() {
+        [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
+        [] => "a",
+        _ => "a",
+    };
+    format!("frames8/devoid/{key}.png")
 }
 
 /// The real cardconjurer Saga frame PNG for the card's colour — same colour mapping as
@@ -3987,6 +4027,7 @@ const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
 const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
 const TEMPLATE_8TH_PW: &str = include_str!("card_template_8th_pw.html");
 const TEMPLATE_8TH_ADV: &str = include_str!("card_template_8th_adv.html");
+const TEMPLATE_8TH_DEVOID: &str = include_str!("card_template_8th_devoid.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -4149,7 +4190,7 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
     Ok(())
 }
 
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>) -> String {
+fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, template: &str) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
@@ -4274,7 +4315,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("ILLUS", illus),
         ("YEAR", year),
     ];
-    let mut html = TEMPLATE_8TH.to_string();
+    let mut html = template.to_string();
     for (k, v) in &pairs {
         html = html.replace(&format!("%%{k}%%"), v);
     }
@@ -4283,7 +4324,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
 
 #[allow(clippy::too_many_arguments)]
 fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>, template: &str) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
@@ -4291,7 +4332,7 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref());
+    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), template);
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -4856,11 +4897,17 @@ pub fn render_card_8th(
         } else if t.contains("artifact") && !t.contains("land") && !cols.is_empty() {
             colored_artifact_frame(assets_dir, cache_dir, &cols)
                 .unwrap_or_else(|| assets_dir.join(frame_file_8th(&card)))
+        } else if is_devoid_8th(&card) {
+            assets_dir.join(devoid_frame_8th(&card))
         } else {
             assets_dir.join(frame_file_8th(&card))
         }
     };
-    let ptbox_rel = assets_dir.join(pt_box_8th(&card));
+    let ptbox_rel = if is_devoid_8th(&card) {
+        assets_dir.join("frames8/devoid/pt.png")
+    } else {
+        assets_dir.join(pt_box_8th(&card))
+    };
     if !frame_rel.exists() {
         bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
     }
@@ -4942,7 +4989,8 @@ pub fn render_card_8th(
         let adv_frame = adv_frame_resolved(assets_dir, cache_dir, &card, adventure.prepare);
         compose_adv_8th(&card, &art.path, &credit, &art.year, assets_dir, &adv_frame, &ptbox_rel, adventure, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
     } else {
-        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        let tmpl = if is_devoid_8th(&card) { TEMPLATE_8TH_DEVOID } else { TEMPLATE_8TH };
+        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), tmpl)?;
     }
     let _ = fs::write(&hash_file, &hash);
     let _ = card_preview(&out, 760); // pre-warm the editor's nav-size preview
