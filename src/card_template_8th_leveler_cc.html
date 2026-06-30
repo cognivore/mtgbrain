@@ -1,0 +1,100 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="%%MANA_CSS%%">
+<style>
+@font-face { font-family:'matrix'; src:url('%%MATRIX%%'); }
+@font-face { font-family:'mplantin'; src:url('%%MPLANTIN%%'); }
+%%ITALIC_FACE%%
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
+.face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; }
+.layer { position:absolute; left:0; top:0; width:100%; height:100%; }
+/* cardconjurer levelers/regular frame — art window measured from its transparent hole:
+   x.0767 y.1129 w.846 h.4419. The level bands + P/T pill banners are baked into the frame;
+   we draw the level-up cost, tier abilities, and P/T text into those fixed regions. */
+.art { position:absolute; left:7.67%; top:11.29%; width:84.6%; height:44.19%;
+       background-size:cover; background-position:center; }
+.frame { background-size:100% 100%; }
+.box { position:absolute; color:#0a0a0a; text-shadow:none; }
+.titlerow { left:8%; top:5.5%; width:84%; height:4.7%; display:flex; align-items:center; }
+.titlerow .nm { font-family:'matrix'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap; overflow:hidden; }
+.manacost { left:4%; right:7.9%; top:5.5%; height:4.7%; font-size:%%MSZ%%px;
+   display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
+.type { left:8.6%; top:56.6%; width:%%TYW%%; height:4.0%; padding-left:%%TYPAD%%;
+   display:flex; align-items:center; font-family:'matrix'; font-size:%%TYSZ%%px; line-height:1;
+   white-space:nowrap; overflow:hidden; }
+.setsym { position:absolute; right:4.5%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
+/* BASE band (no pill): "Level up {cost} (reminder)" + any base abilities. */
+.lvl-up { left:9%; top:63.0%; width:66%; height:8.4%; display:flex; flex-direction:column;
+   justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.12;
+   color:#0a0a0a; }
+.lvl-up .lu { font-weight:bold; }
+.lvl-up .lu-rem { font-style:italic; }
+.lvl-up .lu-base { margin-top:.12em; }
+/* the base P/T, shown small at the right end of the base band (clear of the wrapped text) */
+.basept { left:78.5%; top:64.2%; width:13%; height:4.4%; display:flex; align-items:center;
+   justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; }
+/* TIER bands: a level-range label + P/T on the baked pill (left column), ability (right). */
+.lvl-range { font-family:'matrix'; font-size:%%LBSZ%%px; line-height:1; white-space:nowrap;
+   color:#0a0a0a; }
+.lvl-pt { position:absolute; left:5.6%; width:12.5%; height:3.8%; display:flex; align-items:center;
+   justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; color:#0a0a0a; }
+.lvl-abil { position:absolute; left:20.5%; width:70%; display:flex; flex-direction:column;
+   justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.14; color:#0a0a0a; }
+.lvl1-range { position:absolute; left:6.0%; top:72.0%; }
+.lvl1-pt    { top:75.4%; }
+.lvl1-abil  { top:72.0%; height:9.6%; }
+.lvl2-range { position:absolute; left:6.0%; top:81.7%; }
+.lvl2-pt    { top:85.1%; }
+.lvl2-abil  { top:81.7%; height:9.6%; }
+.lvl-abil p, .lvl-up p { margin:0; }
+.info { position:absolute; left:8.8%; width:81.07%; text-align:left; color:%%INFOINK%%;
+   font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
+.illus { top:92.5%; font-family:'matrix'; font-size:46px; }
+.legal { top:93.8%; font-size:30px; letter-spacing:.01em; }
+.ms-img { width:0.78em; height:0.78em; vertical-align:-0.07em;
+   filter:drop-shadow(-0.045em 0.05em 0.014em rgba(0,0,0,0.6)); }
+.manacost .ms-img { margin-left:0.07em; vertical-align:-0.02em; }
+.manacost span { display:inline-flex; align-items:center; line-height:1; }
+</style></head>
+<body>
+  <div class="face">
+    <div class="art" style="background-image:url('%%ART%%')"></div>
+    <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
+    <div class="box titlerow"><span class="nm" id="nm">%%NAME%%</span></div>
+    <div class="box manacost" id="mana"><span>%%MANA%%</span></div>
+    <div class="box type" id="ty">%%TYPE%%</div>
+    %%SETSYM%%
+    <div class="box lvl-up" id="lvlup">%%LVLUP%%</div>
+    <div class="box basept">%%BASEPT%%</div>
+    <div class="box lvl-range lvl1-range">%%LVL1RANGE%%</div>
+    <div class="box lvl-abil lvl1-abil" id="lvl1abil">%%LVL1ABIL%%</div>
+    <div class="box lvl-pt lvl1-pt">%%LVL1PT%%</div>
+    <div class="box lvl-range lvl2-range">%%LVL2RANGE%%</div>
+    <div class="box lvl-abil lvl2-abil" id="lvl2abil">%%LVL2ABIL%%</div>
+    <div class="box lvl-pt lvl2-pt">%%LVL2PT%%</div>
+    %%ILLUS%%
+    <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
+  </div>
+<script>
+function fitOneLine(el, span){
+  if(!el) return; const t = span || el;
+  let s = parseFloat(getComputedStyle(t).fontSize);
+  for(let i=0; i<120 && t.scrollWidth > el.clientWidth && s > 8; i++){ s -= 1; t.style.fontSize = s + 'px'; }
+}
+function fitBox(el){
+  if(!el) return; let s = parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0; i<160 && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) && s > 8; i++){
+    s -= 1; el.style.fontSize = s + 'px';
+  }
+}
+function fit(){
+  fitOneLine(document.querySelector('.titlerow'), document.getElementById('nm'));
+  fitBox(document.getElementById('ty'));
+  ['lvlup','lvl1abil','lvl2abil'].forEach(function(id){ fitBox(document.getElementById(id)); });
+  document.querySelectorAll('.info').forEach(function(el){ fitOneLine(el, el.querySelector('span')); });
+  document.documentElement.setAttribute('data-fit','done');
+}
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); } else { window.onload = fit; }
+setTimeout(fit, 1200);
+</script>
+</body></html>

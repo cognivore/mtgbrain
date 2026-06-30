@@ -151,6 +151,14 @@ fn asset_list() -> Vec<(String, &'static str)> {
         ));
     }
     v.push((format!("{CC}/img/frames/m15/devoid/m15DevoidPT.png"), "frames8/devoid/pt.png"));
+    // cardconjurer levelers/regular frame (the real Rise-of-the-Eldrazi Level Up frame) — its
+    // own geometry; see card_template_8th_leveler_cc.html. Bands + P/T pills are baked in.
+    for lo in ["w", "u", "b", "r", "g", "m", "a"] {
+        v.push((
+            format!("{CC}/img/frames/levelers/regular/{lo}.png"),
+            Box::leak(format!("frames8/leveler/{lo}.png").into_boxed_str()),
+        ));
+    }
     // Saga frames (cardconjurer's regular Saga pack) — the chapter abilities run down the left on
     // a gilt lore-spine and the art is a tall scroll on the right. Used by the 8ED Saga renderer.
     for (letter, file) in [
@@ -4028,6 +4036,7 @@ const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
 const TEMPLATE_8TH_PW: &str = include_str!("card_template_8th_pw.html");
 const TEMPLATE_8TH_ADV: &str = include_str!("card_template_8th_adv.html");
 const TEMPLATE_8TH_DEVOID: &str = include_str!("card_template_8th_devoid.html");
+const TEMPLATE_8TH_LEVELER_CC: &str = include_str!("card_template_8th_leveler_cc.html");
 
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
@@ -4428,17 +4437,94 @@ fn build_html_8th_level(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &
     html
 }
 
+/// The cardconjurer levelers/regular frame PNG for the card's colour (white Hedron-Field
+/// Purists → leveler/w.png). Same colour mapping as frame_file_8th's non-land cases.
+fn leveler_frame_8th(c: &Card) -> String {
+    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let key = match cols.as_slice() {
+        [] => "a",
+        [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
+        _ => "m",
+    };
+    format!("frames8/leveler/{key}.png")
+}
+
+/// Build the LEVELER HTML on the real cardconjurer levelers frame: title/art/type/set-symbol,
+/// then the level-up cost band + two tier bands whose abilities + P/T text land on the frame's
+/// baked pill banners. The base P/T sits small at the right of the level-up band.
+fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
+    let fonts = assets_dir.join("fonts");
+    let f = |p: &str| format!("file://{}", fonts.join(p).display());
+    let mana_base = format!("file://{}", assets_dir.join("mana").display());
+    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
+        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+    } else {
+        String::new()
+    };
+    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let illus = if credit.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+    };
+    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
+    // The leveler frame's credit sits in the bottom BLACK margin (the frame ends above it),
+    // so always use light, shadowed ink — never the dark ink a light frame would otherwise pick.
+    let (info_ink, info_shadow) = ("#f4f1e8", "1px 1px 0 rgba(0,0,0,0.85)");
+    let tyw = match set_symbol_wfrac(set_svg) {
+        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
+        None => "78%".to_string(),
+    };
+    // Level-up cost band: "Level up {cost} (reminder)" + any base abilities.
+    let mut lvlup = format!(r#"<div class="lu"><b>Level up</b> {}"#, manaify(&lvl.cost, &mana_base));
+    if !lvl.reminder.is_empty() {
+        lvlup.push_str(&format!(r#" <span class="lu-rem">{}</span>"#, manaify(&lvl.reminder, &mana_base)));
+    }
+    lvlup.push_str("</div>");
+    if !lvl.base_abilities.trim().is_empty() {
+        lvlup.push_str(&format!(r#"<div class="lu-base">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
+    }
+    let tier = |i: usize| lvl.tiers.get(i);
+    let range = |i: usize| tier(i).map_or(String::new(), |t| format!("LEVEL {}", esc(&t.range)));
+    let abil = |i: usize| tier(i).map_or(String::new(), |t| rules_html(&t.abilities, "", &mana_base));
+    let tpt = |i: usize| tier(i).map_or(String::new(), |t| esc(&t.pt));
+    let pairs: Vec<(&str, String)> = vec![
+        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("ITALIC_FACE", italic_face),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("RSZ", px(101.0 / f64::from(FACE_H))),
+        ("LBSZ", px(60.0 / f64::from(FACE_H))), ("PSZ", px(120.0 / f64::from(FACE_H))),
+        ("TYW", tyw), ("TYPAD", "0".to_string()),
+        ("ART", format!("file://{}", art_abs.display())),
+        ("FRAME", format!("file://{}", frame_abs.display())),
+        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("TYPE", esc(&c.type_line)),
+        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.587, 8.0)),
+        ("LVLUP", lvlup), ("BASEPT", esc(&lvl.base_pt)),
+        ("LVL1RANGE", range(0)), ("LVL1ABIL", abil(0)), ("LVL1PT", tpt(0)),
+        ("LVL2RANGE", range(1)), ("LVL2ABIL", abil(1)), ("LVL2PT", tpt(1)),
+        ("ILLUS", illus), ("YEAR", year),
+    ];
+    let mut html = TEMPLATE_8TH_LEVELER_CC.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
 #[allow(clippy::too_many_arguments)]
 fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+    _frame_rel: &Path, _ptbox_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
-    let frame_abs = fs::canonicalize(frame_rel)?;
-    let ptbox_abs = fs::canonicalize(ptbox_rel)?;
+    let frame_abs = fs::canonicalize(assets_dir.join(leveler_frame_8th(card)))?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
     let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_level(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
+    let html = build_html_8th_leveler_cc(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
     let html_path = std::env::temp_dir().join(format!("mtgbrain-level8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
@@ -4933,7 +5019,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 8,
+            "frame_kind": "eighth", "v": 9,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
