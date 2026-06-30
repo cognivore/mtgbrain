@@ -451,7 +451,7 @@ fn card_hash(c: &Card, art_ref: &str, artist: &str) -> String {
         "oracle_text": c.oracle_text, "flavor": c.flavor, "power": c.power, "toughness": c.toughness,
         "loyalty": c.loyalty, "frame_file": frame_file(c), "is_creature": c.is_creature,
         "set": c.set, "rarity": c.rarity, "errata": c.is_errata, "ci": c.color_identity,
-        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 13,
+        "art_ref": art_ref, "artist": artist, "frame": "seventh", "v": 14,
     });
     let mut h = Sha256::new();
     h.update(canon.to_string().as_bytes());
@@ -3141,6 +3141,34 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     html
 }
 
+/// Glue a flavor **attribution** line (one starting with an em/en dash — e.g. `—Alquist Proft`)
+/// to the quote above it with a Markdown hard break (two trailing spaces), so it renders as a
+/// tight compressed newline directly under the quote instead of dropping a full paragraph gap.
+/// Applied across both cubes so attribution sits consistently, whether the flavor came from a
+/// hand-authored override (already double-spaced — left untouched) or raw Scryfall text
+/// (plain `\n` — fixed here). Walks back past blank lines to the nearest quote line.
+fn glue_attribution(flavor: &str) -> String {
+    let mut lines: Vec<String> = flavor.split('\n').map(str::to_string).collect();
+    for i in 1..lines.len() {
+        let t = lines[i].trim_start();
+        if !(t.starts_with('—') || t.starts_with('–')) {
+            continue;
+        }
+        let mut j = i;
+        while j > 0 {
+            j -= 1;
+            let pr = lines[j].trim_end();
+            if !pr.is_empty() {
+                if !lines[j].ends_with("  ") {
+                    lines[j] = format!("{pr}  ");
+                }
+                break;
+            }
+        }
+    }
+    lines.join("\n")
+}
+
 /// Rules text → paragraphs, mana symbols inline, parenthetical reminder italic.
 fn rules_html(text: &str, flavor: &str, mana_base: &str) -> String {
     let mut s = String::new();
@@ -3154,7 +3182,7 @@ fn rules_html(text: &str, flavor: &str, mana_base: &str) -> String {
         s.push_str("</p>");
     }
     // Flavor text: italic, below the rules, separated by a thin divider (real old frame).
-    for (i, para) in paragraphs(flavor).iter().enumerate() {
+    for (i, para) in paragraphs(&glue_attribution(flavor)).iter().enumerate() {
         if i == 0 {
             s.push_str(r#"<div class="flavbar"></div>"#);
         }
@@ -4858,7 +4886,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 6,
+            "frame_kind": "eighth", "v": 7,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
