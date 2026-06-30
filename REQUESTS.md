@@ -5,13 +5,13 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
-## ◐ 6. 8ED pips — inconsistent drop shadow (title vs textbox)
+## ☑ 6. 8ED pips — inconsistent drop shadow (title vs textbox)
 **Asked:** 2026-06-30. Name-box pips looked shadowed while textbox pips looked flat.
 Root cause: pip SVGs have no baked shadow; the only shadow was a fixed `1px` `.ms-img`
 filter, near-invisible at 2176px render scale and reading differently on the light title
 bar vs white textbox. **Fix:** all 8th templates now use one em-scaled drop-shadow
 (`0.035em 0.045em 0.01em rgba(0,0,0,0.5)`) so it scales with pip size and matches everywhere.
-Bumped 8ED cache v7→v8; re-rendering the cube to apply.
+Bumped 8ED cache v7→v8; cube re-rendered (493, 0 errors).
 
 ## Note (2026-06-30): editor backend / clobbering
 The running editor backends were the **pre-fix binary** and re-rendered (clobbered) corrected
@@ -34,7 +34,7 @@ with M15 art-hole / title / type / textbox / PT positions), like the saga/pw/adv
 layouts — then re-render the 3 cards. The frame-select hook (`devoid_frame_8th`) was wired then
 backed out to avoid shipping a broken title; see the `TODO(devoid)` in `frame_file_8th`.
 
-## ◐ 4. 8ED cube — MPC downloads / publish parity (BOTH)
+## ☑ 4. 8ED cube — MPC downloads / publish parity (BOTH)
 **Asked:** 2026-06-30. The 8ED (`pointless-b-side`) cube has no export path: `render_selfhost`
 + `publish.sh` are hard-coded to the old-frame `cards/` dir; the 8ED cube renders to `cards8/`
 which nothing reads. Wanted: **(a)** a local MPC bundle — stage `cards8/*/card8.png` as
