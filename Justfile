@@ -98,6 +98,41 @@ render-all:
 selfhost:
     cargo run --release -- render selfhost
 
+# ── 8ED back cube (pointless-b-side) export ───────────────────────────────────
+bside_db := "data/pointless-b-side.sqlite"
+bside_bucket := "s3://social-doma-dev-media/odyssey2026-bside"
+bside_base := "https://s3.us-east-1.amazonaws.com/social-doma-dev-media/odyssey2026-bside"
+
+# Local MPC download bundle for the 8ED cube: every print-ready card8.png staged as
+# render-cache/mpc-8ed/<Card-Name>.png — hand this folder straight to MakePlayingCards.
+mpc-bundle-8ed:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stage=render-cache/mpc-8ed; rm -rf "$stage"; mkdir -p "$stage"; n=0
+    for f in render-cache/cards8/*/card8.png; do
+      [ -e "$f" ] || continue
+      ln -f "$f" "$stage/$(basename "$(dirname "$f")").png"; n=$((n+1))
+    done
+    echo "MPC bundle: $n cards -> $stage"
+
+# Build the Scryfall-format selfhost crops for the 8ED cube (from card8.png).
+selfhost-8ed:
+    cargo run --release -- render selfhost --editor-db {{bside_db}} --frame 8th
+
+# FULL 8ED publish: selfhost crops -> S3 (bside prefix) -> CubeCobra CSV. Outward-facing.
+publish-8ed: selfhost-8ed
+    #!/usr/bin/env bash
+    set -uo pipefail
+    stage=render-cache/selfhost-upload-8ed; rm -rf "$stage"; mkdir -p "$stage"; n=0
+    for f in render-cache/cards8/*/selfhost.png; do
+      [ -e "$f" ] || continue
+      ln -f "$f" "$stage/$(basename "$(dirname "$f")").png"; n=$((n+1))
+    done
+    echo "staged $n images -> {{bside_bucket}}"
+    nix-shell -p awscli2 --run "aws s3 sync '$stage' '{{bside_bucket}}/' --no-progress"
+    cargo run --release -- edit cubecobra-csv --editor-db {{bside_db}} \
+      --base {{bside_base}} --out data/odyssey2026_bside_cubecobra.csv
+
 # Claude key (artwork match + crop) pulled from rageveil at run time.
 mpc_key := "rageveil show geosurge.ai/api.anthropic.com/onehr-cellvm/pool"
 

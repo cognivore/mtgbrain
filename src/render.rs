@@ -5048,7 +5048,7 @@ pub fn selfhost_one(card_dir: &Path) -> Result<Option<PathBuf>> {
 
 /// Generate the selfhost image for every active card in the editor DB. Reports
 /// how many were written and which cards still lack a render.
-pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>) -> Result<()> {
+pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>, eighth: bool) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
     let names: Vec<String> = if let Some(id) = only {
@@ -5064,7 +5064,7 @@ pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>) ->
     };
     let (mut done, mut missing) = (0usize, Vec::new());
     for name in &names {
-        let dir = cache_dir.join("cards").join(sanitize(name));
+        let dir = frame_card_dir(cache_dir, name, eighth);
         match selfhost_one(&dir)? {
             Some(_) => done += 1,
             None => missing.push(name.clone()),

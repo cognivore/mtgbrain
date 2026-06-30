@@ -479,7 +479,8 @@ fn main() -> Result<()> {
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                render::render_selfhost(&edb, &common.cache, *id)
+                let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
+                render::render_selfhost(&edb, &common.cache, *id, eighth)
             }
             RenderCmd::GenaiPass { common } => {
                 let edb = common
