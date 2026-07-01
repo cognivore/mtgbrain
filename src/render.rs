@@ -3535,7 +3535,7 @@ fn ducks_palette(subcat: &str, cat: &str) -> (String, String, String, String) {
 /// Materialise the art for a DuckTales card: crop the top ~63% (the Disney illustration, above
 /// the Polish name strip) out of the original 425×685 scan into the card's cache dir. Cheap,
 /// cached by mtime. A durable art override (editor crop) wins if present.
-fn ducks_art(id: i64, card_dir: &Path) -> Result<PathBuf> {
+fn ducks_art(id: i64, card_dir: &Path, event: bool) -> Result<PathBuf> {
     fs::create_dir_all(card_dir)?;
     let out = card_dir.join("art.png");
     let override_art = card_dir.join("art_override.png");
@@ -3550,7 +3550,10 @@ fn ducks_art(id: i64, card_dir: &Path) -> Result<PathBuf> {
     if src.exists() && (!out.exists() || !fresh) {
         let img = image::open(&src).with_context(|| format!("opening {}", src.display()))?;
         let (w, h) = (img.width(), img.height());
-        let crop_h = (f64::from(h) * 0.63) as u32;
+        // Crop out the FULL Disney illustration — the whole art region down to (but not into) the
+        // Polish text: events' body starts ~.686, objects' colour strip ~.785.
+        let frac = if event { 0.665 } else { 0.775 };
+        let crop_h = (f64::from(h) * frac) as u32;
         image::imageops::crop_imm(&img, 0, 0, w, crop_h)
             .to_image()
             .save(&out)
@@ -3562,29 +3565,20 @@ fn ducks_art(id: i64, card_dir: &Path) -> Result<PathBuf> {
 /// Build the DuckTales card HTML. `type_line` carries "SUBCATEGORY — CATEGORY"; `is_creature`
 /// (repurposed at seed) means the card has body text → the white event panel, else the coloured
 /// object strip. The number is the card id.
-fn build_html_ducks(c: &Card, id: i64, art_abs: &Path) -> String {
+fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
     let (subcat, cat) = c.type_line.split_once(" — ")
         .map_or((c.type_line.trim(), ""), |(s, cc)| (s.trim(), cc.trim()));
-    let (strip, ink, numbg, numink) = ducks_palette(subcat, cat);
-    let event = c.is_creature; // repurposed: hasBodyText
-    let bottom = if event {
-        format!(
-            r#"<div class="body"><div class="enm">{}</div><div class="btext">{}</div></div>"#,
-            esc(&c.name), esc(&c.oracle_text).replace('\n', "<br>")
-        )
-    } else {
-        let sub = if subcat.is_empty() { String::new() } else { format!(r#"<div class="sub">{}</div>"#, esc(subcat)) };
-        let catd = if cat.is_empty() { String::new() } else { format!(r#"<div class="cat">{}</div>"#, esc(cat)) };
-        format!(r#"<div class="strip"><div class="nm">{}</div>{sub}{catd}</div>"#, esc(&c.name))
-    };
+    let (strip, ink, _, _) = ducks_palette(subcat, cat);
     let pairs: Vec<(&str, String)> = vec![
         ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("NMSZ", px(150.0 / f64::from(FACE_H))), ("SUBSZ", px(78.0 / f64::from(FACE_H))),
-        ("BODYSZ", px(96.0 / f64::from(FACE_H))), ("NUMSZ", px(150.0 / f64::from(FACE_H))),
-        ("STRIP", strip), ("INK", ink), ("NUMBG", numbg), ("NUMINK", numink),
+        ("NMSZ", px(122.0 / f64::from(FACE_H))), ("TYSZ", px(84.0 / f64::from(FACE_H))),
+        ("BODYSZ", px(100.0 / f64::from(FACE_H))), ("NUMSZ", px(52.0 / f64::from(FACE_H))),
+        ("STRIP", strip), ("INK", ink),
         ("ARTURL", format!("file://{}", art_abs.display())),
-        ("BOTTOM", bottom), ("NUMBER", id.to_string()),
+        ("NAME", esc(&c.name)), ("TYPE", esc(&c.type_line)),
+        ("TEXT", esc(&c.oracle_text).replace('\n', "<br>")),
+        ("NUMBER", id.to_string()), ("TOTAL", total.to_string()),
     ];
     let mut html = TEMPLATE_DUCKS.to_string();
     for (k, v) in &pairs {
@@ -3601,16 +3595,19 @@ pub fn render_card_ducks(
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
     let card = load_card(&db, id)?;
+    let total: i64 = db.query_row(
+        "SELECT COUNT(*) FROM cube_cards WHERE in_db_found=1 AND removed=0", [], |r| r.get(0),
+    ).unwrap_or(0);
     let dir = cache_dir.join("ducks").join(sanitize(&card.name));
     let out = dir.join("card.png");
     let hash_file = dir.join("card.hash");
-    let art = ducks_art(id, &dir)?;
+    let art = ducks_art(id, &dir, card.is_creature)?;
     let art_sig = fs::metadata(&art).and_then(|m| m.modified()).ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs());
     let hash = {
         let canon = json!({
             "name": card.name, "type": card.type_line, "oracle": card.oracle_text,
-            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 1,
+            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 2,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
@@ -3620,7 +3617,7 @@ pub fn render_card_ducks(
         return Ok(out);
     }
     let art_abs = fs::canonicalize(&art).unwrap_or(art);
-    let html = build_html_ducks(&card, id, &art_abs);
+    let html = build_html_ducks(&card, id, total, &art_abs);
     screenshot_html(chrome, &html, &out, &format!("ducks-{id}"))?;
     let _ = fs::write(&hash_file, &hash);
     let _ = card_preview(&out, 760);

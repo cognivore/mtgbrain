@@ -3,61 +3,55 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden;
   font-family:'Helvetica Neue',Arial,sans-serif; }
-/* DuckTales layout at MPC size: a category-coloured card, art centred in a window near the
-   top, and a bottom region — a coloured name/category strip (objects) or a white body
-   panel (events) — with a number box in the corner. Colours come from the category palette. */
+/* Frameless DuckTales card at MPC size: a plain white face — big art on top (shown whole,
+   white around it), a category-coloured type-line bar in the middle, the text box under it,
+   and a small collector number in the bottom black margin (Magic-style). No border frame. */
 .face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px;
-  background:%%STRIP%%; border-radius:22px; overflow:hidden; }
-/* thin inner keyline like the original card border */
-.face::before { content:""; position:absolute; inset:1.6%; border:3px solid rgba(0,0,0,.35);
-  border-radius:16px; pointer-events:none; z-index:5; }
-/* art window: centred, upper ~60% */
-.art { position:absolute; left:5.5%; top:4.2%; width:89%; height:58.5%;
-  background:#111 center/cover no-repeat; background-image:url('%%ARTURL%%');
-  border:6px solid #fff; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,.4); }
-/* ---- OBJECT strip (name / subcategory / category + number) ---- */
-.strip { position:absolute; left:0; right:0; top:64.5%; bottom:0; color:%%INK%%;
-  display:flex; flex-direction:column; justify-content:center; padding:0 6% 0 6.5%; }
-.strip > div { flex:none; }
-.strip .nm  { font-weight:900; font-size:%%NMSZ%%px; line-height:1.04; text-transform:uppercase;
-  letter-spacing:.01em; white-space:nowrap; }
-.strip .sub { font-weight:700; font-size:%%SUBSZ%%px; margin-top:.55em; text-transform:uppercase;
-  letter-spacing:.03em; white-space:nowrap; }
-.strip .cat { font-weight:700; font-size:%%SUBSZ%%px; margin-top:.2em; text-transform:uppercase;
-  letter-spacing:.03em; opacity:.92; white-space:nowrap; }
-/* ---- EVENT body (white panel with wrapped text) ---- */
-.body { position:absolute; left:5.5%; right:5.5%; top:64.5%; bottom:6.5%; background:#fff;
-  color:#111; border-radius:12px; padding:3.2% 4%; display:flex; flex-direction:column;
-  box-shadow:0 3px 10px rgba(0,0,0,.35); }
-.body .enm { font-weight:900; font-size:%%NMSZ%%px; line-height:1.02; text-transform:uppercase;
-  letter-spacing:.01em; }
-.body .btext { font-size:%%BODYSZ%%px; line-height:1.28; margin-top:.7em; flex:1; overflow:hidden; }
-/* ---- number box, bottom-right ---- */
-.numbox { position:absolute; right:5.5%; bottom:4%; min-width:8.5%; height:8.2%; padding:0 .4em;
-  background:%%NUMBG%%; color:%%NUMINK%%; border-radius:9px; display:flex; align-items:center;
-  justify-content:center; font-weight:900; font-size:%%NUMSZ%%px; z-index:6;
-  border:3px solid rgba(0,0,0,.25); }
+  background:#fff; border-radius:12px; overflow:hidden; }
+/* NAME: a GENEROUS fixed area (fits two lines). Font starts at one consistent size for every
+   card and only shrinks if a name is so long it overflows this box — so names look uniform
+   instead of huge-for-short / tiny-for-long. */
+.name { position:absolute; left:5%; right:5%; top:2.8%; height:9%; display:flex; align-items:center;
+  justify-content:center; text-align:center; font-weight:900; text-transform:uppercase;
+  letter-spacing:.01em; font-size:%%NMSZ%%px; line-height:1.05; color:#111; overflow:hidden; }
+/* art: tall, centred, shown WHOLE (contain) on a white ground — never cropped */
+.art { position:absolute; left:4%; top:12.6%; width:92%; height:43.5%;
+  background:#fff center/contain no-repeat; background-image:url('%%ARTURL%%'); }
+/* type-line bar (category colour) in the middle */
+.type { position:absolute; left:5%; right:5%; top:57.5%; height:6%; background:%%STRIP%%; color:%%INK%%;
+  border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center;
+  font-weight:800; text-transform:uppercase; letter-spacing:.03em; font-size:%%TYSZ%%px;
+  line-height:1.02; white-space:nowrap; padding:0 3%; }
+/* text box under the type line */
+.text { position:absolute; left:6%; right:6%; top:64.8%; bottom:5%; color:#111;
+  font-size:%%BODYSZ%%px; line-height:1.32; overflow:hidden; }
+/* small collector number in the bottom black margin, like a Magic card */
+.num { position:absolute; left:5.5%; bottom:0.55%; color:#9a9a9a; font-weight:700;
+  font-size:%%NUMSZ%%px; letter-spacing:.02em; }
 </style></head>
 <body>
-  <div class="face" style="background:%%STRIP%%">
+  <div class="face">
+    <div class="name" id="nm">%%NAME%%</div>
     <div class="art"></div>
-    %%BOTTOM%%
-    <div class="numbox">%%NUMBER%%</div>
+    <div class="type" id="ty">%%TYPE%%</div>
+    <div class="text" id="tx">%%TEXT%%</div>
   </div>
+  <div class="num">%%NUMBER%% / %%TOTAL%%</div>
 <script>
-// Names/subcats/categories are single-line (nowrap): shrink only on WIDTH overflow.
+// single-line elements (name, type): shrink only on WIDTH overflow.
 function fitW(el, minPx){
   if(!el) return; var s=parseFloat(getComputedStyle(el).fontSize);
   for(var i=0;i<220 && el.scrollWidth>el.clientWidth+1 && s>minPx;i++){ s-=2; el.style.fontSize=s+'px'; }
 }
-// Body text wraps: shrink until it fits the box HEIGHT.
+// body text wraps: shrink until it fits the box HEIGHT.
 function fitH(el, minPx){
   if(!el) return; var s=parseFloat(getComputedStyle(el).fontSize);
   for(var i=0;i<220 && el.scrollHeight>el.clientHeight+1 && s>minPx;i++){ s-=2; el.style.fontSize=s+'px'; }
 }
 function fit(){
-  document.querySelectorAll('.nm,.enm,.sub,.cat').forEach(function(e){ fitW(e,26); });
-  fitH(document.querySelector('.btext'),18);
+  fitH(document.getElementById('nm'),40);   // name wraps to 2 lines; shrink only if it overflows
+  fitW(document.getElementById('ty'),22);
+  fitH(document.getElementById('tx'),18);
   document.documentElement.setAttribute('data-fit','done');
 }
 window.onload=fit; setTimeout(fit,600);
