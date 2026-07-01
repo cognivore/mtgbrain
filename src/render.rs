@@ -3537,12 +3537,13 @@ fn is_devoid_8th(c: &Card) -> bool {
 /// The M15 devoid frame tinted by colour identity (a colourless devoid card carries a colour
 /// hint — blue-emerge Vexing Scuttler → the U devoid frame); no identity → neutral `m`.
 fn devoid_frame_8th(c: &Card) -> String {
-    // The M15 devoid pack has no pure-colourless variant; a truly colourless Eldrazi (no
-    // identity, e.g. Endless One) takes the neutral tan/bronze artifact variant — the classic
-    // colourless-Eldrazi look — not the gold `m` (which reads as multicolour).
-    let key = match ci_letters(&c.color_identity).as_slice() {
+    // Tint by the card's actual colour — its MANA-COST pips (a manual colour-identity override
+    // wins) — NOT the color_identity field. So Ghostfire Slice ({2}{R}) keeps the RED devoid
+    // frame even when its colours are forced empty. The M15 devoid pack has no pure-colourless
+    // variant, so a truly colourless card (Endless One) takes the neutral tan `a` frame.
+    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let key = match cols.as_slice() {
         [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
-        // no identity (Endless One) OR multi-pinged devoid → the neutral tan artifact variant
         _ => "a",
     };
     format!("frames8/devoid/{key}.png")
@@ -4247,7 +4248,11 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         let is_land = t.contains("land");
         let is_artifact = t.contains("artifact");
         let ci = ci_letters(&c.color_identity);
-        let letters: Vec<char> = if is_artifact && !is_land {
+        let letters: Vec<char> = if is_devoid_8th(c) {
+            // Devoid cards are colourless — the tinted devoid frame conveys the colour hint;
+            // never a colour-indicator dot (that's what put a stray "CR" dot on Ghostfire).
+            vec![]
+        } else if is_artifact && !is_land {
             // Coloured artifacts now carry their colour in the TWIN frame (title/type bars),
             // not a colour-indicator dot; colourless artifacts have nothing to show.
             vec![]
@@ -4973,7 +4978,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 11,
+            "frame_kind": "eighth", "v": 12,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
