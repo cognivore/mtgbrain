@@ -3517,13 +3517,20 @@ fn is_devoid_8th(c: &Card) -> bool {
     if t.contains("land") || t.contains("artifact") || t.contains("planeswalker") {
         return false;
     }
+    // ANY devoid card is colourless regardless of its coloured mana cost — Ghostfire Slice
+    // ({2}{R}) and Propagator Drone ({1}{G}) both say "Devoid (This card has no color.)".
+    // Detect that reminder / keyword in the rules text; the frame is then tinted by the card's
+    // colour (see devoid_frame_8th), e.g. the red devoid frame for Ghostfire Slice.
+    let ot = c.oracle_text.to_lowercase();
+    if ot.contains("devoid") || ot.contains("this card has no color") {
+        return true;
+    }
+    // Otherwise: a genuinely colourless card that is an Eldrazi or has no identity — NOT a
+    // coloured card whose mana cost is merely missing in the data (e.g. a blank-cost sorcery).
     let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
     if !cols.is_empty() {
-        return false; // a colour in its cost → its normal coloured frame
+        return false;
     }
-    // Colourless: the devoid/Eldrazi frame is for actual Eldrazi or genuinely colourless cards
-    // (empty identity) — NOT a coloured card whose mana cost is merely missing in the data
-    // (e.g. a green sorcery with a blank cost would otherwise read as colourless).
     t.contains("eldrazi") || ci_letters(&c.color_identity).is_empty()
 }
 
@@ -4322,7 +4329,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         // set symbol on the type bar. The M15 devoid frame seats it harder against the right
         // edge (right:2.5%) than the 8th frame (right:10%); its type bar sits a hair lower.
         ("SETSYM", {
-            let (center, right) = if is_devoid_8th(c) { (0.591, 5.5) } else { (0.589, 10.0) };
+            let (center, right) = if is_devoid_8th(c) { (0.591, 7.0) } else { (0.589, 10.0) };
             set_symbol_svg_html(set_svg, &c.rarity, center, right)
         }),
         ("ILLUS", illus),
@@ -4966,7 +4973,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 10,
+            "frame_kind": "eighth", "v": 11,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
