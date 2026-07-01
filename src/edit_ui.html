@@ -397,8 +397,11 @@ function isOv(k){ return !!(C.overrides && C.overrides[k]!=null); }
 function ovmark(k){ return isOv(k) ? ` <span class="ov" title="errata">✎</span>` : ""; }
 function img(){
   const f = foilView ? 1 : 0;
-  // cache-bust on every edit (updated_at changes) so the preview reflects the new render
-  const v = encodeURIComponent(C.updated_at || "");
+  // Cache key for the image URL: render_key (8ED editor) is an accurate hash of everything
+  // that actually affects the render, so an unchanged card's URL never changes — the browser
+  // can cache it forever instead of re-fetching every flip. updated_at is the fallback for the
+  // old-frame/ducks editors, which don't send render_key; it only moves on an explicit edit.
+  const v = encodeURIComponent(C.render_key || C.updated_at || "");
   const src = `/api/render/${C.id}?foil=${f}&v=${v}`;
   return `<div class="imgwrap">
     <img class="cardimg" alt="old-frame render" src="${src}" decoding="async"
