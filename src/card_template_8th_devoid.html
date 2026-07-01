@@ -14,7 +14,6 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .art { position:absolute; left:7.71%; top:11.34%; width:84.53%; height:44.10%;
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
-.artframe { background-size:100% 100%; }
 /* devoid P/T box (m15DevoidPT.png) — seated in the textbox bottom-right corner. .pt shares
    the exact box so the P/T number is centred on the shield (no drift). */
 .ptbox { position:absolute; left:75.6%; top:87.9%; width:18.4%; height:6.0%; z-index:10;
@@ -57,10 +56,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 </style></head>
 <body>
   <div class="face">
-    <!-- the M15 devoid frame has transparent OUTER margins (no bleed); underlay the 8th
-         artifact frame so those margins read as a metal border instead of black. The art
-         rectangle sits above it and the opaque devoid frame covers everything but the margins. -->
-    <div class="layer artframe" style="background-image:url('%%ARTFRAME%%')"></div>
+    <!-- NB: no artifact-frame underlay — the devoid frame's textbox is semi-transparent, so
+         anything beneath bleeds through and muddies it. The transparent outer margins simply
+         show the black page, which is the accepted look for these devoid cards. -->
     <div class="art" style="background-image:url('%%ART%%')"></div>
     <div class="layer frame" style="background-image:url('%%FRAME%%')"></div>
     %%PTBOXDIV%%
