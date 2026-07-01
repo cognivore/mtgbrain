@@ -762,7 +762,7 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                                 Response::from_data(Vec::new())
                                     .with_status_code(304)
                                     .with_header(header("ETag", etag.as_deref().unwrap_or("")))
-                                    .with_header(header("Cache-Control", "private, max-age=86400"))
+                                    .with_header(header("Cache-Control", "private, no-cache"))
                             } else {
                                 image_response(&serve_path, mime, etag)
                             }
@@ -1071,7 +1071,7 @@ fn image_response(path: &std::path::Path, mime: &str, etag: Option<String>) -> R
         Ok(bytes) => {
             let mut r = Response::from_data(bytes)
                 .with_header(header("Content-Type", mime))
-                .with_header(header("Cache-Control", "private, max-age=86400"));
+                .with_header(header("Cache-Control", "private, no-cache"));
             if let Some(tag) = etag {
                 r = r.with_header(header("ETag", tag.as_str()));
             }
