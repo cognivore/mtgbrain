@@ -221,6 +221,18 @@ enum EditCmd {
         #[arg(long)]
         no_genai: bool,
     },
+    /// Seed a DuckTales editor DB from beter-ducks.json (English side; reuses the cube schema).
+    SeedDucks {
+        /// Source JSON (the DuckTales cards).
+        #[arg(long, default_value = "/Users/sweater/Github/ducktales/data/beter-ducks.json")]
+        json: PathBuf,
+        /// Output editor DB.
+        #[arg(long, default_value = "data/ducktales.sqlite")]
+        out: PathBuf,
+        /// Overwrite an existing DB.
+        #[arg(long)]
+        force: bool,
+    },
     /// Recompute color_identity for every card from its effective (override-applied)
     /// mana cost + rules-text mana symbols, and write it back to the editor DB.
     Recolor {
@@ -358,6 +370,7 @@ fn main() -> Result<()> {
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 edit::seed(&db, list, &out, *force, *no_genai)
             }
+            EditCmd::SeedDucks { json, out, force } => edit::seed_ducks(json, out, *force),
             EditCmd::Recolor { editor_db, dry_run } => {
                 let edb = editor_db
                     .clone()
@@ -404,7 +417,13 @@ fn main() -> Result<()> {
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
-                let out = if eighth {
+                let ducks = matches!(common.frame.as_str(), "ducks" | "ducktales");
+                let out = if ducks {
+                    render::render_card_ducks(
+                        &edb, &common.assets, &common.cache, &common.chrome, *id,
+                        common.force, common.art_backend.as_deref(),
+                    )?
+                } else if eighth {
                     render::render_card_8th(
                         &edb, &common.assets, &common.cache, &common.chrome, *id,
                         common.force, common.art_backend.as_deref(),
@@ -468,9 +487,8 @@ fn main() -> Result<()> {
                     .editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
-                let eighth = matches!(common.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth");
                 render::render_all(
-                    &edb, &common.assets, &common.cache, &common.chrome, eighth, common.foil,
+                    &edb, &common.assets, &common.cache, &common.chrome, &common.frame, common.foil,
                     common.force, common.art_backend.as_deref(),
                 )
             }

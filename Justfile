@@ -98,6 +98,19 @@ render-all:
 selfhost:
     cargo run --release -- render selfhost
 
+# ── DuckTales editor (Build Your Duckburg cards, English) ─────────────────────
+ducks_json := "/Users/sweater/Github/ducktales/data/beter-ducks.json"
+ducks_db := "data/ducktales.sqlite"
+
+# Seed the DuckTales editor DB from beter-ducks.json (English side only).
+edit-ducks-seed:
+    cargo run --release -- edit seed-ducks --json {{ducks_json}} --out {{ducks_db}} --force
+
+# DuckTales card editor: MPC/Magic sizing, DuckTales layout. Own DB + port 49739.
+edit-ducks PORT="49739":
+    @[ -f {{ducks_db}} ] || just edit-ducks-seed
+    cargo run --release -- edit serve --editor-db {{ducks_db}} --port {{PORT}} --frame ducks
+
 # ── 8ED back cube (pointless-b-side) export ───────────────────────────────────
 bside_db := "data/pointless-b-side.sqlite"
 bside_bucket := "s3://social-doma-dev-media/odyssey2026-bside"

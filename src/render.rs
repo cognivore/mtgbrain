@@ -3479,6 +3479,153 @@ fn compose(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &
 // ---------------------------------------------------------------------------
 
 const TEMPLATE_8TH: &str = include_str!("card_template_8th.html");
+const TEMPLATE_DUCKS: &str = include_str!("card_template_ducks.html");
+
+/// Shared headless-Chrome screenshot of an HTML string → PNG at the MPC canvas size. The 8th
+/// composers each inline this; new renderers (ducks) call it instead of duplicating the args.
+fn screenshot_html(chrome: &str, html: &str, out: &Path, tag: &str) -> Result<()> {
+    fs::create_dir_all(out.parent().unwrap())?;
+    let html_path = std::env::temp_dir().join(format!("mtgbrain-{tag}.html"));
+    fs::write(&html_path, html)?;
+    let status = Command::new(chrome)
+        .args([
+            "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--no-default-browser-check", "--no-first-run", "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw", "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
+            &format!("file://{}", html_path.display()),
+        ])
+        .status()
+        .with_context(|| format!("running Chrome at {chrome}"))?;
+    if !status.success() || !out.exists() {
+        bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
+    }
+    Ok(())
+}
+
+/// Original DuckTales card scans (Disney art + Polish strip). The art window uses the top crop.
+const DUCKS_SRC: &str = "/Users/sweater/Github/ducktales/work/cards";
+
+/// DuckTales category palette (ported from the ducktales generator, `scripts/render_card.py`):
+/// keyed by subcategory (objects) or category (city services) → (strip bg, ink, num bg, num ink)
+/// as CSS colours. `"@"` means "same as the strip colour".
+fn ducks_palette(subcat: &str, cat: &str) -> (String, String, String, String) {
+    // (strip, ink, num_bg, num_ink) — "@" resolves to the strip colour.
+    let table: &[(&str, (u8, u8, u8), &str, &str, &str)] = &[
+        ("TOWN HALL",               (115, 20, 110), "#fff", "#fff", "@"),
+        ("POLICE",                  (25, 30, 122),  "#fff", "#fff", "@"),
+        ("FIRE BRIGADE",            (130, 30, 40),  "#fff", "#fff", "@"),
+        ("HEALTH SERVICE",          (25, 122, 65),  "#fff", "#fff", "@"),
+        ("COMMERCE & SERVICES",     (255, 255, 50), "#05288c", "@", "#fff"),
+        ("CULTURE & ENTERTAINMENT", (250, 25, 105), "#fff", "#fff", "@"),
+        ("INDUSTRY & SCIENCE",      (130, 175, 55), "#fff", "#fff", "@"),
+        ("SPORT",                   (15, 140, 255), "#fff", "#fff", "@"),
+        ("TRANSPORT",               (255, 130, 50), "#fff", "#fff", "@"),
+        ("SPECIAL OBJECTS",         (250, 25, 18),  "#fff", "#fff", "@"),
+    ];
+    let hit = table.iter().find(|e| e.0 == subcat).or_else(|| table.iter().find(|e| e.0 == cat));
+    let (r, g, b, ink, numbg, numink) = hit.map_or((90, 90, 100, "#fff", "#fff", "@"),
+        |e| (e.1 .0, e.1 .1, e.1 .2, e.2, e.3, e.4));
+    let strip = format!("rgb({r},{g},{b})");
+    let resolve = |c: &str| if c == "@" { strip.clone() } else { c.to_string() };
+    (strip.clone(), resolve(ink), resolve(numbg), resolve(numink))
+}
+
+/// Materialise the art for a DuckTales card: crop the top ~63% (the Disney illustration, above
+/// the Polish name strip) out of the original 425×685 scan into the card's cache dir. Cheap,
+/// cached by mtime. A durable art override (editor crop) wins if present.
+fn ducks_art(id: i64, card_dir: &Path) -> Result<PathBuf> {
+    fs::create_dir_all(card_dir)?;
+    let out = card_dir.join("art.png");
+    let override_art = card_dir.join("art_override.png");
+    if override_art.exists() {
+        return Ok(override_art);
+    }
+    let src = PathBuf::from(DUCKS_SRC).join(format!("card-{id:03}.png"));
+    let fresh = matches!(
+        (fs::metadata(&out).and_then(|m| m.modified()), fs::metadata(&src).and_then(|m| m.modified())),
+        (Ok(o), Ok(s)) if s <= o
+    );
+    if src.exists() && (!out.exists() || !fresh) {
+        let img = image::open(&src).with_context(|| format!("opening {}", src.display()))?;
+        let (w, h) = (img.width(), img.height());
+        let crop_h = (f64::from(h) * 0.63) as u32;
+        image::imageops::crop_imm(&img, 0, 0, w, crop_h)
+            .to_image()
+            .save(&out)
+            .with_context(|| format!("writing ducks art {}", out.display()))?;
+    }
+    Ok(out)
+}
+
+/// Build the DuckTales card HTML. `type_line` carries "SUBCATEGORY — CATEGORY"; `is_creature`
+/// (repurposed at seed) means the card has body text → the white event panel, else the coloured
+/// object strip. The number is the card id.
+fn build_html_ducks(c: &Card, id: i64, art_abs: &Path) -> String {
+    let (subcat, cat) = c.type_line.split_once(" — ")
+        .map_or((c.type_line.trim(), ""), |(s, cc)| (s.trim(), cc.trim()));
+    let (strip, ink, numbg, numink) = ducks_palette(subcat, cat);
+    let event = c.is_creature; // repurposed: hasBodyText
+    let bottom = if event {
+        format!(
+            r#"<div class="body"><div class="enm">{}</div><div class="btext">{}</div></div>"#,
+            esc(&c.name), esc(&c.oracle_text).replace('\n', "<br>")
+        )
+    } else {
+        let sub = if subcat.is_empty() { String::new() } else { format!(r#"<div class="sub">{}</div>"#, esc(subcat)) };
+        let catd = if cat.is_empty() { String::new() } else { format!(r#"<div class="cat">{}</div>"#, esc(cat)) };
+        format!(r#"<div class="strip"><div class="nm">{}</div>{sub}{catd}</div>"#, esc(&c.name))
+    };
+    let pairs: Vec<(&str, String)> = vec![
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("NMSZ", px(150.0 / f64::from(FACE_H))), ("SUBSZ", px(78.0 / f64::from(FACE_H))),
+        ("BODYSZ", px(96.0 / f64::from(FACE_H))), ("NUMSZ", px(150.0 / f64::from(FACE_H))),
+        ("STRIP", strip), ("INK", ink), ("NUMBG", numbg), ("NUMINK", numink),
+        ("ARTURL", format!("file://{}", art_abs.display())),
+        ("BOTTOM", bottom), ("NUMBER", id.to_string()),
+    ];
+    let mut html = TEMPLATE_DUCKS.to_string();
+    for (k, v) in &pairs {
+        html = html.replace(&format!("%%{k}%%"), v);
+    }
+    html
+}
+
+/// Render one DuckTales card → MPC-size PNG. Reuses load_card / sanitize / the shared Chrome
+/// screenshot; art is the cropped original scan (or an editor override). Cached by content hash.
+pub fn render_card_ducks(
+    editor_db: &Path, _assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, _backend: Option<&str>,
+) -> Result<PathBuf> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
+    let card = load_card(&db, id)?;
+    let dir = cache_dir.join("ducks").join(sanitize(&card.name));
+    let out = dir.join("card.png");
+    let hash_file = dir.join("card.hash");
+    let art = ducks_art(id, &dir)?;
+    let art_sig = fs::metadata(&art).and_then(|m| m.modified()).ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs());
+    let hash = {
+        let canon = json!({
+            "name": card.name, "type": card.type_line, "oracle": card.oracle_text,
+            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 1,
+        });
+        let mut h = Sha256::new();
+        h.update(canon.to_string().as_bytes());
+        format!("{:x}", h.finalize())
+    };
+    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
+        return Ok(out);
+    }
+    let art_abs = fs::canonicalize(&art).unwrap_or(art);
+    let html = build_html_ducks(&card, id, &art_abs);
+    screenshot_html(chrome, &html, &out, &format!("ducks-{id}"))?;
+    let _ = fs::write(&hash_file, &hash);
+    let _ = card_preview(&out, 760);
+    Ok(out)
+}
 
 fn color_frame_8th(ch: char) -> &'static str {
     match ch {
@@ -4923,13 +5070,25 @@ fn compose_adv_8th(card: &Card, art_path: &Path, artist: &str, year: &str, asset
     Ok(())
 }
 
-/// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
-pub fn render_card_8th(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
-) -> Result<PathBuf> {
-    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
-    let mut card = load_card(&db, id)?;
+/// REVIEW-FAST cache key for the EIGHTH-EDITION render of `id` — DB / card data ONLY,
+/// computed BEFORE any art work (no Scryfall fetch, no MPCfill re-pick, no headless-Chrome
+/// screenshot), so it's cheap enough to call on every single view. This is what lets you
+/// simply browse the cube: a card that's already rendered and whose data hasn't changed is
+/// served straight from disk. (The old key folded in the auto-picked art identity, so cards
+/// with no art sidecar re-fetched art from the network on every single view — 6-18 s each.)
+/// The durable art override carries any manual crop / source pick, so editing art — or
+/// passing --force — busts the key; the AUTO art identity is deliberately excluded (viewing
+/// must never re-pick it). split / adventure layout is implied by the card name, already here.
+///
+/// Shared by [`render_card_8th`]'s own on-disk skip-check and [`render_cache_key_8th`], which
+/// hands the same token to the editor UI as an accurate HTTP cache-busting value — accurate
+/// because it's the SAME computation, so it moves whenever a re-render actually would look
+/// different, unlike `cube_cards.updated_at` (which only moves on an explicit field/art edit
+/// and misses template/asset/code-level rendering changes).
+fn eighth_cache_key(
+    db: &Connection, assets_dir: &Path, cache_dir: &Path, id: i64,
+) -> Result<(Card, PathBuf, PathBuf, String)> {
+    let card = load_card(db, id)?;
     // Colour-bearing artifacts get a composited TWIN frame (artifact metal + the card's
     // colour on the title/type bars); everything else uses its self-contained colour/type
     // frame. The colourless artifact, lands, and ordinary colours fall through to frame_file_8th.
@@ -4956,18 +5115,6 @@ pub fn render_card_8th(
     if !frame_rel.exists() {
         bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
     }
-    let dir = cache_dir.join("cards8").join(sanitize(&card.name));
-    let out = dir.join("card8.png");
-    let hash_file = dir.join("card8.hash");
-
-    // REVIEW-FAST cache key — DB / card data ONLY, computed BEFORE any art work. This is what
-    // lets you simply browse the cube: a card that's already rendered and whose data hasn't
-    // changed is served straight from disk, with NO Scryfall fetch, NO MPCfill re-pick and NO
-    // headless-Chrome screenshot. (The old key folded in the auto-picked art identity, so cards
-    // with no art sidecar re-fetched art from the network on every single view — 6-18 s each.)
-    // The durable art override carries any manual crop / source pick, so editing art — or
-    // passing --force — busts the key; the AUTO art identity is deliberately excluded (viewing
-    // must never re-pick it). split / adventure layout is implied by the card name, already here.
     let hash = {
         let canon = json!({
             "name": card.name, "display_name": card.display_name, "mana_cost": card.mana_cost,
@@ -4977,13 +5124,35 @@ pub fn render_card_8th(
             "ci": card.color_identity, "illustrator": card.illustrator,
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
-            "override": art_override_json(&db, id).to_string(),
+            "override": art_override_json(db, id).to_string(),
             "frame_kind": "eighth", "v": 13,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
         format!("{:x}", h.finalize())
     };
+    Ok((card, frame_rel, ptbox_rel, hash))
+}
+
+/// The cache-busting token for the editor UI: an `/api/render/{id}` URL that embeds this
+/// value is guaranteed to always mean the same bytes (see [`eighth_cache_key`]), so the
+/// browser can safely cache the response forever instead of re-validating on every view.
+pub fn render_cache_key_8th(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, id: i64) -> Result<String> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
+    Ok(eighth_cache_key(&db, assets_dir, cache_dir, id)?.3)
+}
+
+/// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
+pub fn render_card_8th(
+    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
+) -> Result<PathBuf> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
+    let (mut card, frame_rel, ptbox_rel, hash) = eighth_cache_key(&db, assets_dir, cache_dir, id)?;
+    let dir = cache_dir.join("cards8").join(sanitize(&card.name));
+    let out = dir.join("card8.png");
+    let hash_file = dir.join("card8.hash");
     if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
         return Ok(out);
     }
@@ -5045,8 +5214,10 @@ pub fn render_card_8th(
 #[allow(clippy::too_many_arguments)]
 pub fn render_all(
     editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str,
-    eighth: bool, foil: bool, force: bool, backend: Option<&str>,
+    frame: &str, foil: bool, force: bool, backend: Option<&str>,
 ) -> Result<()> {
+    let eighth = matches!(frame, "8th" | "8ed" | "8ED" | "eighth");
+    let ducks = matches!(frame, "ducks" | "ducktales");
     let ids: Vec<i64> = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let mut stmt = db.prepare("SELECT id FROM cube_cards WHERE in_db_found=1 AND removed=0 ORDER BY id")?;
@@ -5059,8 +5230,10 @@ pub fn render_all(
     };
     let total = ids.len();
     for (i, id) in ids.iter().enumerate() {
-        // The modern (8th) frame has its own pipeline (no foil); everything else is render_one.
-        let res = if eighth {
+        // The modern (8th) and DuckTales frames have their own pipelines; else render_one.
+        let res = if ducks {
+            render_card_ducks(editor_db, assets_dir, cache_dir, chrome, *id, force, backend)
+        } else if eighth {
             render_card_8th(editor_db, assets_dir, cache_dir, chrome, *id, force, backend)
         } else {
             render_one(editor_db, assets_dir, cache_dir, chrome, *id, false, force, backend)
@@ -5069,12 +5242,12 @@ pub fn render_all(
             Ok(_) => print!("\r[{}/{total}] id {id}        ", i + 1),
             Err(e) => eprintln!("\n  id {id}: {e}"),
         }
-        if foil && !eighth {
+        if foil && !eighth && !ducks {
             let _ = render_one(editor_db, assets_dir, cache_dir, chrome, *id, true, force, backend);
         }
         std::io::stdout().flush().ok();
     }
-    let sub = if eighth { "cards8" } else { "cards" };
+    let sub = if ducks { "ducks" } else if eighth { "cards8" } else { "cards" };
     println!("\ndone: {total} cards -> {}", cache_dir.join(sub).display());
     Ok(())
 }

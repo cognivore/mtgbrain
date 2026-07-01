@@ -274,6 +274,65 @@ const INSERT_MISSING: &str = r"
 INSERT INTO cube_cards (id,name,in_db_found,decision) VALUES (?1,?2,0,'pending')
 ";
 
+/// Seed a DuckTales editor DB from `beter-ducks.json` (English side only). Reuses the same
+/// `cube_cards` SCHEMA as the MTG editor so the whole `serve` UI + art system work unchanged;
+/// we just map DuckTales fields onto it: englishName→name, "SUBCATEGORY — CATEGORY"→type,
+/// englishText→oracle_text, and hasBodyText→is_creature (repurposed = "has body → event layout").
+pub fn seed_ducks(json_path: &Path, out: &Path, force: bool) -> Result<()> {
+    if out.exists() && !force {
+        anyhow::bail!("{} already exists (pass --force to rebuild)", out.display());
+    }
+    let _ = fs::remove_file(out);
+    let cards: Vec<Value> = serde_json::from_str(&fs::read_to_string(json_path)?)
+        .with_context(|| format!("parsing {}", json_path.display()))?;
+    if let Some(p) = out.parent() {
+        fs::create_dir_all(p)?;
+    }
+    let db = Connection::open(out)?;
+    db.execute_batch(SCHEMA)?;
+    let str_field = |v: &Value, k: &str| -> String {
+        v.get(k).and_then(Value::as_str).map(str::trim)
+            .filter(|s| !s.is_empty() && *s != "null")
+            .unwrap_or("").to_string()
+    };
+    let mut n = 0;
+    {
+        let mut ins = db.prepare(
+            "INSERT INTO cube_cards (id,name,type,oracle_text,is_creature,decision,in_db_found,qty,updated_at)
+             VALUES (?1,?2,?3,?4,?5,'accepted',1,1,datetime('now'))",
+        )?;
+        for c in &cards {
+            let id = c.get("id").and_then(Value::as_i64).unwrap_or(0);
+            let name = str_field(c, "englishName");
+            if name.is_empty() {
+                continue;
+            }
+            let subcat = str_field(c, "englishSubcategory");
+            let cat = str_field(c, "englishCategory");
+            let type_line = match (subcat.is_empty(), cat.is_empty()) {
+                (false, false) => format!("{subcat} — {cat}"),
+                (true, false) => cat.clone(),
+                (false, true) => subcat.clone(),
+                _ => String::new(),
+            };
+            // Body text lives in englishText, but the source JSON sometimes stuffs it into the
+            // hasBodyText field instead — take whichever holds real prose.
+            let mut text = str_field(c, "englishText");
+            if text.is_empty() {
+                let hb = str_field(c, "hasBodyText");
+                if hb != "true" && hb != "false" {
+                    text = hb;
+                }
+            }
+            let has_body = i64::from(!text.is_empty());
+            ins.execute(params![id, name, type_line, text, has_body])?;
+            n += 1;
+        }
+    }
+    println!("seeded {n} DuckTales cards -> {}", out.display());
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // serve
 // ---------------------------------------------------------------------------
@@ -294,6 +353,9 @@ pub struct RenderCfg {
 impl RenderCfg {
     fn is_eighth(&self) -> bool {
         matches!(self.frame.as_str(), "8th" | "8ed" | "8ED" | "eighth")
+    }
+    fn is_ducks(&self) -> bool {
+        matches!(self.frame.as_str(), "ducks" | "ducktales")
     }
 }
 
@@ -450,6 +512,15 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                                 "flavor_base".to_string(),
                                 json!(crate::render::base_flavor(&name, &rc.cache)),
                             );
+                            // Accurate cache-busting token for /api/render/* (see render_cache_key_8th):
+                            // unlike updated_at, it moves whenever the rendered output actually would.
+                            if rc.is_eighth() {
+                                if let Ok(key) =
+                                    crate::render::render_cache_key_8th(editor_db, &rc.assets, &rc.cache, id)
+                                {
+                                    o.insert("render_key".to_string(), json!(key));
+                                }
+                            }
                         }
                         json_response(&v)
                     }
@@ -738,7 +809,11 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 let force = url.contains("force=1");
                 let want_full = url.contains("full=1");
                 match id_from(p, "/api/render/") {
-                    Some(id) => match if rc.is_eighth() {
+                    Some(id) => match if rc.is_ducks() {
+                        crate::render::render_card_ducks(
+                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, force, rc.backend.as_deref(),
+                        )
+                    } else if rc.is_eighth() {
                         crate::render::render_card_8th(
                             editor_db, &rc.assets, &rc.cache, &rc.chrome, id, force, rc.backend.as_deref(),
                         )
@@ -757,14 +832,31 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                                     Err(_) => (full_path.clone(), "image/png"),
                                 }
                             };
+                            // The 8ED pipeline's cache key is cheap to recompute from DB/asset
+                            // state alone (render_cache_key_8th mirrors render_card_8th's own
+                            // key). When the request's `v=` matches it exactly, this URL is
+                            // guaranteed to always mean this exact content, so the browser can
+                            // cache it forever and skip the network on a repeat view — a
+                            // *stronger* guarantee than `updated_at` (which never moves for
+                            // non-DB causes of a changed render: asset/template edits, or the
+                            // art auto-repick sidecar changing). Anything else — old-frame/ducks
+                            // editors, a forced re-render's `t=` bust, a missing/stale `v=` —
+                            // keeps the previous always-revalidate behaviour.
+                            let fresh = rc.is_eighth()
+                                && query_param(&url, "v").is_some_and(|v| {
+                                    crate::render::render_cache_key_8th(editor_db, &rc.assets, &rc.cache, id)
+                                        .is_ok_and(|k| k == v)
+                                });
+                            let cache_control =
+                                if fresh { "public, max-age=31536000, immutable" } else { "private, no-cache" };
                             let etag = file_etag(&serve_path);
                             if etag.is_some() && etag == if_none_match {
                                 Response::from_data(Vec::new())
                                     .with_status_code(304)
                                     .with_header(header("ETag", etag.as_deref().unwrap_or("")))
-                                    .with_header(header("Cache-Control", "private, no-cache"))
+                                    .with_header(header("Cache-Control", cache_control))
                             } else {
-                                image_response(&serve_path, mime, etag)
+                                image_response(&serve_path, mime, etag, cache_control)
                             }
                         }
                         Err(e) => Response::from_string(e.to_string()).with_status_code(500),
@@ -1066,12 +1158,12 @@ fn file_etag(path: &std::path::Path) -> Option<String> {
 
 /// Serve a cached image file with caching headers so the browser keeps it and revalidates
 /// cheaply (see [`file_etag`]). Falls back to 404 if the file vanished between stat and read.
-fn image_response(path: &std::path::Path, mime: &str, etag: Option<String>) -> Response<std::io::Cursor<Vec<u8>>> {
+fn image_response(path: &std::path::Path, mime: &str, etag: Option<String>, cache_control: &str) -> Response<std::io::Cursor<Vec<u8>>> {
     match std::fs::read(path) {
         Ok(bytes) => {
             let mut r = Response::from_data(bytes)
                 .with_header(header("Content-Type", mime))
-                .with_header(header("Cache-Control", "private, no-cache"));
+                .with_header(header("Cache-Control", cache_control));
             if let Some(tag) = etag {
                 r = r.with_header(header("ETag", tag.as_str()));
             }
