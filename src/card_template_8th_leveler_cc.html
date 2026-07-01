@@ -29,9 +29,10 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    background-size:100% 100%; background-repeat:no-repeat; }
 .ptxt { position:absolute; left:75.4%; width:18.6%; height:6.6%; z-index:11; display:flex;
    align-items:center; justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; }
-.pt0box, .pt0 { top:62.3%; }
-.pt1box, .pt1 { top:73.0%; }
-.pt2box, .pt2 { top:82.9%; }
+/* centred on the band lines (base .665, tier1 .77, tier2 .87), box height 6.6% -> top = c-3.3 */
+.pt0box, .pt0 { top:63.2%; }
+.pt1box, .pt1 { top:73.7%; }
+.pt2box, .pt2 { top:83.7%; }
 /* BASE band: "Level up {cost} (reminder)" + base abilities, clear of the base P/T box. */
 .lvl-up { left:9%; top:62.6%; width:66%; height:8.6%; display:flex; flex-direction:column;
    justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.12; color:#0a0a0a; }
@@ -43,13 +44,13 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    align-items:center; justify-content:center; font-family:'matrix'; line-height:1; color:#0a0a0a; text-align:center; }
 .lvl-range .lr-lab { font-size:%%LLSZ%%px; letter-spacing:.02em; }
 .lvl-range .lr-num { font-size:%%LBSZ%%px; }
-.lvl1-range { top:73.4%; }
-.lvl2-range { top:83.3%; }
+.lvl1-range { top:74.5%; }
+.lvl2-range { top:84.5%; }
 /* ability text in the middle column, between the range banner and the P/T box. */
 .lvl-abil { position:absolute; left:20.5%; width:56%; display:flex; flex-direction:column;
    justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.14; color:#0a0a0a; }
-.lvl1-abil { top:72.9%; height:9.7%; }
-.lvl2-abil { top:82.8%; height:9.7%; }
+.lvl1-abil { top:72.2%; height:9.7%; }
+.lvl2-abil { top:82.2%; height:9.7%; }
 .lvl-abil p, .lvl-up p { margin:0; }
 .info { position:absolute; left:8.8%; width:81.07%; text-align:left; color:%%INFOINK%%;
    font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
