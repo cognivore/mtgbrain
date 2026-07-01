@@ -1199,16 +1199,16 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
     #[allow(clippy::type_complexity)]
-    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String, String)> = {
+    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String, String, i64)> = {
         let mut stmt = db.prepare(
-            "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,''),COALESCE(tags,'')
+            "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,''),COALESCE(tags,''),COALESCE(qty,1)
              FROM cube_cards WHERE removed=0 ORDER BY id",
         )?;
         let v = stmt
             .query_map([], |r| {
                 Ok((r.get::<_, String>(0)?, r.get::<_, Option<f64>>(1)?, r.get::<_, Option<String>>(2)?,
                     r.get::<_, Option<String>>(3)?, r.get::<_, String>(4)?, r.get::<_, String>(5)?,
-                    r.get::<_, String>(6)?))
+                    r.get::<_, String>(6)?, r.get::<_, i64>(7)?))
             })?
             .collect::<std::result::Result<_, _>>()?;
         v
@@ -1217,7 +1217,8 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
         "Name,CMC,Type,Color,Set,Collector Number,Rarity,Color Category,Status,Finish,Maybeboard,Image URL,Image Back URL,Tags,Notes,MTGO ID\n",
     );
     let mut n = 0usize;
-    for (name, mv, ty, ci, ov, errata_text, card_tags) in rows {
+    let mut distinct = 0usize;
+    for (name, mv, ty, ci, ov, errata_text, card_tags, qty) in rows {
         let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
         let type_line = o.get("type").and_then(Value::as_str).map(ToString::to_string)
             .or(ty).unwrap_or_default();
@@ -1242,20 +1243,25 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
             tag_list.push(titled);
         }
         let tags = tag_list.join(",");
-        w.push_str(&format!(
+        let row = format!(
             "{},{cmc},{},{color},,,,{cat},Owned,Non-foil,false,{},,{},,\n",
             csv_field(&name),
             csv_field(&type_line),
             csv_field(&url),
             csv_field(&tags),
-        ));
-        n += 1;
+        );
+        // CubeCobra represents N copies of a card as N identical rows — honour `qty`.
+        for _ in 0..qty.max(1) {
+            w.push_str(&row);
+            n += 1;
+        }
+        distinct += 1;
     }
     if let Some(p) = out.parent() {
         fs::create_dir_all(p)?;
     }
     fs::write(out, w)?;
-    println!("cubecobra-csv: {n} cards -> {}", out.display());
+    println!("cubecobra-csv: {n} cards ({distinct} distinct, qty-expanded) -> {}", out.display());
     Ok(())
 }
 
