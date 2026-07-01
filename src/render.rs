@@ -3653,7 +3653,7 @@ fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
         ("BX", dbx.to_string()), ("BY", dby.to_string()),
         ("NMSZ", fs(122.0)), ("TYSZ", fs(84.0)),
         ("BODYSZ", fs(100.0)), ("NUMSZ", fs(58.0)),
-        ("NUML", (dbx + 12).to_string()), ("NUMB", (dby * 2 / 5).to_string()),
+        ("NUML", (dbx + 12).to_string()), ("NUMB", (dby * 3 / 4).to_string()),
         ("STRIP", strip), ("INK", ink),
         ("ARTURL", format!("file://{}", art_abs.display())),
         ("NAME", esc(&c.name)), ("TYPE", esc(&c.type_line)),
@@ -3687,7 +3687,7 @@ pub fn render_card_ducks(
     let hash = {
         let canon = json!({
             "name": card.name, "type": card.type_line, "oracle": card.oracle_text,
-            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 5,
+            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 7,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
