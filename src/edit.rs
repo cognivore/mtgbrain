@@ -709,7 +709,12 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                 match (&method, segs.as_slice(), aid) {
                     // Metadata: current box + every selectable source + window aspect.
                     (Method::Get, [_], Some(id)) => {
-                        match crate::render::art_meta(editor_db, &rc.cache, id, rc.is_eighth()) {
+                        let r = if rc.is_ducks() {
+                            crate::render::ducks_art_meta(editor_db, &rc.cache, id)
+                        } else {
+                            crate::render::art_meta(editor_db, &rc.cache, id, rc.is_eighth())
+                        };
+                        match r {
                             Ok(v) => json_response(&v),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }
@@ -718,7 +723,9 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                     // `&thumb=1` serves a small cached JPEG for the picker sidebar.
                     (Method::Get, [_, "img"], Some(id)) => {
                         let rel = query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
-                        let resolved = if url.contains("thumb=1") {
+                        let resolved = if rc.is_ducks() {
+                            crate::render::ducks_source_path(editor_db, &rc.cache, id, url.contains("thumb=1"))
+                        } else if url.contains("thumb=1") {
                             crate::render::art_thumb(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
                         } else {
                             crate::render::art_image_path(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
@@ -783,16 +790,28 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
                         let bx = parse_box("box");
                         let bx2 = parse_box("box2");
                         match bx {
-                            Some(bx) => match crate::render::art_save_crop(editor_db, &rc.cache, id, rc.is_eighth(), &rel, bx, bx2) {
-                                Ok(()) => json_response(&json!({"ok": true})),
-                                Err(e) => json_response(&json!({"error": e.to_string()})),
-                            },
+                            Some(bx) => {
+                                let r = if rc.is_ducks() {
+                                    crate::render::ducks_save_crop(editor_db, &rc.cache, id, bx)
+                                } else {
+                                    crate::render::art_save_crop(editor_db, &rc.cache, id, rc.is_eighth(), &rel, bx, bx2)
+                                };
+                                match r {
+                                    Ok(()) => json_response(&json!({"ok": true})),
+                                    Err(e) => json_response(&json!({"error": e.to_string()})),
+                                }
+                            }
                             None => json_response(&json!({"error": "missing or malformed box"})),
                         }
                     }
                     // Reset to the automatic crop (restores the stashed auto pick if any).
                     (Method::Post, [_, "reset"], Some(id)) => {
-                        match crate::render::art_reset(editor_db, &rc.cache, id, rc.is_eighth()) {
+                        let r = if rc.is_ducks() {
+                            crate::render::ducks_reset_crop(editor_db, &rc.cache, id)
+                        } else {
+                            crate::render::art_reset(editor_db, &rc.cache, id, rc.is_eighth())
+                        };
+                        match r {
                             Ok(()) => json_response(&json!({"ok": true})),
                             Err(e) => json_response(&json!({"error": e.to_string()})),
                         }

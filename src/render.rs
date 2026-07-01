@@ -3562,6 +3562,69 @@ fn ducks_art(id: i64, card_dir: &Path, event: bool) -> Result<PathBuf> {
     Ok(out)
 }
 
+/// The ducks art window's aspect (w/h) — the crop editor locks the box to it so a hand-placed
+/// crop fills the frame.
+const DUCKS_ART_ASPECT: f64 = (0.92 * FACE_W as f64) / (0.435 * FACE_H as f64);
+
+fn ducks_card_dir(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<(PathBuf, bool)> {
+    let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let name = card_name(&db, id)?;
+    let event = db.query_row("SELECT COALESCE(is_creature,0) FROM cube_cards WHERE id=?1",
+        params![id], |r| r.get::<_, i64>(0)).unwrap_or(0) != 0;
+    Ok((cache_dir.join("ducks").join(sanitize(&name)), event))
+}
+
+/// Crop-editor metadata for a DuckTales card: the single source is the original scan; the box
+/// is the saved hand-crop (or the default full-art region). Shape matches the MTG crop UI.
+pub fn ducks_art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
+    let (card_dir, event) = ducks_card_dir(editor_db, cache_dir, id)?;
+    let bx = read_json(&card_dir.join("crop.json"))
+        .and_then(|v| v["box"].as_array().cloned())
+        .unwrap_or_else(|| vec![json!(0.0), json!(0.0), json!(1.0), json!(if event { 0.665 } else { 0.775 })]);
+    Ok(json!({
+        "id": id, "current_rel": "@src",
+        "sources": [{"rel": "@src", "kind": "scryfall", "label": "Original DuckTales card",
+                     "artist": "", "year": "", "blocked": false}],
+        "box": bx, "aspect": DUCKS_ART_ASPECT, "art_aspect": DUCKS_ART_ASPECT,
+        "is_split": false, "is_saga": false, "is_pw": false, "genai": false, "artist_blocked": false,
+    }))
+}
+
+/// The image the ducks crop editor shows (the original scan); `thumb` → a small cached JPEG.
+pub fn ducks_source_path(editor_db: &Path, cache_dir: &Path, id: i64, thumb: bool) -> Result<PathBuf> {
+    let (card_dir, _) = ducks_card_dir(editor_db, cache_dir, id)?;
+    let src = PathBuf::from(DUCKS_SRC).join(format!("card-{id:03}.png"));
+    if thumb {
+        fs::create_dir_all(&card_dir)?;
+        let out = card_dir.join("src_thumb.jpg");
+        if src.exists() && !out.exists() {
+            image::open(&src)?.thumbnail(420, 420).to_rgb8()
+                .save_with_format(&out, image::ImageFormat::Jpeg)?;
+        }
+        return Ok(out);
+    }
+    Ok(src)
+}
+
+/// Save a hand-placed ducks crop: crop the scan to `box` (reusing crop_exact) → art_override.png,
+/// which render_card_ducks then uses. The box is remembered in crop.json.
+pub fn ducks_save_crop(editor_db: &Path, cache_dir: &Path, id: i64, bx: [f64; 4]) -> Result<()> {
+    let (card_dir, _) = ducks_card_dir(editor_db, cache_dir, id)?;
+    fs::create_dir_all(&card_dir)?;
+    let src = PathBuf::from(DUCKS_SRC).join(format!("card-{id:03}.png"));
+    crop_exact(&src, bx, &card_dir.join("art_override.png"))?;
+    fs::write(card_dir.join("crop.json"), json!({ "box": bx }).to_string())?;
+    Ok(())
+}
+
+/// Reset a ducks card back to the automatic full-art crop.
+pub fn ducks_reset_crop(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()> {
+    let (card_dir, _) = ducks_card_dir(editor_db, cache_dir, id)?;
+    let _ = fs::remove_file(card_dir.join("art_override.png"));
+    let _ = fs::remove_file(card_dir.join("crop.json"));
+    Ok(())
+}
+
 /// Build the DuckTales card HTML. `type_line` carries "SUBCATEGORY — CATEGORY"; `is_creature`
 /// (repurposed at seed) means the card has body text → the white event panel, else the coloured
 /// object strip. The number is the card id.
