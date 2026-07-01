@@ -3505,7 +3505,7 @@ fn screenshot_html(chrome: &str, html: &str, out: &Path, tag: &str) -> Result<()
 }
 
 /// Original DuckTales card scans (Disney art + Polish strip). The art window uses the top crop.
-const DUCKS_SRC: &str = "/Users/sweater/Github/ducktales/work/cards";
+const DUCKS_SRC: &str = "/Users/sweater/Github/ducktales/work/cards-hires";
 
 /// DuckTales category palette (ported from the ducktales generator, `scripts/render_card.py`):
 /// keyed by subcategory (objects) or category (city services) → (strip bg, ink, num bg, num ink)
@@ -3550,9 +3550,12 @@ fn ducks_art(id: i64, card_dir: &Path, event: bool) -> Result<PathBuf> {
     if src.exists() && (!out.exists() || !fresh) {
         let img = image::open(&src).with_context(|| format!("opening {}", src.display()))?;
         let (w, h) = (img.width(), img.height());
-        // Crop out the FULL Disney illustration — the whole art region down to (but not into) the
-        // Polish text: events' body starts ~.686, objects' colour strip ~.785.
-        let frac = if event { 0.665 } else { 0.775 };
+        // Crop out the FULL Disney illustration — the whole character, down to (but not into) the
+        // Polish name strip, which the original generator paints at y≈538/685≈.785 for both the
+        // object cards and the city-service cards. Cropping shallower (the old .665) chopped the
+        // figure off at the chest and made the art look squat; the full portrait reads far taller.
+        let _ = event;
+        let frac = 0.785;
         let crop_h = (f64::from(h) * frac) as u32;
         image::imageops::crop_imm(&img, 0, 0, w, crop_h)
             .to_image()
@@ -3564,7 +3567,7 @@ fn ducks_art(id: i64, card_dir: &Path, event: bool) -> Result<PathBuf> {
 
 /// The ducks art window's aspect (w/h) — the crop editor locks the box to it so a hand-placed
 /// crop fills the frame.
-const DUCKS_ART_ASPECT: f64 = (0.92 * FACE_W as f64) / (0.435 * FACE_H as f64);
+const DUCKS_ART_ASPECT: f64 = (0.92 * FACE_W as f64) / (0.48 * FACE_H as f64);
 
 fn ducks_card_dir(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<(PathBuf, bool)> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
@@ -3577,10 +3580,10 @@ fn ducks_card_dir(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<(PathBu
 /// Crop-editor metadata for a DuckTales card: the single source is the original scan; the box
 /// is the saved hand-crop (or the default full-art region). Shape matches the MTG crop UI.
 pub fn ducks_art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
-    let (card_dir, event) = ducks_card_dir(editor_db, cache_dir, id)?;
+    let (card_dir, _event) = ducks_card_dir(editor_db, cache_dir, id)?;
     let bx = read_json(&card_dir.join("crop.json"))
         .and_then(|v| v["box"].as_array().cloned())
-        .unwrap_or_else(|| vec![json!(0.0), json!(0.0), json!(1.0), json!(if event { 0.665 } else { 0.775 })]);
+        .unwrap_or_else(|| vec![json!(0.0), json!(0.0), json!(1.0), json!(0.785_f64)]);
     Ok(json!({
         "id": id, "current_rel": "@src",
         "sources": [{"rel": "@src", "kind": "scryfall", "label": "Original DuckTales card",
@@ -3632,11 +3635,21 @@ fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
     let (subcat, cat) = c.type_line.split_once(" — ")
         .map_or((c.type_line.trim(), ""), |(s, cc)| (s.trim(), cc.trim()));
     let (strip, ink, _, _) = ducks_palette(subcat, cat);
+    // Ducks cards get a WIDE black border (like a Magic card), not the near-full-bleed MPC face:
+    // shrink the white face and centre it, keeping the true 2.5:3.5 card aspect. The generous
+    // black margin all around matches how much black the MTG frames carry.
+    let dfw: u32 = 1776;
+    let dfh: u32 = (f64::from(dfw) * f64::from(FACE_H) / f64::from(FACE_W)).round() as u32; // 0.714 aspect
+    let dbx = (W - dfw) / 2;
+    let dby = (H - dfh) / 2;
+    // Fonts scale with the smaller face (× dfw/FACE_W ≈ 0.89 vs the old MPC-face sizes).
+    let fs = |px_at_2000: f64| px((px_at_2000 * f64::from(dfw) / f64::from(FACE_W)) / f64::from(FACE_H));
     let pairs: Vec<(&str, String)> = vec![
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("NMSZ", px(122.0 / f64::from(FACE_H))), ("TYSZ", px(84.0 / f64::from(FACE_H))),
-        ("BODYSZ", px(100.0 / f64::from(FACE_H))), ("NUMSZ", px(52.0 / f64::from(FACE_H))),
+        ("W", W.to_string()), ("H", H.to_string()), ("FW", dfw.to_string()), ("FH", dfh.to_string()),
+        ("BX", dbx.to_string()), ("BY", dby.to_string()),
+        ("NMSZ", fs(122.0)), ("TYSZ", fs(84.0)),
+        ("BODYSZ", fs(100.0)), ("NUMSZ", fs(58.0)),
+        ("NUML", (dbx + 12).to_string()), ("NUMB", (dby / 3).to_string()),
         ("STRIP", strip), ("INK", ink),
         ("ARTURL", format!("file://{}", art_abs.display())),
         ("NAME", esc(&c.name)), ("TYPE", esc(&c.type_line)),
@@ -3670,7 +3683,7 @@ pub fn render_card_ducks(
     let hash = {
         let canon = json!({
             "name": card.name, "type": card.type_line, "oracle": card.oracle_text,
-            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 2,
+            "event": card.is_creature, "id": id, "art_sig": art_sig, "frame": "ducks", "v": 4,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
