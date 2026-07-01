@@ -9,8 +9,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .face { position:absolute; left:%%BX%%px; top:%%BY%%px; width:%%FW%%px; height:%%FH%%px; }
 .layer { position:absolute; left:0; top:0; width:100%; height:100%; }
 /* cardconjurer levelers/regular frame — art window measured from its transparent hole:
-   x.0767 y.1129 w.846 h.4419. The level bands + P/T pill banners are baked into the frame;
-   we draw the level-up cost, tier abilities, and P/T text into those fixed regions. */
+   x.0767 y.1129 w.846 h.4419. The frame bakes the left LEVEL-range banners; we draw the
+   level ranges into them, the abilities in the middle column, and a P/T box (from the 8th
+   P/T set) on the RIGHT of each band — base P/T right under the type line. */
 .art { position:absolute; left:7.67%; top:11.29%; width:84.6%; height:44.19%;
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
@@ -23,29 +24,32 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    display:flex; align-items:center; font-family:'matrix'; font-size:%%TYSZ%%px; line-height:1;
    white-space:nowrap; overflow:hidden; }
 .setsym { position:absolute; right:4.5%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
-/* BASE band (no pill): "Level up {cost} (reminder)" + any base abilities. */
-.lvl-up { left:9%; top:63.0%; width:66%; height:8.4%; display:flex; flex-direction:column;
-   justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.12;
-   color:#0a0a0a; }
+/* P/T boxes on the RIGHT — one per band (base, tier1, tier2). */
+.ptbox { position:absolute; left:78.5%; width:15.5%; height:5.0%; z-index:10;
+   background-size:100% 100%; background-repeat:no-repeat; }
+.ptxt { position:absolute; left:78.5%; width:15.5%; height:5.0%; z-index:11; display:flex;
+   align-items:center; justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; }
+.pt0box, .pt0 { top:62.8%; }
+.pt1box, .pt1 { top:72.9%; }
+.pt2box, .pt2 { top:82.7%; }
+/* BASE band: "Level up {cost} (reminder)" + base abilities, clear of the base P/T box. */
+.lvl-up { left:9%; top:62.6%; width:66%; height:8.6%; display:flex; flex-direction:column;
+   justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.12; color:#0a0a0a; }
 .lvl-up .lu { font-weight:bold; }
 .lvl-up .lu-rem { font-style:italic; }
 .lvl-up .lu-base { margin-top:.12em; }
-/* the base P/T, shown small at the right end of the base band (clear of the wrapped text) */
-.basept { left:78.5%; top:64.2%; width:13%; height:4.4%; display:flex; align-items:center;
-   justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; }
-/* TIER bands: a level-range label + P/T on the baked pill (left column), ability (right). */
-.lvl-range { font-family:'matrix'; font-size:%%LBSZ%%px; line-height:1; white-space:nowrap;
-   color:#0a0a0a; }
-.lvl-pt { position:absolute; left:5.6%; width:12.5%; height:3.8%; display:flex; align-items:center;
-   justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; color:#0a0a0a; }
-.lvl-abil { position:absolute; left:20.5%; width:70%; display:flex; flex-direction:column;
+/* LEVEL-range banners on the left (frame-baked); we drop the "LEVEL n-m" text on them. */
+.lvl-range { position:absolute; left:5.7%; width:12.8%; height:5%; display:flex; flex-direction:column;
+   align-items:center; justify-content:center; font-family:'matrix'; line-height:1; color:#0a0a0a; text-align:center; }
+.lvl-range .lr-lab { font-size:%%LLSZ%%px; letter-spacing:.02em; }
+.lvl-range .lr-num { font-size:%%LBSZ%%px; }
+.lvl1-range { top:72.6%; }
+.lvl2-range { top:82.4%; }
+/* ability text in the middle column, between the range banner and the P/T box. */
+.lvl-abil { position:absolute; left:20.5%; width:56%; display:flex; flex-direction:column;
    justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.14; color:#0a0a0a; }
-.lvl1-range { position:absolute; left:6.0%; top:72.0%; }
-.lvl1-pt    { top:75.4%; }
-.lvl1-abil  { top:72.0%; height:9.6%; }
-.lvl2-range { position:absolute; left:6.0%; top:81.7%; }
-.lvl2-pt    { top:85.1%; }
-.lvl2-abil  { top:81.7%; height:9.6%; }
+.lvl1-abil { top:72.0%; height:9.7%; }
+.lvl2-abil { top:81.9%; height:9.7%; }
 .lvl-abil p, .lvl-up p { margin:0; }
 .info { position:absolute; left:8.8%; width:81.07%; text-align:left; color:%%INFOINK%%;
    font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
@@ -65,13 +69,16 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
     <div class="box type" id="ty">%%TYPE%%</div>
     %%SETSYM%%
     <div class="box lvl-up" id="lvlup">%%LVLUP%%</div>
-    <div class="box basept">%%BASEPT%%</div>
+    <div class="ptbox pt0box" style="background-image:url('%%PTBOX%%')"></div>
+    <div class="box ptxt pt0">%%BASEPT%%</div>
     <div class="box lvl-range lvl1-range">%%LVL1RANGE%%</div>
     <div class="box lvl-abil lvl1-abil" id="lvl1abil">%%LVL1ABIL%%</div>
-    <div class="box lvl-pt lvl1-pt">%%LVL1PT%%</div>
+    %%PTBOX1DIV%%
+    <div class="box ptxt pt1">%%LVL1PT%%</div>
     <div class="box lvl-range lvl2-range">%%LVL2RANGE%%</div>
     <div class="box lvl-abil lvl2-abil" id="lvl2abil">%%LVL2ABIL%%</div>
-    <div class="box lvl-pt lvl2-pt">%%LVL2PT%%</div>
+    %%PTBOX2DIV%%
+    <div class="box ptxt pt2">%%LVL2PT%%</div>
     %%ILLUS%%
     <div class="info legal"><span>NOT FOR SALE &nbsp;·&nbsp; &#8482; &amp; &#169; 1993-%%YEAR%% Wizards of the Coast, Inc.</span></div>
   </div>

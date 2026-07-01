@@ -796,7 +796,7 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
     };
     // If it came from `named` (single card), rewrite the cache as {data:[card]} so the
     // adventure-face reader (expects data[0].card_faces) sees it too.
-    if v["data"].as_array().map_or(true, |a| a.is_empty()) && !prints.is_empty() {
+    if v["data"].as_array().is_none_or(|a| a.is_empty()) && !prints.is_empty() {
         v = json!({ "data": prints.clone() });
         let _ = fs::write(&meta_file, v.to_string());
     }
@@ -4031,7 +4031,6 @@ fn planeswalker_parse(c: &Card) -> Option<Planeswalker> {
 }
 
 const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
-const TEMPLATE_8TH_LEVEL: &str = include_str!("card_template_8th_level.html");
 const TEMPLATE_8TH_SAGA: &str = include_str!("card_template_8th_saga.html");
 const TEMPLATE_8TH_PW: &str = include_str!("card_template_8th_pw.html");
 const TEMPLATE_8TH_ADV: &str = include_str!("card_template_8th_adv.html");
@@ -4199,6 +4198,7 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, template: &str) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
@@ -4319,8 +4319,12 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("TYPE", esc(&c.type_line)),
         ("RULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
         ("PT", pt),
-        // set symbol on the type bar, right edge ~0.90 (right:10%), centred on the type bar
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
+        // set symbol on the type bar. The M15 devoid frame seats it harder against the right
+        // edge (right:2.5%) than the 8th frame (right:10%); its type bar sits a hair lower.
+        ("SETSYM", {
+            let (center, right) = if is_devoid_8th(c) { (0.591, 2.5) } else { (0.589, 10.0) };
+            set_symbol_svg_html(set_svg, &c.rarity, center, right)
+        }),
         ("ILLUS", illus),
         ("YEAR", year),
     ];
@@ -4361,80 +4365,6 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
         bail!("Chrome screenshot failed (check --chrome / MTGBRAIN_CHROME path)");
     }
     Ok(())
-}
-
-/// Build the LEVELER (Level-up creature) HTML in 8ED style: normal title/art/type/set-symbol,
-/// then a level section — a "Level up {cost}" band plus one band per LEVEL tier, each carrying
-/// its own P/T pill on the right. (No bottom-right P/T box: every level's P/T is in its band.)
-fn build_html_8th_level(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
-    let fonts = assets_dir.join("fonts");
-    let f = |p: &str| format!("file://{}", fonts.join(p).display());
-    let mana_base = format!("file://{}", assets_dir.join("mana").display());
-    let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
-    } else {
-        String::new()
-    };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
-    let illus = if credit.is_empty() {
-        String::new()
-    } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
-    };
-    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
-    let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
-    let tyw = match set_symbol_wfrac(set_svg) {
-        Some(wf) => format!("{:.2}%", (78.5 - wf).clamp(40.0, 78.0)),
-        None => "78%".to_string(),
-    };
-    // BASE band: "Level up {cost} (reminder)" + any base-level abilities. The base P/T is NOT
-    // shown here — it rides the standard corner P/T box below (see ptbox/pt), so this band has
-    // no pill and reclaims its right padding (.lvl-base).
-    let mut bands = String::from(r#"<div class="lvl-band lvl-base"><div class="lvl-up">Level up "#);
-    bands.push_str(&manaify(&lvl.cost, &mana_base));
-    if !lvl.reminder.is_empty() {
-        bands.push_str(&format!(r#" <span class="lu-rem">{}</span>"#, manaify(&lvl.reminder, &mana_base)));
-    }
-    bands.push_str("</div>");
-    if !lvl.base_abilities.trim().is_empty() {
-        bands.push_str(&format!(r#"<div class="lvl-abil">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
-    }
-    bands.push_str("</div>");
-    // Standard 8ED corner P/T box carrying the printed base P/T.
-    let ptboxdiv = format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display());
-    let pt = format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&lvl.base_pt));
-    // One band per LEVEL tier: range badge, abilities, P/T pill.
-    for t in &lvl.tiers {
-        bands.push_str(&format!(
-            r#"<div class="lvl-band"><div class="lvl-badge">LEVEL {}</div><div class="lvl-abil">{}</div><span class="lvl-pt">{}</span></div>"#,
-            esc(&t.range), rules_html(&t.abilities, "", &mana_base), esc(&t.pt),
-        ));
-    }
-    let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
-        ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
-        ("TYSZ", px(100.0 / f64::from(FACE_H))),
-        ("LSZ", px(86.0 / f64::from(FACE_H))), ("LBSZ", px(66.0 / f64::from(FACE_H))),
-        ("PSZ", px(131.0 / f64::from(FACE_H))),
-        ("TYW", tyw), ("TYPAD", "0".to_string()), ("COLORIND", String::new()),
-        ("ART", format!("file://{}", art_abs.display())),
-        ("FRAME", format!("file://{}", frame_abs.display())),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
-        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
-        ("TYPE", esc(&c.type_line)),
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.589, 10.0)),
-        ("LVLBANDS", bands),
-        ("PTBOXDIV", ptboxdiv), ("PT", pt),
-        ("ILLUS", illus), ("YEAR", year),
-    ];
-    let mut html = TEMPLATE_8TH_LEVEL.to_string();
-    for (k, v) in &pairs {
-        html = html.replace(&format!("%%{k}%%"), v);
-    }
-    html
 }
 
 /// The cardconjurer levelers/regular frame PNG for the card's colour (white Hedron-Field
@@ -4484,10 +4414,23 @@ fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_
     if !lvl.base_abilities.trim().is_empty() {
         lvlup.push_str(&format!(r#"<div class="lu-base">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
     }
+    // Right-column P/T box PNG (the 8th P/T set, tinted to the card's colour).
+    let ptbox_url = format!("file://{}", assets_dir.join(pt_box_8th(c)).display());
     let tier = |i: usize| lvl.tiers.get(i);
-    let range = |i: usize| tier(i).map_or(String::new(), |t| format!("LEVEL {}", esc(&t.range)));
+    // Left banner shows a small "LEVEL" label over the range number (e.g. "1-4"/"5+").
+    let range = |i: usize| tier(i).map_or(String::new(), |t| {
+        format!(r#"<span class="lr-lab">LEVEL</span><span class="lr-num">{}</span>"#, esc(&t.range))
+    });
     let abil = |i: usize| tier(i).map_or(String::new(), |t| rules_html(&t.abilities, "", &mana_base));
     let tpt = |i: usize| tier(i).map_or(String::new(), |t| esc(&t.pt));
+    // Each tier's right-hand P/T box only appears when that tier exists.
+    let ptbox_div = |i: usize, cls: &str| {
+        if tier(i).is_some() {
+            format!(r#"<div class="ptbox {cls}" style="background-image:url('{ptbox_url}')"></div>"#)
+        } else {
+            String::new()
+        }
+    };
     let pairs: Vec<(&str, String)> = vec![
         ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
@@ -4495,10 +4438,13 @@ fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_
         ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
         ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
         ("TYSZ", px(100.0 / f64::from(FACE_H))), ("RSZ", px(101.0 / f64::from(FACE_H))),
-        ("LBSZ", px(60.0 / f64::from(FACE_H))), ("PSZ", px(120.0 / f64::from(FACE_H))),
+        ("LBSZ", px(64.0 / f64::from(FACE_H))), ("LLSZ", px(42.0 / f64::from(FACE_H))),
+        ("PSZ", px(116.0 / f64::from(FACE_H))),
         ("TYW", tyw), ("TYPAD", "0".to_string()),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
+        ("PTBOX", ptbox_url.clone()),
+        ("PTBOX1DIV", ptbox_div(0, "pt1box")), ("PTBOX2DIV", ptbox_div(1, "pt2box")),
         ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
         ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
@@ -4855,6 +4801,7 @@ fn compose_pw_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets
 /// title/art/type/set-symbol, then the lower book — a colour-headed sub-spell page on one side and
 /// the creature's own rules on the other. An adventure puts the sub-spell on the LEFT page; a
 /// prepared spell on the RIGHT (the frame is flipped for it, so the columns swap to match).
+#[allow(clippy::too_many_arguments)]
 fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: &Adventure) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
