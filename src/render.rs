@@ -4324,6 +4324,13 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         ("PSZ", px(131.0 / f64::from(FACE_H))),  // power / toughness (matrix)
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
+        // Devoid frames have transparent margins; underlay the 8th artifact frame so the border
+        // reads as metal, not black. Only the devoid template references %%ARTFRAME%%.
+        ("ARTFRAME", if is_devoid_8th(c) {
+            format!("file://{}", assets_dir.join("frames8/a.png").display())
+        } else {
+            String::new()
+        }),
         ("PTBOXDIV", ptboxdiv),
         ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
         ("NAME", esc(&c.name)),
@@ -4978,7 +4985,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 12,
+            "frame_kind": "eighth", "v": 13,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());
