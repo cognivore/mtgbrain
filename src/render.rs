@@ -4322,7 +4322,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         // set symbol on the type bar. The M15 devoid frame seats it harder against the right
         // edge (right:2.5%) than the 8th frame (right:10%); its type bar sits a hair lower.
         ("SETSYM", {
-            let (center, right) = if is_devoid_8th(c) { (0.591, 2.5) } else { (0.589, 10.0) };
+            let (center, right) = if is_devoid_8th(c) { (0.591, 5.5) } else { (0.589, 10.0) };
             set_symbol_svg_html(set_svg, &c.rarity, center, right)
         }),
         ("ILLUS", illus),
@@ -4966,7 +4966,7 @@ pub fn render_card_8th(
             "frame": frame_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "ptbox": ptbox_rel.file_name().and_then(|s| s.to_str()).unwrap_or(""),
             "override": art_override_json(&db, id).to_string(),
-            "frame_kind": "eighth", "v": 9,
+            "frame_kind": "eighth", "v": 10,
         });
         let mut h = Sha256::new();
         h.update(canon.to_string().as_bytes());

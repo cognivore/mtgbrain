@@ -14,8 +14,9 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .art { position:absolute; left:7.71%; top:11.34%; width:84.53%; height:44.10%;
        background-size:cover; background-position:center; }
 .frame { background-size:100% 100%; }
-/* devoid P/T box (m15DevoidPT.png) — bottom-right corner, M15 position (right + low) */
-.ptbox { position:absolute; left:75.3%; top:87.9%; width:18.9%; height:6.0%; z-index:10;
+/* devoid P/T box (m15DevoidPT.png) — seated in the textbox bottom-right corner. .pt shares
+   the exact box so the P/T number is centred on the shield (no drift). */
+.ptbox { position:absolute; left:75.6%; top:86.3%; width:18.4%; height:6.2%; z-index:10;
          background-size:100% 100%; background-repeat:no-repeat; }
 /* M15 title / type / P-T text is dark on the light devoid bars. */
 .box { position:absolute; color:#0a0a0a; text-shadow:none; }
@@ -23,7 +24,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .titlerow { left:8%; top:5.5%; width:84%; height:4.7%; display:flex; align-items:center; }
 .titlerow .nm { font-family:'matrix'; font-size:%%TSZ%%px; line-height:1; white-space:nowrap;
    overflow:hidden; }
-.manacost { left:4%; right:7.6%; top:5.4%; height:4.7%; font-size:calc(%%MSZ%%px * 1.13);
+.manacost { left:4%; right:7.6%; top:5.15%; height:4.7%; font-size:calc(%%MSZ%%px * 1.13);
    display:flex; align-items:center; justify-content:flex-end; white-space:nowrap; }
 /* M15 type bar sits just below the art (art bottom .5544). */
 .type { left:8.6%; top:57.4%; width:%%TYW%%; height:4.0%; padding-left:%%TYPAD%%;
@@ -39,7 +40,7 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
 .rules i { font-style:italic; }
 .rules .flav { font-style:italic; margin:.18em 0 .42em; color:#0a0a0a; }
 .rules .flav .up { font-style:normal; }
-.pt { left:78.1%; top:89.3%; width:14.2%; height:4.5%; z-index:11;
+.pt { left:75.6%; top:86.3%; width:18.4%; height:6.2%; z-index:11;
    display:flex; align-items:center; justify-content:center;
    font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; font-feature-settings:"smcp"; }
 .info { position:absolute; left:8.8%; width:81.07%; text-align:left; color:%%INFOINK%%;
