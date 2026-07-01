@@ -24,14 +24,14 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    display:flex; align-items:center; font-family:'matrix'; font-size:%%TYSZ%%px; line-height:1;
    white-space:nowrap; overflow:hidden; }
 .setsym { position:absolute; right:4.5%; top:57.0%; width:12%; height:3.7%; overflow:visible; }
-/* P/T boxes on the RIGHT — one per band (base, tier1, tier2). */
-.ptbox { position:absolute; left:78.5%; width:15.5%; height:5.0%; z-index:10;
+/* P/T boxes on the RIGHT — one per band (base, tier1, tier2). Bigger so the numbers breathe. */
+.ptbox { position:absolute; left:75.4%; width:18.6%; height:6.6%; z-index:10;
    background-size:100% 100%; background-repeat:no-repeat; }
-.ptxt { position:absolute; left:78.5%; width:15.5%; height:5.0%; z-index:11; display:flex;
+.ptxt { position:absolute; left:75.4%; width:18.6%; height:6.6%; z-index:11; display:flex;
    align-items:center; justify-content:center; font-family:'matrix'; font-size:%%PSZ%%px; line-height:1; }
-.pt0box, .pt0 { top:62.8%; }
-.pt1box, .pt1 { top:72.9%; }
-.pt2box, .pt2 { top:82.7%; }
+.pt0box, .pt0 { top:62.3%; }
+.pt1box, .pt1 { top:73.0%; }
+.pt2box, .pt2 { top:82.9%; }
 /* BASE band: "Level up {cost} (reminder)" + base abilities, clear of the base P/T box. */
 .lvl-up { left:9%; top:62.6%; width:66%; height:8.6%; display:flex; flex-direction:column;
    justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.12; color:#0a0a0a; }
@@ -43,18 +43,18 @@ html,body { width:%%W%%px; height:%%H%%px; background:#000; overflow:hidden; }
    align-items:center; justify-content:center; font-family:'matrix'; line-height:1; color:#0a0a0a; text-align:center; }
 .lvl-range .lr-lab { font-size:%%LLSZ%%px; letter-spacing:.02em; }
 .lvl-range .lr-num { font-size:%%LBSZ%%px; }
-.lvl1-range { top:72.6%; }
-.lvl2-range { top:82.4%; }
+.lvl1-range { top:73.4%; }
+.lvl2-range { top:83.3%; }
 /* ability text in the middle column, between the range banner and the P/T box. */
 .lvl-abil { position:absolute; left:20.5%; width:56%; display:flex; flex-direction:column;
    justify-content:center; font-family:'mplantin'; font-size:%%RSZ%%px; line-height:1.14; color:#0a0a0a; }
-.lvl1-abil { top:72.0%; height:9.7%; }
-.lvl2-abil { top:81.9%; height:9.7%; }
+.lvl1-abil { top:72.9%; height:9.7%; }
+.lvl2-abil { top:82.8%; height:9.7%; }
 .lvl-abil p, .lvl-up p { margin:0; }
 .info { position:absolute; left:8.8%; width:81.07%; text-align:left; color:%%INFOINK%%;
    font-family:'mplantin'; line-height:1; white-space:nowrap; text-shadow:%%INFOSHADOW%%; }
-.illus { top:92.5%; font-family:'matrix'; font-size:46px; }
-.legal { top:93.8%; font-size:30px; letter-spacing:.01em; }
+.illus { top:94.1%; font-family:'matrix'; font-size:46px; }
+.legal { top:95.4%; font-size:30px; letter-spacing:.01em; }
 .ms-img { width:0.78em; height:0.78em; vertical-align:-0.07em;
    filter:drop-shadow(-0.015em 0.062em 0.02em rgba(0,0,0,0.82)); }
 .manacost .ms-img { margin-left:0.07em; vertical-align:-0.02em; }
