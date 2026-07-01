@@ -1043,6 +1043,9 @@ document.addEventListener("keydown", e => {
 // art; the boxed region is exactly what the card shows (WYSIWYG). Saving writes a manual
 // crop that every later render uses; "reset to auto" restores the heuristic pick.
 let cropOpen = false, cropMeta = null, cropAspect = 1.236, cropR = 1, cropDrag = null, cropCurRel = null;
+// FREE aspect (DuckTales): the render `contain`-fits the crop on white, so the box may be any
+// shape — resize each edge independently, and the live preview letterboxes to match the card.
+let cropFree = false;
 // SPLIT cards crop TWO rectangles (left half + right half) over the combined art; everything
 // else crops one. `cropBoxes` holds 1 or 2 boxes (fractions of the source); `cropActive` is
 // the box the arrow keys nudge.
@@ -1057,6 +1060,7 @@ async function openCrop(id){
   if (meta.error){ alert("Crop editor: "+meta.error); return; }
   cropMeta = meta;
   cropAspect = meta.window_aspect || 1.236;
+  cropFree = !!meta.free_aspect;
   cropSplit = !!meta.split;
   cropActive = 0;
   const names = meta.split_names || [];
@@ -1168,7 +1172,14 @@ function loadCropSource(rel, box, box2){
   img.onload = () => {
     cropR = img.clientWidth / img.clientHeight;       // display pixel aspect (= natural)
     // A stored box → normalise to the window aspect keeping its centre; else default-centre.
-    const fit = (b) => { let [x,y,w,h] = b; const h2 = w * cropR / cropAspect; return clampBox({ x, y: y + (h - h2)/2, w, h: h2 }); };
+    // In FREE mode the box keeps its own shape (only clamped on-image).
+    const fit = cropFree
+      ? (b) => { let [x,y,w,h] = b; return clampBox({ x, y, w, h }); }
+      : (b) => { let [x,y,w,h] = b; const h2 = w * cropR / cropAspect; return clampBox({ x, y: y + (h - h2)/2, w, h: h2 }); };
+    if (cropFree){
+      cropBoxes = [ fit((box && box.length === 4) ? box : [0, 0, 1, 0.785]) ];
+      drawCrop(); return;
+    }
     if (cropSplit){
       // Two rectangles: each ≈ half the source at the half-window aspect, centred in its half.
       let w = 0.46, h = w * cropR / cropAspect;
@@ -1196,6 +1207,12 @@ function loadCropSource(rel, box, box2){
 // Keep w,h ≤ 1 at the locked aspect, then clamp x,y so the box stays on the image.
 function clampBox(b){
   let { x, y, w, h } = b;
+  if (cropFree){
+    // free aspect: w and h are independent, each just kept on-image
+    w = clmp(w, 0.04, 1); h = clmp(h, 0.04, 1);
+    x = clmp(x, 0, 1 - w); y = clmp(y, 0, 1 - h);
+    return { x, y, w, h };
+  }
   w = clmp(w, 0.04, 1); h = w * cropR / cropAspect;
   if (h > 1){ h = 1; w = h * cropAspect / cropR; }
   x = clmp(x, 0, 1 - w); y = clmp(y, 0, 1 - h);
@@ -1218,8 +1235,22 @@ function drawCrop(){
     const live = document.getElementById(ids[i][1]);
     live.style.width = Wp+"px"; live.style.height = Hp+"px";
     live.style.backgroundImage = `url("${img.src}")`;
-    live.style.backgroundSize = `${Wp/cb.w}px ${Hp/cb.h}px`;
-    live.style.backgroundPosition = `${-cb.x*Wp/cb.w}px ${-cb.y*Hp/cb.h}px`;
+    if (cropFree){
+      // WYSIWYG: the card `contain`-fits the crop on white — letterbox it in the tile the same way.
+      live.style.backgroundColor = "#fff"; live.style.backgroundRepeat = "no-repeat";
+      const cropAsp = (cb.w / cb.h) * cropR;            // pixel aspect of the boxed region
+      let dw, dh;                                       // drawn size inside the tile (contain)
+      if (cropAsp >= cropAspect){ dw = Wp; dh = Wp / cropAsp; }
+      else { dh = Hp; dw = Hp * cropAsp; }
+      const bgW = dw / cb.w, bgH = dh / cb.h;           // full source scaled so the box maps to dw×dh
+      const offX = (Wp - dw) / 2 - cb.x * bgW, offY = (Hp - dh) / 2 - cb.y * bgH;
+      live.style.backgroundSize = `${bgW}px ${bgH}px`;
+      live.style.backgroundPosition = `${offX}px ${offY}px`;
+    } else {
+      live.style.backgroundColor = "transparent"; live.style.backgroundRepeat = "repeat";
+      live.style.backgroundSize = `${Wp/cb.w}px ${Hp/cb.h}px`;
+      live.style.backgroundPosition = `${-cb.x*Wp/cb.w}px ${-cb.y*Hp/cb.h}px`;
+    }
   }
 }
 
@@ -1249,6 +1280,15 @@ function cropOnMove(e){
     const dx = (e.clientX-cropDrag.sx)/r.width, dy = (e.clientY-cropDrag.sy)/r.height;
     cb.x = clmp(cropDrag.ox+dx, 0, 1-cb.w);
     cb.y = clmp(cropDrag.oy+dy, 0, 1-cb.h);
+  } else if (cropFree){
+    // free aspect: the dragged corner moves to the pointer; opposite corner stays anchored.
+    const px = clmp((e.clientX-r.left)/r.width, 0, 1);
+    const py = clmp((e.clientY-r.top)/r.height, 0, 1);
+    let w = Math.max(Math.abs(px - cropDrag.ax), 0.04);
+    let h = Math.max(Math.abs(py - cropDrag.ay), 0.04);
+    cropBoxes[cropDrag.idx] = clampBox({
+      x: cropDrag.corner.includes("e") ? cropDrag.ax : px,
+      y: cropDrag.corner.includes("s") ? cropDrag.ay : py, w, h });
   } else {
     const px = clmp((e.clientX-r.left)/r.width, 0, 1);
     const py = clmp((e.clientY-r.top)/r.height, 0, 1);
