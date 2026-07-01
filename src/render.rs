@@ -275,11 +275,11 @@ const SCRYFALL_MIN_INTERVAL: Duration = Duration::from_millis(120);
 /// Block until at least `SCRYFALL_MIN_INTERVAL` has elapsed since the previous Scryfall request,
 /// then stamp "now" as the latest request time. Only applied to `api.scryfall.com` URLs.
 fn scryfall_throttle() {
-    let mut last = SCRYFALL_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut last = SCRYFALL_GATE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(prev) = *last {
         let elapsed = prev.elapsed();
         if elapsed < SCRYFALL_MIN_INTERVAL {
-            std::thread::sleep(SCRYFALL_MIN_INTERVAL - elapsed);
+            std::thread::sleep(SCRYFALL_MIN_INTERVAL.checked_sub(elapsed).unwrap());
         }
     }
     *last = Some(Instant::now());
@@ -796,7 +796,7 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
     };
     // If it came from `named` (single card), rewrite the cache as {data:[card]} so the
     // adventure-face reader (expects data[0].card_faces) sees it too.
-    if v["data"].as_array().is_none_or(|a| a.is_empty()) && !prints.is_empty() {
+    if v["data"].as_array().is_none_or(std::vec::Vec::is_empty) && !prints.is_empty() {
         v = json!({ "data": prints.clone() });
         let _ = fs::write(&meta_file, v.to_string());
     }
@@ -2241,7 +2241,7 @@ fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
 /// search as `scryfall_oldest`; a 404 (split / DFC names) just leaves the file absent.
 fn ensure_prints_meta(name: &str, art_dir: &Path) {
     let meta = art_dir.join(format!("{}.json", sanitize(name)));
-    if meta.metadata().map(|m| m.len() >= 64).unwrap_or(false) {
+    if meta.metadata().is_ok_and(|m| m.len() >= 64) {
         return;
     }
     let _ = fs::create_dir_all(art_dir);
@@ -2263,7 +2263,7 @@ fn set_symbol_svg(set: &str, cache_dir: &Path) -> Option<PathBuf> {
     let dir = cache_dir.join("sets");
     let _ = fs::create_dir_all(&dir);
     let dst = dir.join(format!("{set}.svg"));
-    let big_enough = |p: &Path| fs::metadata(p).map(|m| m.len() >= 64).unwrap_or(false);
+    let big_enough = |p: &Path| fs::metadata(p).is_ok_and(|m| m.len() >= 64);
     if !big_enough(&dst) {
         let _ = curl_to_file(&format!("https://svgs.scryfall.io/sets/{set}.svg"), &dst);
     }
@@ -2931,10 +2931,10 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     // The printed "Illus." credit prefers the editor-DB `illustrator` override (set by a
     // GenAI pseudonym pick or an art upload); otherwise it falls back to the art's own
     // historical artist credit.
-    let credit = if !c.illustrator.trim().is_empty() {
-        c.illustrator.trim()
-    } else {
+    let credit = if c.illustrator.trim().is_empty() {
         art.artist.trim()
+    } else {
+        c.illustrator.trim()
     };
     let illus = if credit.is_empty() {
         String::new()
@@ -3535,7 +3535,7 @@ fn devoid_frame_8th(c: &Card) -> String {
     // colourless-Eldrazi look — not the gold `m` (which reads as multicolour).
     let key = match ci_letters(&c.color_identity).as_slice() {
         [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
-        [] => "a",
+        // no identity (Endless One) OR multi-pinged devoid → the neutral tan artifact variant
         _ => "a",
     };
     format!("frames8/devoid/{key}.png")
@@ -4224,7 +4224,7 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     } else {
         format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display())
     };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
     let illus = if credit.is_empty() {
         String::new()
     } else {
@@ -4391,7 +4391,7 @@ fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_
     } else {
         String::new()
     };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
     let illus = if credit.is_empty() {
         String::new()
     } else {
@@ -4501,7 +4501,7 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
     } else {
         String::new()
     };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
     let illus = if credit.is_empty() {
         String::new()
     } else {
@@ -4633,7 +4633,7 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
     } else {
         String::new()
     };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
     let illus = if credit.is_empty() {
         String::new()
     } else {
@@ -4703,7 +4703,7 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
     for (i, ab) in pw.abilities.iter().enumerate() {
         let band_top = bounds[i];
         let band_bot = bounds[i + 1];
-        let band_cy = (band_top + band_bot) / 2.0;
+        let band_cy = f64::midpoint(band_top, band_bot);
         let p_top = if i == 0 { PANEL_TOP_EXT } else { band_top };
         let p_bot = if i == n - 1 { PANEL_BOT_EXT } else { band_bot };
         let bg = if i % 2 == 0 { light } else { dark };
@@ -4811,7 +4811,7 @@ fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Pa
     } else {
         String::new()
     };
-    let credit = if !c.illustrator.trim().is_empty() { c.illustrator.trim() } else { art.artist.trim() };
+    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
     let illus = if credit.is_empty() {
         String::new()
     } else {
@@ -5113,11 +5113,11 @@ fn forefront_render(card_dir: &Path) -> Option<PathBuf> {
 /// Zero the alpha outside a rounded rectangle (1px coverage AA on the arc).
 fn round_corners(img: &mut image::RgbaImage, frac: f64) {
     let (w, h) = (img.width(), img.height());
-    let r = (frac * w as f64).round() as i32;
+    let r = (frac * f64::from(w)).round() as i32;
     if r <= 0 {
         return;
     }
-    let rf = r as f64;
+    let rf = f64::from(r);
     for y in 0..h as i32 {
         for x in 0..w as i32 {
             // Snap to the nearest corner-arc center; if either axis is in the
@@ -5127,7 +5127,7 @@ fn round_corners(img: &mut image::RgbaImage, frac: f64) {
             if cx == x || cy == y {
                 continue; // on a straight edge/interior, not a corner arc
             }
-            let d = (((x - cx) as f64).powi(2) + ((y - cy) as f64).powi(2)).sqrt();
+            let d = (f64::from(x - cx).powi(2) + f64::from(y - cy).powi(2)).sqrt();
             if d > rf {
                 img.get_pixel_mut(x as u32, y as u32)[3] = 0;
             } else if d > rf - 1.0 {

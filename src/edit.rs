@@ -420,12 +420,9 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
         let mut req = req;
         let editor_db: &Path = &editor_db_buf;
         let rc: &RenderCfg = &rc_owned;
-        let db = match Connection::open(editor_db) {
-            Ok(d) => d,
-            Err(_) => {
-                let _ = req.respond(Response::from_string("db open failed").with_status_code(500));
-                return;
-            }
+        let db = if let Ok(d) = Connection::open(editor_db) { d } else {
+            let _ = req.respond(Response::from_string("db open failed").with_status_code(500));
+            return;
         };
         // Wait (don't error) if another thread/process holds a write lock.
         let _ = db.busy_timeout(std::time::Duration::from_secs(15));
@@ -1063,8 +1060,7 @@ fn file_etag(path: &std::path::Path) -> Option<String> {
         .modified()
         .ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_secs());
     Some(format!("\"{:x}-{:x}\"", m.len(), secs))
 }
 
