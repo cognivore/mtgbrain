@@ -36,7 +36,7 @@ const ODYSSEY_BLOCK: &[&str] = &["ODY", "TOR", "JUD"];
 /// frame, mid-2003). A card with any of these among its printings keeps its
 /// original art and does NOT get the GenAI-new-art flag pre-set. Everything else
 /// is modern-frame and is pre-flagged. (Heuristic seed; reviewer toggles per card.)
-const OLD_FRAME_SETS: &[&str] = &[
+pub(crate) const OLD_FRAME_SETS: &[&str] = &[
     // Core editions (7th is the last old-frame core set)
     "LEA", "LEB", "2ED", "3ED", "4ED", "5ED", "6ED", "7ED", "CED", "CEI", "SUM", "FBB", "4BB",
     // Reprints / boxed / compilations (pre-2003)
@@ -44,8 +44,7 @@ const OLD_FRAME_SETS: &[&str] = &[
     // Expansions through Scourge (last old-frame expansion, May 2003)
     "ARN", "ATQ", "LEG", "DRK", "FEM", "ICE", "HML", "ALL", "MIR", "VIS", "WTH", "TMP", "STH",
     "EXO", "USG", "ULG", "UDS", "MMQ", "NEM", "PCY", "INV", "PLS", "APC", "ODY", "TOR", "JUD",
-    "ONS", "LGN", "SCG",
-    // Portal / Starter / Un (pre-2003)
+    "ONS", "LGN", "SCG", // Portal / Starter / Un (pre-2003)
     "POR", "P02", "PTK", "S99", "UGL",
     // World Championship / Arena league / gateway promos (pre-2003)
     "WC97", "WC98", "WC99", "WC00", "WC01", "WC02", "PAL99", "PAL00", "PAL01", "PAL02", "PARL",
@@ -57,7 +56,13 @@ const OLD_FRAME_SETS: &[&str] = &[
 // ---------------------------------------------------------------------------
 
 /// Build the editor DB from `list_path`, snapshotting fields from `mtg_db`.
-pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool, no_genai: bool) -> Result<()> {
+pub fn seed(
+    mtg_db: &Path,
+    list_path: &Path,
+    out: &Path,
+    force: bool,
+    no_genai: bool,
+) -> Result<()> {
     if out.exists() {
         if force {
             fs::remove_file(out).with_context(|| format!("removing {}", out.display()))?;
@@ -132,7 +137,10 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool, no_genai: 
             tx.execute(INSERT_MISSING, params![idx as i64, name])?;
         }
         if *qty != 1 {
-            tx.execute("UPDATE cube_cards SET qty=?2 WHERE id=?1", params![idx as i64, qty])?;
+            tx.execute(
+                "UPDATE cube_cards SET qty=?2 WHERE id=?1",
+                params![idx as i64, qty],
+            )?;
         }
     }
     tx.execute(
@@ -153,24 +161,24 @@ pub fn seed(mtg_db: &Path, list_path: &Path, out: &Path, force: bool, no_genai: 
     Ok(())
 }
 
-struct CardRow {
-    mana_cost: Option<String>,
-    mana_value: Option<f64>,
-    type_line: String,
-    colors: Option<String>,
-    color_identity: Option<String>,
-    power: Option<String>,
-    toughness: Option<String>,
-    loyalty: Option<String>,
-    oracle_text: Option<String>,
-    keywords: Option<String>,
-    produced_mana: Option<String>,
-    printings: String,
-    cube_elo: Option<f64>,
-    edhrec_rank: Option<i64>,
+pub(crate) struct CardRow {
+    pub mana_cost: Option<String>,
+    pub mana_value: Option<f64>,
+    pub type_line: String,
+    pub colors: Option<String>,
+    pub color_identity: Option<String>,
+    pub power: Option<String>,
+    pub toughness: Option<String>,
+    pub loyalty: Option<String>,
+    pub oracle_text: Option<String>,
+    pub keywords: Option<String>,
+    pub produced_mana: Option<String>,
+    pub printings: String,
+    pub cube_elo: Option<f64>,
+    pub edhrec_rank: Option<i64>,
 }
 
-fn lookup_card(src: &Connection, name: &str) -> Result<Option<CardRow>> {
+pub(crate) fn lookup_card(src: &Connection, name: &str) -> Result<Option<CardRow>> {
     // Match the full card `name` first; if that misses — a multi-face card listed by its
     // FRONT-face name (e.g. "Value Town" for "Value Town // Take a Trip", or the "prepare"
     // cards listed by their creature half) — fall back to the matching FACE so it seeds with
@@ -291,9 +299,12 @@ pub fn seed_ducks(json_path: &Path, out: &Path, force: bool) -> Result<()> {
     let db = Connection::open(out)?;
     db.execute_batch(SCHEMA)?;
     let str_field = |v: &Value, k: &str| -> String {
-        v.get(k).and_then(Value::as_str).map(str::trim)
+        v.get(k)
+            .and_then(Value::as_str)
+            .map(str::trim)
             .filter(|s| !s.is_empty() && *s != "null")
-            .unwrap_or("").to_string()
+            .unwrap_or("")
+            .to_string()
     };
     let mut n = 0;
     {
@@ -361,13 +372,16 @@ impl RenderCfg {
 
 /// Add a card to the cube by exact name: snapshot its fields from `source_db`,
 /// apply the same pre-sets as seeding, append it to the source list, return it.
-fn add_card(db: &Connection, source_db: &Path, name: &str, tags: &str) -> Result<Value> {
+pub(crate) fn add_card(db: &Connection, source_db: &Path, name: &str, tags: &str) -> Result<Value> {
     let name = name.trim();
     if name.is_empty() {
         bail!("empty card name");
     }
-    let exists: i64 =
-        db.query_row("SELECT COUNT(*) FROM cube_cards WHERE name=?1", params![name], |r| r.get(0))?;
+    let exists: i64 = db.query_row(
+        "SELECT COUNT(*) FROM cube_cards WHERE name=?1",
+        params![name],
+        |r| r.get(0),
+    )?;
     if exists > 0 {
         bail!("'{name}' is already in the cube");
     }
@@ -379,25 +393,46 @@ fn add_card(db: &Connection, source_db: &Path, name: &str, tags: &str) -> Result
     let printings: Vec<&str> = c.printings.split(", ").collect();
     let odyssey_creature = is_creature && printings.iter().any(|p| ODYSSEY_BLOCK.contains(p));
     let modern_frame = !printings.iter().any(|p| OLD_FRAME_SETS.contains(p));
-    let next_id: i64 =
-        db.query_row("SELECT COALESCE(MAX(id),-1)+1 FROM cube_cards", [], |r| r.get(0))?;
+    let next_id: i64 = db.query_row("SELECT COALESCE(MAX(id),-1)+1 FROM cube_cards", [], |r| {
+        r.get(0)
+    })?;
     db.execute(
         INSERT,
         params![
-            next_id, name, c.mana_cost, c.mana_value, c.type_line, c.colors, c.color_identity,
-            c.power, c.toughness, c.loyalty, c.oracle_text, c.keywords, c.produced_mana,
-            c.printings, c.cube_elo, c.edhrec_rank, i64::from(is_creature),
-            i64::from(odyssey_creature), i64::from(modern_frame), "pending", 1i64,
+            next_id,
+            name,
+            c.mana_cost,
+            c.mana_value,
+            c.type_line,
+            c.colors,
+            c.color_identity,
+            c.power,
+            c.toughness,
+            c.loyalty,
+            c.oracle_text,
+            c.keywords,
+            c.produced_mana,
+            c.printings,
+            c.cube_elo,
+            c.edhrec_rank,
+            i64::from(is_creature),
+            i64::from(odyssey_creature),
+            i64::from(modern_frame),
+            "pending",
+            1i64,
         ],
     )?;
     let tags = tags.trim();
     if !tags.is_empty() {
-        db.execute("UPDATE cube_cards SET tags=?2 WHERE id=?1", params![next_id, tags])?;
+        db.execute(
+            "UPDATE cube_cards SET tags=?2 WHERE id=?1",
+            params![next_id, tags],
+        )?;
     }
     // Keep the source list file in sync so a future re-seed remembers this card.
-    if let Ok(list_path) =
-        db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0))
-    {
+    if let Ok(list_path) = db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| {
+        r.get::<_, String>(0)
+    }) {
         let _ = append_to_list(&list_path, name);
     }
     get_card(db, next_id).context("reading back the added card")
@@ -408,7 +443,10 @@ fn append_to_list(path: &str, name: &str) -> Result<()> {
     if existing.lines().any(|l| l.trim() == name) {
         return Ok(());
     }
-    let mut f = fs::OpenOptions::new().create(true).append(true).open(path)?;
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
     if !existing.is_empty() && !existing.ends_with('\n') {
         writeln!(f)?;
     }
@@ -433,8 +471,14 @@ fn set_removed(db: &Connection, id: i64, removed: bool) -> Result<Option<Value>>
         params![id, i64::from(removed), decision],
     )?;
     if let (Ok(list_path), Ok(name)) = (
-        db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| r.get::<_, String>(0)),
-        db.query_row("SELECT name FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0)),
+        db.query_row("SELECT value FROM meta WHERE key='source_list'", [], |r| {
+            r.get::<_, String>(0)
+        }),
+        db.query_row(
+            "SELECT name FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get::<_, String>(0),
+        ),
     ) {
         let _ = if removed {
             remove_from_list(&list_path, &name)
@@ -456,13 +500,33 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
     let db =
         Connection::open(editor_db).with_context(|| format!("opening {}", editor_db.display()))?;
     // Non-destructive migrations for older editor DBs (ignore "duplicate column" errors).
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN removed INTEGER NOT NULL DEFAULT 0", []);
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''", []);
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0", []);
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN art_override TEXT NOT NULL DEFAULT ''", []);
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN qty INTEGER NOT NULL DEFAULT 1", []);
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN removed INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN illustrator TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN genai_done INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN art_override TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN qty INTEGER NOT NULL DEFAULT 1",
+        [],
+    );
     // Free-form comma-separated tags (e.g. "banger") — shown as a list badge + searchable `is:banger`.
-    let _ = db.execute("ALTER TABLE cube_cards ADD COLUMN tags TEXT NOT NULL DEFAULT ''", []);
+    let _ = db.execute(
+        "ALTER TABLE cube_cards ADD COLUMN tags TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    // Maybeboard research tables (idempotent) so /maybe works on pre-existing editor DBs.
+    crate::maybe::ensure_schema(&db)?;
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let server = Server::http(addr).map_err(|e| anyhow::anyhow!("starting server: {e}"))?;
@@ -479,413 +543,612 @@ pub fn serve(editor_db: &Path, port: u16, rc: &RenderCfg) -> Result<()> {
         let editor_db_buf = editor_db.to_path_buf();
         let rc_owned = rc.clone();
         std::thread::spawn(move || {
-        let mut req = req;
-        let editor_db: &Path = &editor_db_buf;
-        let rc: &RenderCfg = &rc_owned;
-        let db = if let Ok(d) = Connection::open(editor_db) { d } else {
-            let _ = req.respond(Response::from_string("db open failed").with_status_code(500));
-            return;
-        };
-        // Wait (don't error) if another thread/process holds a write lock.
-        let _ = db.busy_timeout(std::time::Duration::from_secs(15));
-        let method = req.method().clone();
-        let url = req.url().to_string();
-        let path = url.split('?').next().unwrap_or("").to_string();
-        // Browser's cached validator, for conditional GETs on card images (snappy nav).
-        let if_none_match = req
-            .headers()
-            .iter()
-            .find(|h| h.field.equiv("If-None-Match"))
-            .map(|h| h.value.as_str().to_string());
+            let mut req = req;
+            let editor_db: &Path = &editor_db_buf;
+            let rc: &RenderCfg = &rc_owned;
+            let db = if let Ok(d) = Connection::open(editor_db) {
+                d
+            } else {
+                let _ = req.respond(Response::from_string("db open failed").with_status_code(500));
+                return;
+            };
+            // Wait (don't error) if another thread/process holds a write lock.
+            let _ = db.busy_timeout(std::time::Duration::from_secs(15));
+            let method = req.method().clone();
+            let url = req.url().to_string();
+            let path = url.split('?').next().unwrap_or("").to_string();
+            // Browser's cached validator, for conditional GETs on card images (snappy nav).
+            let if_none_match = req
+                .headers()
+                .iter()
+                .find(|h| h.field.equiv("If-None-Match"))
+                .map(|h| h.value.as_str().to_string());
 
-        let resp = match (&method, path.as_str()) {
-            (Method::Get, "/") => html_response(INDEX_HTML),
-            (Method::Get, "/api/cards") => json_response(&list_cards(&db)),
-            (Method::Get, p) if p.starts_with("/api/card/") => match id_from(p, "/api/card/") {
-                Some(id) => match get_card(&db, id) {
-                    Some(mut v) => {
-                        // Attach the original Scryfall flavor so the editor's flavor field
-                        // can prefill it (override wins; this is the fallback baseline).
-                        let name = v["name"].as_str().unwrap_or("").to_string();
-                        if let Some(o) = v.as_object_mut() {
-                            o.insert(
-                                "flavor_base".to_string(),
-                                json!(crate::render::base_flavor(&name, &rc.cache)),
-                            );
-                            // Accurate cache-busting token for /api/render/* (see render_cache_key_8th):
-                            // unlike updated_at, it moves whenever the rendered output actually would.
-                            if rc.is_eighth() {
-                                if let Ok(key) =
-                                    crate::render::render_cache_key_8th(editor_db, &rc.assets, &rc.cache, id)
-                                {
-                                    o.insert("render_key".to_string(), json!(key));
-                                }
-                            }
-                        }
-                        json_response(&v)
-                    }
-                    None => not_found(),
-                },
-                None => not_found(),
-            },
-            (Method::Post, p) if p.starts_with("/api/card/") => {
-                let mut body = String::new();
-                req.as_reader().read_to_string(&mut body).ok();
-                match id_from(p, "/api/card/") {
-                    Some(id) => match save_card(&db, id, &body) {
-                        Ok(Some(v)) => json_response(&v),
-                        Ok(None) => not_found(),
-                        Err(e) => json_response(&json!({"error": e.to_string()})),
-                    },
-                    None => not_found(),
-                }
-            }
-            // Add a card to the cube by exact name.
-            (Method::Post, "/api/add") => {
-                let mut body = String::new();
-                req.as_reader().read_to_string(&mut body).ok();
-                let parsed = serde_json::from_str::<Value>(&body).ok();
-                let name = parsed
-                    .as_ref()
-                    .and_then(|v| v.get("name").and_then(Value::as_str).map(ToString::to_string))
-                    .unwrap_or_default();
-                let tags = parsed
-                    .as_ref()
-                    .and_then(|v| v.get("tags").and_then(Value::as_str).map(ToString::to_string))
-                    .unwrap_or_default();
-                match add_card(&db, &rc.source_db, &name, &tags) {
+            let resp = match (&method, path.as_str()) {
+                (Method::Get, "/") => html_response(INDEX_HTML),
+                // Maybeboard research + cube trim: one self-contained page, two entry routes.
+                (Method::Get, "/maybe" | "/trim") => html_response(MAYBE_HTML),
+                (Method::Get, "/api/cards") => json_response(&list_cards(&db)),
+                // The whole card corpus (faces collapsed, in_cube/oldframe flagged) for the
+                // client-side maybeboard query engine. Big (~15 MB) but local and one-shot.
+                (Method::Get, "/api/pool") => match crate::maybe::pool(&rc.source_db, editor_db) {
                     Ok(v) => json_response(&v),
                     Err(e) => json_response(&json!({"error": e.to_string()})),
-                }
-            }
-            // Set the print quantity (number of copies) for a card.
-            (Method::Post, p) if p.starts_with("/api/qty/") => match id_from(p, "/api/qty/") {
-                Some(id) => {
-                    let mut body = String::new();
-                    req.as_reader().read_to_string(&mut body).ok();
-                    let q = serde_json::from_str::<Value>(&body)
-                        .ok()
-                        .and_then(|v| v.get("qty").and_then(Value::as_i64))
-                        .unwrap_or(1)
-                        .max(0);
-                    let _ = db.execute("UPDATE cube_cards SET qty=?2 WHERE id=?1", params![id, q]);
-                    json_response(&json!({"id": id, "qty": q}))
-                }
-                None => not_found(),
-            },
-            // Soft-remove / restore a card (kept in DB; removed from the cube list).
-            (Method::Post, p) if p.starts_with("/api/remove/") => match id_from(p, "/api/remove/") {
-                Some(id) => set_removed(&db, id, true).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
-                None => not_found(),
-            },
-            (Method::Post, p) if p.starts_with("/api/restore/") => match id_from(p, "/api/restore/") {
-                Some(id) => set_removed(&db, id, false).ok().flatten().map_or_else(not_found, |v| json_response(&v)),
-                None => not_found(),
-            },
-            // GenAI art gallery: generate options, serve option cards, choose one.
-            (_, p) if p.starts_with("/api/genai/") => {
-                let rest = p.strip_prefix("/api/genai/").unwrap_or("");
-                let segs: Vec<&str> = rest.split('/').collect();
-                let gid = segs.first().and_then(|s| s.parse::<i64>().ok());
-                match (&method, segs.as_slice(), gid) {
-                    // Review dashboard: every genai-flagged card + its status.
-                    (Method::Get, ["dashboard"], _) => {
-                        match crate::render::genai_dashboard(editor_db, &rc.cache) {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Cached options (no generation) for the review gallery.
-                    (Method::Get, [_, "options"], Some(gid)) => {
-                        match crate::render::genai_existing(editor_db, &rc.cache, gid) {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Event history / time-travel for a card.
-                    (Method::Get, [_, "history"], Some(gid)) => {
-                        match crate::render::genai_history(&rc.cache, gid) {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Restore an old event's prompt as the current direction.
-                    (Method::Post, [_, "reprompt"], Some(gid)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let ev = serde_json::from_str::<Value>(&body)
-                            .ok()
-                            .and_then(|v| v["event_id"].as_i64())
-                            .unwrap_or(0);
-                        match crate::render::genai_reprompt(editor_db, &rc.cache, gid, ev) {
-                            Ok(d) => json_response(&json!({"direction": d})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Clear the chosen art (logged).
-                    (Method::Post, [_, "unchoose"], Some(gid)) => {
-                        match crate::render::genai_unchoose(editor_db, &rc.cache, gid) {
-                            Ok(()) => json_response(&json!({"ok": true})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Choose the card's ORIGINAL (real) art — recorded as a decision so the
-                    // card STAYS in the Review list marked "✓ Original art" (genai flag kept).
-                    (Method::Post, [_, "original"], Some(gid)) => {
-                        match crate::render::genai_choose_original(editor_db, &rc.cache, gid) {
-                            Ok(()) => json_response(&json!({"ok": true})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Art direction: fetch (cached/Claude) or regenerate; user edits before generating.
-                    (Method::Post, [_, "direction"], Some(gid)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let regen = serde_json::from_str::<Value>(&body)
-                            .ok()
-                            .and_then(|v| v["regenerate"].as_bool())
-                            .unwrap_or(false);
-                        match crate::render::genai_direction(editor_db, &rc.cache, gid, regen) {
-                            Ok(d) => json_response(&json!({"direction": d})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    (Method::Post, [_, "generate"], Some(gid)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let dir = serde_json::from_str::<Value>(&body)
-                            .ok()
-                            .and_then(|v| v["direction"].as_str().map(ToString::to_string));
-                        match crate::render::genai_options(
-                            editor_db, &rc.assets, &rc.cache, &rc.chrome, gid, dir.as_deref(),
-                        ) {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    (Method::Get, [_, "card", bucket], Some(gid)) => {
-                        let nm = db
-                            .query_row("SELECT name FROM cube_cards WHERE id=?1", params![gid], |r| {
-                                r.get::<_, String>(0)
-                            })
-                            .unwrap_or_default();
-                        let path = crate::render::genai_card_path(&rc.cache, &nm, bucket);
-                        match std::fs::read(&path) {
-                            Ok(bytes) => Response::from_data(bytes)
-                                .with_header(header("Content-Type", "image/png")),
-                            Err(_) => not_found(),
-                        }
-                    }
-                    // Render + serve the REAL-art preview (the "Original art" gallery option).
-                    (Method::Get, [_, "base-card"], Some(gid)) => {
-                        match crate::render::genai_base_card(editor_db, &rc.assets, &rc.cache, &rc.chrome, gid) {
-                            Ok(path) => match std::fs::read(&path) {
-                                Ok(bytes) => Response::from_data(bytes)
-                                    .with_header(header("Content-Type", "image/png")),
-                                Err(_) => not_found(),
-                            },
-                            Err(_) => not_found(),
-                        }
-                    }
-                    (Method::Post, [_, "choose"], Some(gid)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let v: Value = serde_json::from_str(&body).unwrap_or(json!({}));
-                        let artist = v["artist"].as_str().unwrap_or("");
-                        let hash = v["hash"].as_str().unwrap_or("");
-                        match crate::render::genai_choose(editor_db, &rc.cache, gid, artist, hash) {
-                            Ok(()) => json_response(&json!({"ok": true})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    _ => not_found(),
-                }
-            }
-            // Per-card crop editor: reposition the underlying MPCfill/Scryfall art.
-            (_, p) if p.starts_with("/api/art/") => {
-                let rest = p.strip_prefix("/api/art/").unwrap_or("");
-                let segs: Vec<&str> = rest.split('/').collect();
-                let aid = segs.first().and_then(|s| s.parse::<i64>().ok());
-                match (&method, segs.as_slice(), aid) {
-                    // Metadata: current box + every selectable source + window aspect.
-                    (Method::Get, [_], Some(id)) => {
-                        let r = if rc.is_ducks() {
-                            crate::render::ducks_art_meta(editor_db, &rc.cache, id)
-                        } else {
-                            crate::render::art_meta(editor_db, &rc.cache, id, rc.is_eighth())
-                        };
-                        match r {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Serve a source image (the underlying card/art the user crops over).
-                    // `&thumb=1` serves a small cached JPEG for the picker sidebar.
-                    (Method::Get, [_, "img"], Some(id)) => {
-                        let rel = query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
-                        let resolved = if rc.is_ducks() {
-                            crate::render::ducks_source_path(editor_db, &rc.cache, id, url.contains("thumb=1"))
-                        } else if url.contains("thumb=1") {
-                            crate::render::art_thumb(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
-                        } else {
-                            crate::render::art_image_path(editor_db, &rc.cache, id, rc.is_eighth(), &rel)
-                        };
-                        match resolved {
-                            Ok(path) => match std::fs::read(&path) {
-                                Ok(bytes) => Response::from_data(bytes)
-                                    .with_header(header("Content-Type", mime_of(&path))),
-                                Err(_) => not_found(),
-                            },
-                            Err(_) => not_found(),
-                        }
-                    }
-                    // Fetch ALL candidates (MPCfill proxies >=600 DPI + alt-printing art),
-                    // then return the refreshed source list.
-                    (Method::Post, [_, "fetch"], Some(id)) => {
-                        match crate::render::art_fetch_all(editor_db, &rc.cache, id, rc.is_eighth(), rc.backend.as_deref()) {
-                            Ok(v) => json_response(&v),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    // Upload art from a local disk path:
-                    // {path, artist?, year?, illustrator?, dpi_threshold?, strict?}.
-                    (Method::Post, [_, "upload"], Some(id)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
-                        let path = v["path"].as_str().unwrap_or("").trim().to_string();
-                        if path.is_empty() {
-                            json_response(&json!({"error": "missing 'path' (local image file)"}))
-                        } else {
-                            match crate::render::art_upload(
-                                editor_db,
-                                &rc.cache,
-                                id,
-                                rc.is_eighth(),
-                                std::path::Path::new(&path),
-                                v["artist"].as_str(),
-                                v["year"].as_str(),
-                                v["illustrator"].as_str(),
-                                v["dpi_threshold"].as_i64().unwrap_or(600),
-                                v["strict"].as_bool().unwrap_or(false),
-                            ) {
-                                Ok(res) => json_response(&res),
-                                Err(e) => json_response(&json!({"error": e.to_string()})),
-                            }
-                        }
-                    }
-                    // Save a hand-placed crop: {rel, box:[x,y,w,h], box2?:[x,y,w,h]}.
-                    // box2 is a SPLIT card's RIGHT-half rectangle (the left half is `box`).
-                    (Method::Post, [_], Some(id)) => {
-                        let mut body = String::new();
-                        req.as_reader().read_to_string(&mut body).ok();
-                        let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
-                        let rel = v["rel"].as_str().unwrap_or("@current").to_string();
-                        let parse_box = |k: &str| {
-                            v[k].as_array().filter(|a| a.len() == 4).map(|a| {
-                                let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
-                                [g(0), g(1), g(2), g(3)]
-                            })
-                        };
-                        let bx = parse_box("box");
-                        let bx2 = parse_box("box2");
-                        match bx {
-                            Some(bx) => {
-                                let r = if rc.is_ducks() {
-                                    crate::render::ducks_save_crop(editor_db, &rc.cache, id, bx)
-                                } else {
-                                    crate::render::art_save_crop(editor_db, &rc.cache, id, rc.is_eighth(), &rel, bx, bx2)
-                                };
-                                match r {
-                                    Ok(()) => json_response(&json!({"ok": true})),
-                                    Err(e) => json_response(&json!({"error": e.to_string()})),
-                                }
-                            }
-                            None => json_response(&json!({"error": "missing or malformed box"})),
-                        }
-                    }
-                    // Reset to the automatic crop (restores the stashed auto pick if any).
-                    (Method::Post, [_, "reset"], Some(id)) => {
-                        let r = if rc.is_ducks() {
-                            crate::render::ducks_reset_crop(editor_db, &rc.cache, id)
-                        } else {
-                            crate::render::art_reset(editor_db, &rc.cache, id, rc.is_eighth())
-                        };
-                        match r {
-                            Ok(()) => json_response(&json!({"ok": true})),
-                            Err(e) => json_response(&json!({"error": e.to_string()})),
-                        }
-                    }
-                    _ => not_found(),
-                }
-            }
-            // On-demand render (cached by content hash). ?foil=1, &force=1, &full=1.
-            // By default serves a small cached JPEG preview (~40× smaller than the print PNG)
-            // with ETag + Cache-Control so navigation is snappy and revisits are 304s; `full=1`
-            // (the "full DPI" link) serves the original print PNG.
-            (Method::Get, p) if p.starts_with("/api/render/") => {
-                let foil = url.contains("foil=1");
-                let force = url.contains("force=1");
-                let want_full = url.contains("full=1");
-                match id_from(p, "/api/render/") {
-                    Some(id) => match if rc.is_ducks() {
-                        crate::render::render_card_ducks(
-                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, force, rc.backend.as_deref(),
-                        )
-                    } else if rc.is_eighth() {
-                        crate::render::render_card_8th(
-                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, force, rc.backend.as_deref(),
-                        )
-                    } else {
-                        crate::render::render_one(
-                            editor_db, &rc.assets, &rc.cache, &rc.chrome, id, foil, force,
-                            rc.backend.as_deref(),
-                        )
-                    } {
-                        Ok(full_path) => {
-                            let (serve_path, mime) = if want_full {
-                                (full_path.clone(), "image/png")
-                            } else {
-                                match crate::render::card_preview(&full_path, 760) {
-                                    Ok(p) => (p, "image/jpeg"),
-                                    Err(_) => (full_path.clone(), "image/png"),
-                                }
-                            };
-                            // The 8ED pipeline's cache key is cheap to recompute from DB/asset
-                            // state alone (render_cache_key_8th mirrors render_card_8th's own
-                            // key). When the request's `v=` matches it exactly, this URL is
-                            // guaranteed to always mean this exact content, so the browser can
-                            // cache it forever and skip the network on a repeat view — a
-                            // *stronger* guarantee than `updated_at` (which never moves for
-                            // non-DB causes of a changed render: asset/template edits, or the
-                            // art auto-repick sidecar changing). Anything else — old-frame/ducks
-                            // editors, a forced re-render's `t=` bust, a missing/stale `v=` —
-                            // keeps the previous always-revalidate behaviour.
-                            let fresh = rc.is_eighth()
-                                && query_param(&url, "v").is_some_and(|v| {
-                                    crate::render::render_cache_key_8th(editor_db, &rc.assets, &rc.cache, id)
-                                        .is_ok_and(|k| k == v)
-                                });
-                            let cache_control =
-                                if fresh { "public, max-age=31536000, immutable" } else { "private, no-cache" };
-                            let etag = file_etag(&serve_path);
+                },
+                // Scryfall `normal` card image, disk-cached forever (grid tiles for cards
+                // that have no print render — maybeboard candidates chiefly).
+                (Method::Get, "/api/maybe/img") => {
+                    let name = query_param(&url, "name").unwrap_or_default();
+                    match crate::maybe::scryfall_normal(&rc.cache, &name) {
+                        Ok(p) => {
+                            let etag = file_etag(&p);
                             if etag.is_some() && etag == if_none_match {
                                 Response::from_data(Vec::new())
                                     .with_status_code(304)
                                     .with_header(header("ETag", etag.as_deref().unwrap_or("")))
-                                    .with_header(header("Cache-Control", cache_control))
+                                    .with_header(header(
+                                        "Cache-Control",
+                                        "public, max-age=31536000",
+                                    ))
                             } else {
-                                image_response(&serve_path, mime, etag, cache_control)
+                                image_response(&p, "image/jpeg", etag, "public, max-age=31536000")
                             }
                         }
-                        Err(e) => Response::from_string(e.to_string()).with_status_code(500),
+                        Err(_) => not_found(),
+                    }
+                }
+                // Grid thumbnail for a cube card: the cached render preview if the card has
+                // ever been rendered (never triggers Chrome), else its Scryfall image.
+                (Method::Get, p) if p.starts_with("/api/thumb/") => match id_from(p, "/api/thumb/")
+                {
+                    Some(id) => {
+                        match crate::maybe::thumb_for_card(editor_db, &rc.cache, id, rc.is_eighth())
+                        {
+                            Ok(p) => {
+                                let etag = file_etag(&p);
+                                if etag.is_some() && etag == if_none_match {
+                                    Response::from_data(Vec::new())
+                                        .with_status_code(304)
+                                        .with_header(header("ETag", etag.as_deref().unwrap_or("")))
+                                        .with_header(header("Cache-Control", "private, no-cache"))
+                                } else {
+                                    image_response(&p, mime_of(&p), etag, "private, no-cache")
+                                }
+                            }
+                            Err(_) => not_found(),
+                        }
+                    }
+                    None => not_found(),
+                },
+                // Maybeboard modules: launch / list / review / verdict / promote / delete.
+                (_, p) if p.starts_with("/api/maybe/") => {
+                    let rest = p.strip_prefix("/api/maybe/").unwrap_or("");
+                    let segs: Vec<&str> = rest.split('/').collect();
+                    let mid = segs.get(1).and_then(|s| s.parse::<i64>().ok());
+                    let mut body = String::new();
+                    if method == Method::Post {
+                        req.as_reader().read_to_string(&mut body).ok();
+                    }
+                    let parsed: Value = serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
+                    let result = match (&method, segs.as_slice(), mid) {
+                        (Method::Get, ["modules"], _) => crate::maybe::modules(editor_db),
+                        (Method::Post, ["launch"], _) => {
+                            let names: Vec<String> = parsed["names"]
+                                .as_array()
+                                .map(|a| {
+                                    a.iter()
+                                        .filter_map(Value::as_str)
+                                        .map(ToString::to_string)
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+                            crate::maybe::launch(
+                                editor_db,
+                                &rc.source_db,
+                                parsed["name"].as_str().unwrap_or(""),
+                                parsed["query"].as_str().unwrap_or(""),
+                                parsed["notes"].as_str().unwrap_or(""),
+                                &names,
+                            )
+                        }
+                        (Method::Get, ["module", _], Some(mid)) => {
+                            crate::maybe::module_cards(editor_db, mid)
+                        }
+                        (Method::Post, ["verdict", _], Some(mid)) => crate::maybe::set_verdict(
+                            editor_db,
+                            mid,
+                            parsed["name"].as_str().unwrap_or(""),
+                            parsed["verdict"].as_str().unwrap_or(""),
+                        ),
+                        (Method::Post, ["promote", _], Some(mid)) => {
+                            crate::maybe::promote(editor_db, &rc.source_db, mid)
+                        }
+                        (Method::Post, ["delete", _], Some(mid)) => {
+                            crate::maybe::delete_module(editor_db, mid)
+                        }
+                        _ => Err(anyhow::anyhow!("unknown maybeboard endpoint")),
+                    };
+                    match result {
+                        Ok(v) => json_response(&v),
+                        Err(e) => json_response(&json!({"error": e.to_string()})),
+                    }
+                }
+                (Method::Get, p) if p.starts_with("/api/card/") => match id_from(p, "/api/card/") {
+                    Some(id) => match get_card(&db, id) {
+                        Some(mut v) => {
+                            // Attach the original Scryfall flavor so the editor's flavor field
+                            // can prefill it (override wins; this is the fallback baseline).
+                            let name = v["name"].as_str().unwrap_or("").to_string();
+                            if let Some(o) = v.as_object_mut() {
+                                o.insert(
+                                    "flavor_base".to_string(),
+                                    json!(crate::render::base_flavor(&name, &rc.cache)),
+                                );
+                                // Accurate cache-busting token for /api/render/* (see render_cache_key_8th):
+                                // unlike updated_at, it moves whenever the rendered output actually would.
+                                if rc.is_eighth() {
+                                    if let Ok(key) = crate::render::render_cache_key_8th(
+                                        editor_db, &rc.assets, &rc.cache, id,
+                                    ) {
+                                        o.insert("render_key".to_string(), json!(key));
+                                    }
+                                }
+                            }
+                            json_response(&v)
+                        }
+                        None => not_found(),
                     },
                     None => not_found(),
+                },
+                (Method::Post, p) if p.starts_with("/api/card/") => {
+                    let mut body = String::new();
+                    req.as_reader().read_to_string(&mut body).ok();
+                    match id_from(p, "/api/card/") {
+                        Some(id) => match save_card(&db, id, &body) {
+                            Ok(Some(v)) => json_response(&v),
+                            Ok(None) => not_found(),
+                            Err(e) => json_response(&json!({"error": e.to_string()})),
+                        },
+                        None => not_found(),
+                    }
                 }
-            }
-            _ => not_found(),
-        };
-        let _ = req.respond(resp);
+                // Add a card to the cube by exact name.
+                (Method::Post, "/api/add") => {
+                    let mut body = String::new();
+                    req.as_reader().read_to_string(&mut body).ok();
+                    let parsed = serde_json::from_str::<Value>(&body).ok();
+                    let name = parsed
+                        .as_ref()
+                        .and_then(|v| {
+                            v.get("name")
+                                .and_then(Value::as_str)
+                                .map(ToString::to_string)
+                        })
+                        .unwrap_or_default();
+                    let tags = parsed
+                        .as_ref()
+                        .and_then(|v| {
+                            v.get("tags")
+                                .and_then(Value::as_str)
+                                .map(ToString::to_string)
+                        })
+                        .unwrap_or_default();
+                    match add_card(&db, &rc.source_db, &name, &tags) {
+                        Ok(v) => json_response(&v),
+                        Err(e) => json_response(&json!({"error": e.to_string()})),
+                    }
+                }
+                // Set the print quantity (number of copies) for a card.
+                (Method::Post, p) if p.starts_with("/api/qty/") => match id_from(p, "/api/qty/") {
+                    Some(id) => {
+                        let mut body = String::new();
+                        req.as_reader().read_to_string(&mut body).ok();
+                        let q = serde_json::from_str::<Value>(&body)
+                            .ok()
+                            .and_then(|v| v.get("qty").and_then(Value::as_i64))
+                            .unwrap_or(1)
+                            .max(0);
+                        let _ =
+                            db.execute("UPDATE cube_cards SET qty=?2 WHERE id=?1", params![id, q]);
+                        json_response(&json!({"id": id, "qty": q}))
+                    }
+                    None => not_found(),
+                },
+                // Soft-remove / restore a card (kept in DB; removed from the cube list).
+                (Method::Post, p) if p.starts_with("/api/remove/") => {
+                    match id_from(p, "/api/remove/") {
+                        Some(id) => set_removed(&db, id, true)
+                            .ok()
+                            .flatten()
+                            .map_or_else(not_found, |v| json_response(&v)),
+                        None => not_found(),
+                    }
+                }
+                (Method::Post, p) if p.starts_with("/api/restore/") => {
+                    match id_from(p, "/api/restore/") {
+                        Some(id) => set_removed(&db, id, false)
+                            .ok()
+                            .flatten()
+                            .map_or_else(not_found, |v| json_response(&v)),
+                        None => not_found(),
+                    }
+                }
+                // GenAI art gallery: generate options, serve option cards, choose one.
+                (_, p) if p.starts_with("/api/genai/") => {
+                    let rest = p.strip_prefix("/api/genai/").unwrap_or("");
+                    let segs: Vec<&str> = rest.split('/').collect();
+                    let gid = segs.first().and_then(|s| s.parse::<i64>().ok());
+                    match (&method, segs.as_slice(), gid) {
+                        // Review dashboard: every genai-flagged card + its status.
+                        (Method::Get, ["dashboard"], _) => {
+                            match crate::render::genai_dashboard(editor_db, &rc.cache) {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Cached options (no generation) for the review gallery.
+                        (Method::Get, [_, "options"], Some(gid)) => {
+                            match crate::render::genai_existing(editor_db, &rc.cache, gid) {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Event history / time-travel for a card.
+                        (Method::Get, [_, "history"], Some(gid)) => {
+                            match crate::render::genai_history(&rc.cache, gid) {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Restore an old event's prompt as the current direction.
+                        (Method::Post, [_, "reprompt"], Some(gid)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let ev = serde_json::from_str::<Value>(&body)
+                                .ok()
+                                .and_then(|v| v["event_id"].as_i64())
+                                .unwrap_or(0);
+                            match crate::render::genai_reprompt(editor_db, &rc.cache, gid, ev) {
+                                Ok(d) => json_response(&json!({"direction": d})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Clear the chosen art (logged).
+                        (Method::Post, [_, "unchoose"], Some(gid)) => {
+                            match crate::render::genai_unchoose(editor_db, &rc.cache, gid) {
+                                Ok(()) => json_response(&json!({"ok": true})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Choose the card's ORIGINAL (real) art — recorded as a decision so the
+                        // card STAYS in the Review list marked "✓ Original art" (genai flag kept).
+                        (Method::Post, [_, "original"], Some(gid)) => {
+                            match crate::render::genai_choose_original(editor_db, &rc.cache, gid) {
+                                Ok(()) => json_response(&json!({"ok": true})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Art direction: fetch (cached/Claude) or regenerate; user edits before generating.
+                        (Method::Post, [_, "direction"], Some(gid)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let regen = serde_json::from_str::<Value>(&body)
+                                .ok()
+                                .and_then(|v| v["regenerate"].as_bool())
+                                .unwrap_or(false);
+                            match crate::render::genai_direction(editor_db, &rc.cache, gid, regen) {
+                                Ok(d) => json_response(&json!({"direction": d})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        (Method::Post, [_, "generate"], Some(gid)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let dir = serde_json::from_str::<Value>(&body)
+                                .ok()
+                                .and_then(|v| v["direction"].as_str().map(ToString::to_string));
+                            match crate::render::genai_options(
+                                editor_db,
+                                &rc.assets,
+                                &rc.cache,
+                                &rc.chrome,
+                                gid,
+                                dir.as_deref(),
+                            ) {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        (Method::Get, [_, "card", bucket], Some(gid)) => {
+                            let nm = db
+                                .query_row(
+                                    "SELECT name FROM cube_cards WHERE id=?1",
+                                    params![gid],
+                                    |r| r.get::<_, String>(0),
+                                )
+                                .unwrap_or_default();
+                            let path = crate::render::genai_card_path(&rc.cache, &nm, bucket);
+                            match std::fs::read(&path) {
+                                Ok(bytes) => Response::from_data(bytes)
+                                    .with_header(header("Content-Type", "image/png")),
+                                Err(_) => not_found(),
+                            }
+                        }
+                        // Render + serve the REAL-art preview (the "Original art" gallery option).
+                        (Method::Get, [_, "base-card"], Some(gid)) => {
+                            match crate::render::genai_base_card(
+                                editor_db, &rc.assets, &rc.cache, &rc.chrome, gid,
+                            ) {
+                                Ok(path) => match std::fs::read(&path) {
+                                    Ok(bytes) => Response::from_data(bytes)
+                                        .with_header(header("Content-Type", "image/png")),
+                                    Err(_) => not_found(),
+                                },
+                                Err(_) => not_found(),
+                            }
+                        }
+                        (Method::Post, [_, "choose"], Some(gid)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let v: Value = serde_json::from_str(&body).unwrap_or(json!({}));
+                            let artist = v["artist"].as_str().unwrap_or("");
+                            let hash = v["hash"].as_str().unwrap_or("");
+                            match crate::render::genai_choose(
+                                editor_db, &rc.cache, gid, artist, hash,
+                            ) {
+                                Ok(()) => json_response(&json!({"ok": true})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        _ => not_found(),
+                    }
+                }
+                // Per-card crop editor: reposition the underlying MPCfill/Scryfall art.
+                (_, p) if p.starts_with("/api/art/") => {
+                    let rest = p.strip_prefix("/api/art/").unwrap_or("");
+                    let segs: Vec<&str> = rest.split('/').collect();
+                    let aid = segs.first().and_then(|s| s.parse::<i64>().ok());
+                    match (&method, segs.as_slice(), aid) {
+                        // Metadata: current box + every selectable source + window aspect.
+                        (Method::Get, [_], Some(id)) => {
+                            let r = if rc.is_ducks() {
+                                crate::render::ducks_art_meta(editor_db, &rc.cache, id)
+                            } else {
+                                crate::render::art_meta(editor_db, &rc.cache, id, rc.is_eighth())
+                            };
+                            match r {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Serve a source image (the underlying card/art the user crops over).
+                        // `&thumb=1` serves a small cached JPEG for the picker sidebar.
+                        (Method::Get, [_, "img"], Some(id)) => {
+                            let rel =
+                                query_param(&url, "rel").unwrap_or_else(|| "@current".to_string());
+                            let resolved = if rc.is_ducks() {
+                                crate::render::ducks_source_path(
+                                    editor_db,
+                                    &rc.cache,
+                                    id,
+                                    url.contains("thumb=1"),
+                                )
+                            } else if url.contains("thumb=1") {
+                                crate::render::art_thumb(
+                                    editor_db,
+                                    &rc.cache,
+                                    id,
+                                    rc.is_eighth(),
+                                    &rel,
+                                )
+                            } else {
+                                crate::render::art_image_path(
+                                    editor_db,
+                                    &rc.cache,
+                                    id,
+                                    rc.is_eighth(),
+                                    &rel,
+                                )
+                            };
+                            match resolved {
+                                Ok(path) => match std::fs::read(&path) {
+                                    Ok(bytes) => Response::from_data(bytes)
+                                        .with_header(header("Content-Type", mime_of(&path))),
+                                    Err(_) => not_found(),
+                                },
+                                Err(_) => not_found(),
+                            }
+                        }
+                        // Fetch ALL candidates (MPCfill proxies >=600 DPI + alt-printing art),
+                        // then return the refreshed source list.
+                        (Method::Post, [_, "fetch"], Some(id)) => {
+                            match crate::render::art_fetch_all(
+                                editor_db,
+                                &rc.cache,
+                                id,
+                                rc.is_eighth(),
+                                rc.backend.as_deref(),
+                            ) {
+                                Ok(v) => json_response(&v),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        // Upload art from a local disk path:
+                        // {path, artist?, year?, illustrator?, dpi_threshold?, strict?}.
+                        (Method::Post, [_, "upload"], Some(id)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let v: Value =
+                                serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
+                            let path = v["path"].as_str().unwrap_or("").trim().to_string();
+                            if path.is_empty() {
+                                json_response(
+                                    &json!({"error": "missing 'path' (local image file)"}),
+                                )
+                            } else {
+                                match crate::render::art_upload(
+                                    editor_db,
+                                    &rc.cache,
+                                    id,
+                                    rc.is_eighth(),
+                                    std::path::Path::new(&path),
+                                    v["artist"].as_str(),
+                                    v["year"].as_str(),
+                                    v["illustrator"].as_str(),
+                                    v["dpi_threshold"].as_i64().unwrap_or(600),
+                                    v["strict"].as_bool().unwrap_or(false),
+                                ) {
+                                    Ok(res) => json_response(&res),
+                                    Err(e) => json_response(&json!({"error": e.to_string()})),
+                                }
+                            }
+                        }
+                        // Save a hand-placed crop: {rel, box:[x,y,w,h], box2?:[x,y,w,h]}.
+                        // box2 is a SPLIT card's RIGHT-half rectangle (the left half is `box`).
+                        (Method::Post, [_], Some(id)) => {
+                            let mut body = String::new();
+                            req.as_reader().read_to_string(&mut body).ok();
+                            let v: Value =
+                                serde_json::from_str(&body).unwrap_or_else(|_| json!({}));
+                            let rel = v["rel"].as_str().unwrap_or("@current").to_string();
+                            let parse_box = |k: &str| {
+                                v[k].as_array().filter(|a| a.len() == 4).map(|a| {
+                                    let g = |i: usize| a[i].as_f64().unwrap_or(0.0);
+                                    [g(0), g(1), g(2), g(3)]
+                                })
+                            };
+                            let bx = parse_box("box");
+                            let bx2 = parse_box("box2");
+                            match bx {
+                                Some(bx) => {
+                                    let r = if rc.is_ducks() {
+                                        crate::render::ducks_save_crop(editor_db, &rc.cache, id, bx)
+                                    } else {
+                                        crate::render::art_save_crop(
+                                            editor_db,
+                                            &rc.cache,
+                                            id,
+                                            rc.is_eighth(),
+                                            &rel,
+                                            bx,
+                                            bx2,
+                                        )
+                                    };
+                                    match r {
+                                        Ok(()) => json_response(&json!({"ok": true})),
+                                        Err(e) => json_response(&json!({"error": e.to_string()})),
+                                    }
+                                }
+                                None => {
+                                    json_response(&json!({"error": "missing or malformed box"}))
+                                }
+                            }
+                        }
+                        // Reset to the automatic crop (restores the stashed auto pick if any).
+                        (Method::Post, [_, "reset"], Some(id)) => {
+                            let r = if rc.is_ducks() {
+                                crate::render::ducks_reset_crop(editor_db, &rc.cache, id)
+                            } else {
+                                crate::render::art_reset(editor_db, &rc.cache, id, rc.is_eighth())
+                            };
+                            match r {
+                                Ok(()) => json_response(&json!({"ok": true})),
+                                Err(e) => json_response(&json!({"error": e.to_string()})),
+                            }
+                        }
+                        _ => not_found(),
+                    }
+                }
+                // On-demand render (cached by content hash). ?foil=1, &force=1, &full=1.
+                // By default serves a small cached JPEG preview (~40× smaller than the print PNG)
+                // with ETag + Cache-Control so navigation is snappy and revisits are 304s; `full=1`
+                // (the "full DPI" link) serves the original print PNG.
+                (Method::Get, p) if p.starts_with("/api/render/") => {
+                    let foil = url.contains("foil=1");
+                    let force = url.contains("force=1");
+                    let want_full = url.contains("full=1");
+                    match id_from(p, "/api/render/") {
+                        Some(id) => match if rc.is_ducks() {
+                            crate::render::render_card_ducks(
+                                editor_db,
+                                &rc.assets,
+                                &rc.cache,
+                                &rc.chrome,
+                                id,
+                                force,
+                                rc.backend.as_deref(),
+                            )
+                        } else if rc.is_eighth() {
+                            crate::render::render_card_8th(
+                                editor_db,
+                                &rc.assets,
+                                &rc.cache,
+                                &rc.chrome,
+                                id,
+                                force,
+                                rc.backend.as_deref(),
+                            )
+                        } else {
+                            crate::render::render_one(
+                                editor_db,
+                                &rc.assets,
+                                &rc.cache,
+                                &rc.chrome,
+                                id,
+                                foil,
+                                force,
+                                rc.backend.as_deref(),
+                            )
+                        } {
+                            Ok(full_path) => {
+                                let (serve_path, mime) = if want_full {
+                                    (full_path.clone(), "image/png")
+                                } else {
+                                    match crate::render::card_preview(&full_path, 760) {
+                                        Ok(p) => (p, "image/jpeg"),
+                                        Err(_) => (full_path.clone(), "image/png"),
+                                    }
+                                };
+                                // The 8ED pipeline's cache key is cheap to recompute from DB/asset
+                                // state alone (render_cache_key_8th mirrors render_card_8th's own
+                                // key). When the request's `v=` matches it exactly, this URL is
+                                // guaranteed to always mean this exact content, so the browser can
+                                // cache it forever and skip the network on a repeat view — a
+                                // *stronger* guarantee than `updated_at` (which never moves for
+                                // non-DB causes of a changed render: asset/template edits, or the
+                                // art auto-repick sidecar changing). Anything else — old-frame/ducks
+                                // editors, a forced re-render's `t=` bust, a missing/stale `v=` —
+                                // keeps the previous always-revalidate behaviour.
+                                let fresh = rc.is_eighth()
+                                    && query_param(&url, "v").is_some_and(|v| {
+                                        crate::render::render_cache_key_8th(
+                                            editor_db, &rc.assets, &rc.cache, id,
+                                        )
+                                        .is_ok_and(|k| k == v)
+                                    });
+                                let cache_control = if fresh {
+                                    "public, max-age=31536000, immutable"
+                                } else {
+                                    "private, no-cache"
+                                };
+                                let etag = file_etag(&serve_path);
+                                if etag.is_some() && etag == if_none_match {
+                                    Response::from_data(Vec::new())
+                                        .with_status_code(304)
+                                        .with_header(header("ETag", etag.as_deref().unwrap_or("")))
+                                        .with_header(header("Cache-Control", cache_control))
+                                } else {
+                                    image_response(&serve_path, mime, etag, cache_control)
+                                }
+                            }
+                            Err(e) => Response::from_string(e.to_string()).with_status_code(500),
+                        },
+                        None => not_found(),
+                    }
+                }
+                _ => not_found(),
+            };
+            let _ = req.respond(resp);
         }); // end per-request worker thread
     }
     Ok(())
@@ -918,7 +1181,10 @@ fn list_cards(db: &Connection) -> Value {
                 serde_json::from_str(&r.get::<_, String>(23)?).unwrap_or_else(|_| json!({}));
             // Effective value of an erratable field: the override wins, else the base column.
             let eff = |k: &str, base: Option<String>| {
-                ov.get(k).and_then(Value::as_str).map(str::to_string).or(base)
+                ov.get(k)
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .or(base)
             };
 
             let eff_mc = eff("mana_cost", r.get::<_, Option<String>>(3)?);
@@ -1120,7 +1386,12 @@ fn save_card(db: &Connection, id: i64, body: &str) -> Result<Option<Value>> {
         // a separate `recolor` pass.
         let merged_v = Value::Object(merged.clone());
         let mpick = |k: &str, base: Option<String>| {
-            merged_v.get(k).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
+            merged_v
+                .get(k)
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+                .or(base)
+                .unwrap_or_default()
         };
         let (base_mc, base_ot): (Option<String>, Option<String>) = db
             .query_row(
@@ -1177,7 +1448,12 @@ fn file_etag(path: &std::path::Path) -> Option<String> {
 
 /// Serve a cached image file with caching headers so the browser keeps it and revalidates
 /// cheaply (see [`file_etag`]). Falls back to 404 if the file vanished between stat and read.
-fn image_response(path: &std::path::Path, mime: &str, etag: Option<String>, cache_control: &str) -> Response<std::io::Cursor<Vec<u8>>> {
+fn image_response(
+    path: &std::path::Path,
+    mime: &str,
+    etag: Option<String>,
+    cache_control: &str,
+) -> Response<std::io::Cursor<Vec<u8>>> {
     match std::fs::read(path) {
         Ok(bytes) => {
             let mut r = Response::from_data(bytes)
@@ -1233,7 +1509,12 @@ fn percent_decode(s: &str) -> String {
 
 /// Content-Type for a served image, by extension (defaults to octet-stream).
 fn mime_of(path: &Path) -> &'static str {
-    match path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
         Some("png") => "image/png",
         Some("jpg" | "jpeg") => "image/jpeg",
         Some("webp") => "image/webp",
@@ -1281,8 +1562,15 @@ fn csv_field(s: &str) -> String {
 /// FUNCTIONAL field override or a non-empty errata note (cosmetic overrides like
 /// `name`/`flavor` never trip it).
 fn errata_ribbon(overrides: &Value, errata_text: &str) -> bool {
-    const FUNCTIONAL: &[&str] =
-        &["mana_cost", "type", "oracle_text", "power", "toughness", "loyalty", "colors"];
+    const FUNCTIONAL: &[&str] = &[
+        "mana_cost",
+        "type",
+        "oracle_text",
+        "power",
+        "toughness",
+        "loyalty",
+        "colors",
+    ];
     let scroll_override = overrides.get("errata_scroll").and_then(|v| match v {
         Value::Bool(b) => Some(*b),
         Value::String(s) => match s.trim().to_lowercase().as_str() {
@@ -1310,16 +1598,32 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
     #[allow(clippy::type_complexity)]
-    let rows: Vec<(String, Option<f64>, Option<String>, Option<String>, String, String, String, i64)> = {
+    let rows: Vec<(
+        String,
+        Option<f64>,
+        Option<String>,
+        Option<String>,
+        String,
+        String,
+        String,
+        i64,
+    )> = {
         let mut stmt = db.prepare(
             "SELECT name,mana_value,type,color_identity,COALESCE(overrides,'{}'),COALESCE(errata_text,''),COALESCE(tags,''),COALESCE(qty,1)
              FROM cube_cards WHERE removed=0 ORDER BY id",
         )?;
         let v = stmt
             .query_map([], |r| {
-                Ok((r.get::<_, String>(0)?, r.get::<_, Option<f64>>(1)?, r.get::<_, Option<String>>(2)?,
-                    r.get::<_, Option<String>>(3)?, r.get::<_, String>(4)?, r.get::<_, String>(5)?,
-                    r.get::<_, String>(6)?, r.get::<_, i64>(7)?))
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, Option<f64>>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                    r.get::<_, String>(4)?,
+                    r.get::<_, String>(5)?,
+                    r.get::<_, String>(6)?,
+                    r.get::<_, i64>(7)?,
+                ))
             })?
             .collect::<std::result::Result<_, _>>()?;
         v
@@ -1331,12 +1635,27 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
     let mut distinct = 0usize;
     for (name, mv, ty, ci, ov, errata_text, card_tags, qty) in rows {
         let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
-        let type_line = o.get("type").and_then(Value::as_str).map(ToString::to_string)
-            .or(ty).unwrap_or_default();
-        let cmc = o.get("mana_value").and_then(Value::as_f64).or(mv).unwrap_or(0.0);
-        let cmc = if cmc.fract() == 0.0 { format!("{}", cmc as i64) } else { format!("{cmc}") };
-        let letters: Vec<char> =
-            ci.unwrap_or_default().chars().filter(|c| "WUBRG".contains(*c)).collect();
+        let type_line = o
+            .get("type")
+            .and_then(Value::as_str)
+            .map(ToString::to_string)
+            .or(ty)
+            .unwrap_or_default();
+        let cmc = o
+            .get("mana_value")
+            .and_then(Value::as_f64)
+            .or(mv)
+            .unwrap_or(0.0);
+        let cmc = if cmc.fract() == 0.0 {
+            format!("{}", cmc as i64)
+        } else {
+            format!("{cmc}")
+        };
+        let letters: Vec<char> = ci
+            .unwrap_or_default()
+            .chars()
+            .filter(|c| "WUBRG".contains(*c))
+            .collect();
         let color: String = letters.iter().collect();
         let cat = color_category(&type_line, &letters);
         let url = format!("{base}/{}.png", crate::render::sanitize(&name));
@@ -1346,7 +1665,11 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
         if errata_ribbon(&o, &errata_text) {
             tag_list.push("Errata".to_string());
         }
-        for t in card_tags.split(',').map(str::trim).filter(|t| !t.is_empty()) {
+        for t in card_tags
+            .split(',')
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+        {
             let mut cs = t.chars();
             let titled = cs.next().map_or_else(String::new, |c| {
                 c.to_uppercase().collect::<String>() + cs.as_str()
@@ -1372,7 +1695,10 @@ pub fn cubecobra_csv(editor_db: &Path, base: &str, out: &Path) -> Result<()> {
         fs::create_dir_all(p)?;
     }
     fs::write(out, w)?;
-    println!("cubecobra-csv: {n} cards ({distinct} distinct, qty-expanded) -> {}", out.display());
+    println!(
+        "cubecobra-csv: {n} cards ({distinct} distinct, qty-expanded) -> {}",
+        out.display()
+    );
     Ok(())
 }
 
@@ -1396,7 +1722,9 @@ fn mana_value_of(mana_cost: &str) -> f64 {
                 sym.push(c2);
             }
             // Hybrid like "2/W" contributes the numeric side (2); "W/U" contributes 1.
-            let numeric = sym.split(['/', '\u{2044}']).find_map(|p| p.trim().parse::<f64>().ok());
+            let numeric = sym
+                .split(['/', '\u{2044}'])
+                .find_map(|p| p.trim().parse::<f64>().ok());
             if let Some(n) = numeric {
                 total += n;
             } else if sym.eq_ignore_ascii_case("x")
@@ -1440,12 +1768,19 @@ fn color_identity_of(mana_cost: &str, oracle_text: &str) -> String {
     }
     const ORDER: &str = "WUBRG";
     set.sort_by_key(|c| ORDER.find(*c).unwrap_or(9));
-    set.iter().map(char::to_string).collect::<Vec<_>>().join(", ")
+    set.iter()
+        .map(char::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// `color_identity_of`, but a non-empty MANUAL override (e.g. "UB", "U, B") wins outright,
 /// letting a cost-removed card still declare its identity for the solver/frame/dot.
-fn effective_color_identity(mana_cost: &str, oracle_text: &str, ci_override: Option<&str>) -> String {
+fn effective_color_identity(
+    mana_cost: &str,
+    oracle_text: &str,
+    ci_override: Option<&str>,
+) -> String {
     match ci_override.map(str::trim).filter(|s| !s.is_empty()) {
         Some(s) => {
             let mut set: Vec<char> = Vec::new();
@@ -1456,7 +1791,10 @@ fn effective_color_identity(mana_cost: &str, oracle_text: &str, ci_override: Opt
             }
             const ORDER: &str = "WUBRG";
             set.sort_by_key(|c| ORDER.find(*c).unwrap_or(9));
-            set.iter().map(char::to_string).collect::<Vec<_>>().join(", ")
+            set.iter()
+                .map(char::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
         }
         None => color_identity_of(mana_cost, oracle_text),
     }
@@ -1467,17 +1805,31 @@ fn effective_color_identity(mana_cost: &str, oracle_text: &str, ci_override: Opt
 /// `overrides` blob applied) is the source of truth — this is what re-aligns the
 /// colour-shifted lock pieces. Prints every change; `dry_run` writes nothing.
 pub fn recolor(editor_db: &Path, dry_run: bool) -> Result<()> {
-    let mut db = Connection::open(editor_db)
-        .with_context(|| format!("opening {}", editor_db.display()))?;
+    let mut db =
+        Connection::open(editor_db).with_context(|| format!("opening {}", editor_db.display()))?;
     #[allow(clippy::type_complexity)]
-    let rows: Vec<(i64, String, Option<String>, Option<String>, Option<String>, String)> = {
+    let rows: Vec<(
+        i64,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    )> = {
         let mut stmt = db.prepare(
             "SELECT id,name,mana_cost,oracle_text,color_identity,COALESCE(overrides,'{}')
              FROM cube_cards WHERE removed=0 ORDER BY id",
         )?;
         let v = stmt
             .query_map([], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
             })?
             .collect::<std::result::Result<_, _>>()?;
         v
@@ -1486,14 +1838,28 @@ pub fn recolor(editor_db: &Path, dry_run: bool) -> Result<()> {
     for (id, name, mc, ot, ci_old, ov) in rows {
         let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
         let pick = |k: &str, base: Option<String>| {
-            o.get(k).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
+            o.get(k)
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+                .or(base)
+                .unwrap_or_default()
         };
         let mana = pick("mana_cost", mc);
         let oracle = pick("oracle_text", ot);
-        let ci = effective_color_identity(&mana, &oracle, o.get("color_identity").and_then(Value::as_str));
+        let ci = effective_color_identity(
+            &mana,
+            &oracle,
+            o.get("color_identity").and_then(Value::as_str),
+        );
         let ci_old = ci_old.unwrap_or_default();
         if ci != ci_old {
-            let show = |s: &str| if s.is_empty() { "—".to_string() } else { s.to_string() };
+            let show = |s: &str| {
+                if s.is_empty() {
+                    "—".to_string()
+                } else {
+                    s.to_string()
+                }
+            };
             println!("  {name}: [{}] -> [{}]", show(&ci_old), show(&ci));
             updates.push((id, ci));
         }
@@ -1515,3 +1881,4 @@ pub fn recolor(editor_db: &Path, dry_run: bool) -> Result<()> {
 }
 
 const INDEX_HTML: &str = include_str!("edit_ui.html");
+const MAYBE_HTML: &str = include_str!("maybe_ui.html");

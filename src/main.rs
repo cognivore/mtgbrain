@@ -5,6 +5,7 @@ mod build;
 mod download;
 mod edit;
 mod events;
+mod maybe;
 mod model;
 mod query;
 mod render;
@@ -224,7 +225,10 @@ enum EditCmd {
     /// Seed a DuckTales editor DB from beter-ducks.json (English side; reuses the cube schema).
     SeedDucks {
         /// Source JSON (the DuckTales cards).
-        #[arg(long, default_value = "/Users/sweater/Github/ducktales/data/beter-ducks.json")]
+        #[arg(
+            long,
+            default_value = "/Users/sweater/Github/ducktales/data/beter-ducks.json"
+        )]
         json: PathBuf,
         /// Output editor DB.
         #[arg(long, default_value = "data/ducktales.sqlite")]
@@ -257,6 +261,29 @@ enum EditCmd {
         /// Output CSV path (default: <data-dir>/odyssey2026_cubecobra.csv).
         #[arg(long)]
         out: Option<PathBuf>,
+    },
+    /// Launch a maybeboard research module: snapshot a batch of candidate cards
+    /// (from --sql against mtg.sqlite, a --list file, or stdin) into the editor DB
+    /// for grid review at /maybe. Cards already in the cube are skipped.
+    MaybeLaunch {
+        /// Editor DB (default: <data-dir>/cube_editor.sqlite).
+        #[arg(long = "editor-db")]
+        editor_db: Option<PathBuf>,
+        /// Module name, e.g. "threshold-matters".
+        #[arg(long)]
+        name: String,
+        /// The research question / Scryfall-ish query, recorded as module metadata.
+        #[arg(long, default_value = "")]
+        query: String,
+        /// Free-form notes on the research intent.
+        #[arg(long, default_value = "")]
+        notes: String,
+        /// Read-only SELECT against mtg.sqlite; the first column is the card name.
+        #[arg(long)]
+        sql: Option<String>,
+        /// Card-name list file (one per line, # comments); "-" or omitted = stdin.
+        #[arg(long)]
+        list: Option<PathBuf>,
     },
     /// Serve the review UI on a local port.
     Serve {
@@ -364,20 +391,71 @@ fn main() -> Result<()> {
         } => query::search(&db, query, where_clause.as_deref(), order, *phrase, out),
         Cmd::Card { name, out } => query::card(&db, name, out),
         Cmd::Edit { cmd } => match cmd {
-            EditCmd::Seed { list, out, force, no_genai } => {
+            EditCmd::Seed {
+                list,
+                out,
+                force,
+                no_genai,
+            } => {
                 let out = out
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 edit::seed(&db, list, &out, *force, *no_genai)
             }
             EditCmd::SeedDucks { json, out, force } => edit::seed_ducks(json, out, *force),
+            EditCmd::MaybeLaunch {
+                editor_db,
+                name,
+                query,
+                notes,
+                sql,
+                list,
+            } => {
+                let edb = editor_db
+                    .clone()
+                    .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
+                let names: Vec<String> = if let Some(sql) = sql {
+                    // Read-only connection: the query genuinely cannot mutate anything.
+                    let src = rusqlite::Connection::open_with_flags(
+                        &db,
+                        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+                    )?;
+                    let mut stmt = src.prepare(sql)?;
+                    let v = stmt
+                        .query_map([], |r| r.get::<_, String>(0))?
+                        .filter_map(std::result::Result::ok)
+                        .collect();
+                    v
+                } else {
+                    let text = match list.as_deref() {
+                        Some(p) if p != std::path::Path::new("-") => std::fs::read_to_string(p)?,
+                        _ => std::io::read_to_string(std::io::stdin())?,
+                    };
+                    text.lines()
+                        .map(str::trim)
+                        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                        .map(ToString::to_string)
+                        .collect()
+                };
+                let res = maybe::launch(&edb, &db, name, query, notes, &names)?;
+                println!("{}", serde_json::to_string_pretty(&res)?);
+                println!(
+                    "\nreview it:  mtgbrain edit serve --editor-db {}   then open /maybe",
+                    edb.display()
+                );
+                Ok(())
+            }
             EditCmd::Recolor { editor_db, dry_run } => {
                 let edb = editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 edit::recolor(&edb, *dry_run)
             }
-            EditCmd::CubecobraCsv { editor_db, base, out } => {
+            EditCmd::CubecobraCsv {
+                editor_db,
+                base,
+                out,
+            } => {
                 let edb = editor_db
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
@@ -420,18 +498,34 @@ fn main() -> Result<()> {
                 let ducks = matches!(common.frame.as_str(), "ducks" | "ducktales");
                 let out = if ducks {
                     render::render_card_ducks(
-                        &edb, &common.assets, &common.cache, &common.chrome, *id,
-                        common.force, common.art_backend.as_deref(),
+                        &edb,
+                        &common.assets,
+                        &common.cache,
+                        &common.chrome,
+                        *id,
+                        common.force,
+                        common.art_backend.as_deref(),
                     )?
                 } else if eighth {
                     render::render_card_8th(
-                        &edb, &common.assets, &common.cache, &common.chrome, *id,
-                        common.force, common.art_backend.as_deref(),
+                        &edb,
+                        &common.assets,
+                        &common.cache,
+                        &common.chrome,
+                        *id,
+                        common.force,
+                        common.art_backend.as_deref(),
                     )?
                 } else {
                     render::render_one(
-                        &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
-                        common.force, common.art_backend.as_deref(),
+                        &edb,
+                        &common.assets,
+                        &common.cache,
+                        &common.chrome,
+                        *id,
+                        common.foil,
+                        common.force,
+                        common.art_backend.as_deref(),
                     )?
                 };
                 println!("{}", out.display());
@@ -469,13 +563,24 @@ fn main() -> Result<()> {
                 if !*no_render {
                     let out = if eighth {
                         render::render_card_8th(
-                            &edb, &common.assets, &common.cache, &common.chrome, *id, true,
+                            &edb,
+                            &common.assets,
+                            &common.cache,
+                            &common.chrome,
+                            *id,
+                            true,
                             common.art_backend.as_deref(),
                         )?
                     } else {
                         render::render_one(
-                            &edb, &common.assets, &common.cache, &common.chrome, *id, common.foil,
-                            true, common.art_backend.as_deref(),
+                            &edb,
+                            &common.assets,
+                            &common.cache,
+                            &common.chrome,
+                            *id,
+                            common.foil,
+                            true,
+                            common.art_backend.as_deref(),
                         )?
                     };
                     println!("rendered → {}", out.display());
@@ -488,8 +593,14 @@ fn main() -> Result<()> {
                     .clone()
                     .unwrap_or_else(|| edit::default_editor_db(&cli.data_dir));
                 render::render_all(
-                    &edb, &common.assets, &common.cache, &common.chrome, &common.frame, common.foil,
-                    common.force, common.art_backend.as_deref(),
+                    &edb,
+                    &common.assets,
+                    &common.cache,
+                    &common.chrome,
+                    &common.frame,
+                    common.foil,
+                    common.force,
+                    common.art_backend.as_deref(),
                 )
             }
             RenderCmd::Selfhost { id, common } => {

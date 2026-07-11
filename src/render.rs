@@ -112,18 +112,25 @@ fn manual_crop_aspect(eighth: bool, type_lc: &str) -> f64 {
 fn asset_list() -> Vec<(String, &'static str)> {
     let mut v: Vec<(String, &'static str)> = Vec::new();
     // Seventh (2001) frames: one self-contained PNG per colour/type.
-    for letter in ["w", "u", "b", "r", "g", "m", "a", "c", "l", "wl", "ul", "bl", "rl", "gl"] {
+    for letter in [
+        "w", "u", "b", "r", "g", "m", "a", "c", "l", "wl", "ul", "bl", "rl", "gl",
+    ] {
         v.push((
             format!("{CC}/img/frames/seventh/regular/{letter}.png"),
             Box::leak(format!("frames/{letter}.png").into_boxed_str()),
         ));
     }
     // 7ED foil "falling star" (white path, correctly positioned).
-    v.push((format!("{CC}/img/frames/seventh/foilStar.svg"), "foil/star.svg"));
+    v.push((
+        format!("{CC}/img/frames/seventh/foilStar.svg"),
+        "foil/star.svg",
+    ));
     // Eighth-Edition (2003 / modern) frame pack: a COLOUR layer per frame + region
     // masks (frame/pinline/type/rules) the template composites via CSS, plus the
     // separate P/T boxes. Geometry comes from cardconjurer's pack8th.js.
-    for letter in ["w", "u", "b", "r", "g", "m", "a", "c", "l", "wl", "ul", "bl", "rl", "gl", "ml"] {
+    for letter in [
+        "w", "u", "b", "r", "g", "m", "a", "c", "l", "wl", "ul", "bl", "rl", "gl", "ml",
+    ] {
         v.push((
             format!("{CC}/img/frames/8th/{letter}.png"),
             Box::leak(format!("frames8/{letter}.png").into_boxed_str()),
@@ -144,13 +151,25 @@ fn asset_list() -> Vec<(String, &'static str)> {
     // Modern M15 DEVOID (Eldrazi colourless) frames — used for colourless Eldrazi via the
     // dedicated devoid layout (its own M15 geometry; see card_template_8th_devoid.html). The
     // pack has no pure-colourless variant, so a no-identity Eldrazi takes the `a` frame.
-    for (up, lo) in [("W", "w"), ("U", "u"), ("B", "b"), ("R", "r"), ("G", "g"), ("M", "m"), ("A", "a"), ("L", "l")] {
+    for (up, lo) in [
+        ("W", "w"),
+        ("U", "u"),
+        ("B", "b"),
+        ("R", "r"),
+        ("G", "g"),
+        ("M", "m"),
+        ("A", "a"),
+        ("L", "l"),
+    ] {
         v.push((
             format!("{CC}/img/frames/m15/devoid/m15DevoidFrame{up}.png"),
             Box::leak(format!("frames8/devoid/{lo}.png").into_boxed_str()),
         ));
     }
-    v.push((format!("{CC}/img/frames/m15/devoid/m15DevoidPT.png"), "frames8/devoid/pt.png"));
+    v.push((
+        format!("{CC}/img/frames/m15/devoid/m15DevoidPT.png"),
+        "frames8/devoid/pt.png",
+    ));
     // cardconjurer levelers/regular frame (the real Rise-of-the-Eldrazi Level Up frame) — its
     // own geometry; see card_template_8th_leveler_cc.html. Bands + P/T pills are baked in.
     for lo in ["w", "u", "b", "r", "g", "m", "a"] {
@@ -162,24 +181,42 @@ fn asset_list() -> Vec<(String, &'static str)> {
     // Saga frames (cardconjurer's regular Saga pack) — the chapter abilities run down the left on
     // a gilt lore-spine and the art is a tall scroll on the right. Used by the 8ED Saga renderer.
     for (letter, file) in [
-        ("w", "sagaFrameW"), ("u", "sagaFrameU"), ("b", "sagaFrameB"), ("r", "sagaFrameR"),
-        ("g", "sagaFrameG"), ("m", "sagaFrameM"), ("a", "sagaFrameA"),
+        ("w", "sagaFrameW"),
+        ("u", "sagaFrameU"),
+        ("b", "sagaFrameB"),
+        ("r", "sagaFrameR"),
+        ("g", "sagaFrameG"),
+        ("m", "sagaFrameM"),
+        ("a", "sagaFrameA"),
     ] {
         v.push((
             format!("{CC}/img/frames/saga/regular/{file}.png"),
             Box::leak(format!("frames8/saga/{letter}.png").into_boxed_str()),
         ));
     }
-    v.push((format!("{CC}/img/frames/saga/regular/l.png"), "frames8/saga/l.png"));
-    v.push((format!("{CC}/img/frames/saga/sagaChapter.png"), "frames8/saga/chapter.png"));
-    v.push((format!("{CC}/img/frames/saga/sagaDivider.png"), "frames8/saga/divider.png"));
+    v.push((
+        format!("{CC}/img/frames/saga/regular/l.png"),
+        "frames8/saga/l.png",
+    ));
+    v.push((
+        format!("{CC}/img/frames/saga/sagaChapter.png"),
+        "frames8/saga/chapter.png",
+    ));
+    v.push((
+        format!("{CC}/img/frames/saga/sagaDivider.png"),
+        "frames8/saga/divider.png",
+    ));
     // Planeswalker frames (cardconjurer's regular PW pack): a near-full-card art window, a title
     // pill, a type pill, and the bottom-right loyalty shield baked in. The loyalty abilities ride
     // translucent panels over the lower art; their cost badges are the separate plus/minus/neutral
     // PNGs. Used by the 8ED planeswalker renderer.
     for (letter, file) in [
-        ("w", "planeswalkerFrameW"), ("u", "planeswalkerFrameU"), ("b", "planeswalkerFrameB"),
-        ("r", "planeswalkerFrameR"), ("g", "planeswalkerFrameG"), ("m", "planeswalkerFrameM"),
+        ("w", "planeswalkerFrameW"),
+        ("u", "planeswalkerFrameU"),
+        ("b", "planeswalkerFrameB"),
+        ("r", "planeswalkerFrameR"),
+        ("g", "planeswalkerFrameG"),
+        ("m", "planeswalkerFrameM"),
         ("a", "planeswalkerFrameA"),
     ] {
         v.push((
@@ -187,9 +224,18 @@ fn asset_list() -> Vec<(String, &'static str)> {
             Box::leak(format!("frames8/pw/{letter}.png").into_boxed_str()),
         ));
     }
-    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerPlus.png"), "frames8/pw/plus.png"));
-    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerMinus.png"), "frames8/pw/minus.png"));
-    v.push((format!("{CC}/img/frames/planeswalker/planeswalkerNeutral.png"), "frames8/pw/neutral.png"));
+    v.push((
+        format!("{CC}/img/frames/planeswalker/planeswalkerPlus.png"),
+        "frames8/pw/plus.png",
+    ));
+    v.push((
+        format!("{CC}/img/frames/planeswalker/planeswalkerMinus.png"),
+        "frames8/pw/minus.png",
+    ));
+    v.push((
+        format!("{CC}/img/frames/planeswalker/planeswalkerNeutral.png"),
+        "frames8/pw/neutral.png",
+    ));
     // Adventure frames (cardconjurer's regular Adventure pack): a self-contained m15-style frame
     // whose lower text area is an OPEN BOOK — a colour-headed sub-spell page on the LEFT, the
     // creature's rules on the plain RIGHT page. A PREPARED spell mirrors the book (frame flipped
@@ -201,22 +247,26 @@ fn asset_list() -> Vec<(String, &'static str)> {
         ));
     }
     // old fonts (proprietary — kept out of git; personal-use only)
-    v.push((format!("{CC}/fonts/goudy-medieval.ttf"), "fonts/goudy-medieval.ttf"));
+    v.push((
+        format!("{CC}/fonts/goudy-medieval.ttf"),
+        "fonts/goudy-medieval.ttf",
+    ));
     v.push((format!("{CC}/fonts/mplantin.ttf"), "fonts/mplantin.ttf"));
     // cardconjurer's italic is named mplantin-i.ttf; saved under our -italic.ttf name.
-    v.push((format!("{CC}/fonts/mplantin-i.ttf"), "fonts/mplantin-italic.ttf"));
+    v.push((
+        format!("{CC}/fonts/mplantin-i.ttf"),
+        "fonts/mplantin-italic.ttf",
+    ));
     v.push((format!("{CC}/fonts/matrix.ttf"), "fonts/matrix.ttf"));
     // mana font (OFL) — kept for any legacy use
     v.push((format!("{MANA}/fonts/mana.ttf"), "fonts/mana.ttf"));
     v.push((format!("{MANA}/css/mana.css"), "fonts/mana.css"));
     // cardconjurer's own mana-symbol SVGs (disk + glyph baked in) → pixel-match pips.
-    let mut syms: Vec<String> =
-        (0..=20).map(|n| n.to_string()).collect();
+    let mut syms: Vec<String> = (0..=20).map(|n| n.to_string()).collect();
     for s in [
-        "w", "u", "b", "r", "g", "c", "x", "s", "t", "untap", "e", "p",
-        "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu",
-        "2w", "2u", "2b", "2r", "2g", "wp", "up", "bp", "rp", "gp",
-        "hw", "hr",
+        "w", "u", "b", "r", "g", "c", "x", "s", "t", "untap", "e", "p", "wu", "wb", "ub", "ur",
+        "br", "bg", "rg", "rw", "gw", "gu", "2w", "2u", "2b", "2r", "2g", "wp", "up", "bp", "rp",
+        "gp", "hw", "hr",
     ] {
         syms.push(s.to_string());
     }
@@ -258,7 +308,10 @@ pub fn assets(assets_dir: &Path, force: bool) -> Result<()> {
             .replace("../fonts/mana.ttf", "mana.ttf");
         fs::write(&css_path, fixed)?;
     }
-    println!("assets: {got} downloaded, {skipped} present  ->  {}", assets_dir.display());
+    println!(
+        "assets: {got} downloaded, {skipped} present  ->  {}",
+        assets_dir.display()
+    );
     if got > 0 {
         println!("note: frame art + old fonts are WotC-derived/proprietary — personal use only, keep out of git.");
     }
@@ -275,7 +328,9 @@ const SCRYFALL_MIN_INTERVAL: Duration = Duration::from_millis(120);
 /// Block until at least `SCRYFALL_MIN_INTERVAL` has elapsed since the previous Scryfall request,
 /// then stamp "now" as the latest request time. Only applied to `api.scryfall.com` URLs.
 fn scryfall_throttle() {
-    let mut last = SCRYFALL_GATE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut last = SCRYFALL_GATE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(prev) = *last {
         let elapsed = prev.elapsed();
         if elapsed < SCRYFALL_MIN_INTERVAL {
@@ -285,7 +340,7 @@ fn scryfall_throttle() {
     *last = Some(Instant::now());
 }
 
-fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
+pub(crate) fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
     let is_scryfall_api = url.contains("api.scryfall.com");
     // Up to 5 attempts; back off on 429 / 5xx (the codes worth retrying). Non-retryable
     // failures (4xx other than 429, network errors) bail immediately.
@@ -296,14 +351,23 @@ fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
         }
         let out = Command::new("curl")
             .args([
-                "-sSL", "--max-time", "90", "-A", "Mozilla/5.0",
-                "-w", "%{http_code}", "-o",
+                "-sSL",
+                "--max-time",
+                "90",
+                "-A",
+                "Mozilla/5.0",
+                "-w",
+                "%{http_code}",
+                "-o",
             ])
             .arg(dst)
             .arg(url)
             .output()
             .context("running curl")?;
-        let code: u32 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap_or(0);
+        let code: u32 = String::from_utf8_lossy(&out.stdout)
+            .trim()
+            .parse()
+            .unwrap_or(0);
         // curl itself failed (network/timeout) → code 0; treat as transient.
         if out.status.success() && (200..300).contains(&code) {
             return Ok(());
@@ -314,7 +378,10 @@ fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
             let _ = fs::remove_file(dst);
             bail!("curl failed for {url} (HTTP {code}, attempt {attempt})");
         }
-        eprintln!("  curl {url}: HTTP {code} — backing off {:.1}s (attempt {attempt}/5)", backoff.as_secs_f32());
+        eprintln!(
+            "  curl {url}: HTTP {code} — backing off {:.1}s (attempt {attempt}/5)",
+            backoff.as_secs_f32()
+        );
         std::thread::sleep(backoff);
         backoff *= 2;
     }
@@ -323,8 +390,21 @@ fn curl_to_file(url: &str, dst: &Path) -> Result<()> {
 
 fn curl_post_json(url: &str, body: &str) -> Result<String> {
     let out = Command::new("curl")
-        .args(["-sS", "--fail", "--max-time", "60", "-A", "Mozilla/5.0",
-            "-H", "Content-Type: application/json", "-X", "POST", "-d", body, url])
+        .args([
+            "-sS",
+            "--fail",
+            "--max-time",
+            "60",
+            "-A",
+            "Mozilla/5.0",
+            "-H",
+            "Content-Type: application/json",
+            "-X",
+            "POST",
+            "-d",
+            body,
+            url,
+        ])
         .output()
         .context("curl POST")?;
     if !out.status.success() {
@@ -374,8 +454,16 @@ struct Card {
 }
 
 type RawRow = (
-    String, Option<String>, Option<String>, Option<String>, Option<String>,
-    Option<String>, Option<String>, Option<String>, i64, String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    i64,
+    String,
 );
 
 fn load_card(db: &Connection, id: i64) -> Result<Card> {
@@ -384,22 +472,44 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
             "SELECT name,mana_cost,type,oracle_text,power,toughness,loyalty,colors,
                     is_creature,overrides FROM cube_cards WHERE id=?1",
             params![id],
-            |r| Ok((
-                r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?,
-                r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?,
-            )),
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                    r.get(7)?,
+                    r.get(8)?,
+                    r.get(9)?,
+                ))
+            },
         )
         .with_context(|| format!("no card id {id} in editor DB"))?;
     let o: Value = serde_json::from_str(&ov).unwrap_or_else(|_| json!({}));
     let pick = |key: &str, base: Option<String>| -> String {
-        o.get(key).and_then(Value::as_str).map(ToString::to_string).or(base).unwrap_or_default()
+        o.get(key)
+            .and_then(Value::as_str)
+            .map(ToString::to_string)
+            .or(base)
+            .unwrap_or_default()
     };
     // Best-effort: tolerate older editor DBs that predate the `illustrator` column.
     let illustrator: String = db
-        .query_row("SELECT COALESCE(illustrator,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .query_row(
+            "SELECT COALESCE(illustrator,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get(0),
+        )
         .unwrap_or_default();
     let errata_text: String = db
-        .query_row("SELECT COALESCE(errata_text,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .query_row(
+            "SELECT COALESCE(errata_text,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get(0),
+        )
         .unwrap_or_default();
     // Colour identity: a MANUAL `color_identity` override (e.g. "UB" on a cost-removed card)
     // is authoritative for the frame + colour-indicator dot; otherwise the solved DB column.
@@ -410,9 +520,17 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
         .filter(|s| !s.is_empty());
     let ci_manual = ci_override.is_some();
     let color_identity: String = match ci_override {
-        Some(s) => ci_letters(s).iter().map(char::to_string).collect::<Vec<_>>().join(", "),
+        Some(s) => ci_letters(s)
+            .iter()
+            .map(char::to_string)
+            .collect::<Vec<_>>()
+            .join(", "),
         None => db
-            .query_row("SELECT COALESCE(color_identity,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+            .query_row(
+                "SELECT COALESCE(color_identity,'') FROM cube_cards WHERE id=?1",
+                params![id],
+                |r| r.get(0),
+            )
             .unwrap_or_default(),
     };
     // Errata scroll: auto when the printed text actually differs (any override field
@@ -429,9 +547,17 @@ fn load_card(db: &Connection, id: i64) -> Result<Card> {
     });
     // Ribbon = FUNCTIONAL change only. Cosmetic overrides (name, flavor) never trip it;
     // a manual `errata_scroll` override still forces it either way.
-    const FUNCTIONAL: &[&str] =
-        &["mana_cost", "type", "oracle_text", "power", "toughness", "loyalty", "colors"];
-    let auto_errata = o.as_object()
+    const FUNCTIONAL: &[&str] = &[
+        "mana_cost",
+        "type",
+        "oracle_text",
+        "power",
+        "toughness",
+        "loyalty",
+        "colors",
+    ];
+    let auto_errata = o
+        .as_object()
         .is_some_and(|m| m.keys().any(|k| FUNCTIONAL.contains(&k.as_str())))
         || !errata_text.trim().is_empty();
     let is_errata = scroll_override.unwrap_or(auto_errata);
@@ -500,7 +626,11 @@ fn card_colors(c: &Card) -> Vec<char> {
         }
     }
     if set.is_empty() {
-        set = c.colors.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+        set = c
+            .colors
+            .chars()
+            .filter(|ch| "WUBRG".contains(*ch))
+            .collect();
     }
     set
 }
@@ -539,11 +669,18 @@ fn frame_file(c: &Card) -> &'static str {
         // Lands have no `colors`; the single-colour 7ED land frame is chosen from the
         // colour identity (the {U} in "Add {U}"). Only a MONO identity gets a tinted
         // land frame; colourless or multi → the generic land frame.
-        let lc: Vec<char> = c.color_identity.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+        let lc: Vec<char> = c
+            .color_identity
+            .chars()
+            .filter(|ch| "WUBRG".contains(*ch))
+            .collect();
         return match lc.as_slice() {
-            ['W'] => "frames/wl.png", ['U'] => "frames/ul.png",
-            ['B'] => "frames/bl.png", ['R'] => "frames/rl.png",
-            ['G'] => "frames/gl.png", _ => "frames/l.png",
+            ['W'] => "frames/wl.png",
+            ['U'] => "frames/ul.png",
+            ['B'] => "frames/bl.png",
+            ['R'] => "frames/rl.png",
+            ['G'] => "frames/gl.png",
+            _ => "frames/l.png",
         };
     }
     // Coloured ARTIFACTS keep the brown artifact frame as the base; their colour is
@@ -575,8 +712,11 @@ fn frame_overlay(c: &Card) -> Option<&'static str> {
     match card_colors(c).as_slice() {
         [] => None,
         [one] => Some(match one {
-            'W' => "frames/w.png", 'U' => "frames/u.png", 'B' => "frames/b.png",
-            'R' => "frames/r.png", _ => "frames/g.png",
+            'W' => "frames/w.png",
+            'U' => "frames/u.png",
+            'B' => "frames/b.png",
+            'R' => "frames/r.png",
+            _ => "frames/g.png",
         }),
         _ => Some("frames/m.png"),
     }
@@ -609,12 +749,20 @@ struct Pick {
 /// MPC-Autofill `backend` and `ANTHROPIC_API_KEY` are present, pull all high-DPI
 /// candidates (cached per bucket), pick the highest-DPI one whose illustration
 /// Claude confirms matches the old art, and crop its art window cleanly.
-fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&str>, latest: bool) -> Result<Art> {
+fn acquire_art(
+    name: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+    backend: Option<&str>,
+    latest: bool,
+) -> Result<Art> {
     let art_dir = cache_root.join("art");
     fs::create_dir_all(&art_dir)?;
     fs::create_dir_all(card_dir)?;
 
-    let key = std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty());
+    let key = std::env::var("ANTHROPIC_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty());
     let can_repick = backend.is_some() && key.is_some();
 
     // FAST PATH: once the MPCfill crop is chosen, art.json records the source proxy +
@@ -627,7 +775,10 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
     let crop = card_dir.join("art.png");
     if sidecar.exists() {
         if let Ok(v) = serde_json::from_str::<Value>(&fs::read_to_string(&sidecar)?) {
-            let art_ref = v["art_ref"].as_str().unwrap_or("mpcfill:cached").to_string();
+            let art_ref = v["art_ref"]
+                .as_str()
+                .unwrap_or("mpcfill:cached")
+                .to_string();
             let artist = v["artist"].as_str().unwrap_or("").to_string();
             let year = v["year"].as_str().unwrap_or("2001").to_string();
             // A MANUAL crop (operator hand-positioned the box in the editor) is sticky.
@@ -637,14 +788,22 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
             if let Some(rest) = art_ref.strip_prefix("genai:") {
                 if !crop.exists() {
                     if let Some((a, h)) = rest.rsplit_once(':') {
-                        let src = card_dir.join("genai").join(sanitize_bucket(a)).join(format!("{h}.png"));
+                        let src = card_dir
+                            .join("genai")
+                            .join(sanitize_bucket(a))
+                            .join(format!("{h}.png"));
                         if src.exists() {
                             fs::copy(&src, &crop)?;
                         }
                     }
                 }
                 if crop.exists() {
-                    return Ok(Art { path: crop, art_ref, artist, year });
+                    return Ok(Art {
+                        path: crop,
+                        art_ref,
+                        artist,
+                        year,
+                    });
                 }
             }
             let bx = v["box"].as_array().filter(|a| a.len() == 4).map(|a| {
@@ -662,10 +821,20 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
                         crop_exact(proxy, bx, &crop)?;
                         // Legacy manual sidecars predate stored aspect — fall back to THIS frame's
                         // window (8ED back cube fetches `latest`, so it locks to the pack8th window).
-                        let asp = v["art_aspect"].as_f64()
-                            .unwrap_or_else(|| if latest { art_window_aspect_8th() } else { art_window_aspect() });
+                        let asp = v["art_aspect"].as_f64().unwrap_or_else(|| {
+                            if latest {
+                                art_window_aspect_8th()
+                            } else {
+                                art_window_aspect()
+                            }
+                        });
                         let art_ref = format!("{art_ref}#{}", crop_sig(proxy, &bx, asp, true));
-                        return Ok(Art { path: crop, art_ref, artist, year });
+                        return Ok(Art {
+                            path: crop,
+                            art_ref,
+                            artist,
+                            year,
+                        });
                     }
                 }
             }
@@ -676,14 +845,24 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
                 if proxy.exists() {
                     crop_to(proxy, bx, &crop, asp)?;
                     let art_ref = format!("{art_ref}#{}", crop_sig(proxy, &bx, asp, false));
-                    return Ok(Art { path: crop, art_ref, artist, year });
+                    return Ok(Art {
+                        path: crop,
+                        art_ref,
+                        artist,
+                        year,
+                    });
                 }
             }
             // Any SETTLED crop is reused — do NOT re-pick and clobber a deliberate choice
             // (manual swap, reprint pick, etc.). Only the legacy boxless auto-cache
             // ("mpcfill:cached") is upgraded to a box-bearing pick when we can re-pick.
             if crop.exists() && !(can_repick && art_ref == "mpcfill:cached") {
-                return Ok(Art { path: crop, art_ref, artist, year });
+                return Ok(Art {
+                    path: crop,
+                    art_ref,
+                    artist,
+                    year,
+                });
             }
             // else fall through → re-pick (will write a box-bearing sidecar).
         }
@@ -699,7 +878,10 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
     // Optional per-render art-source override: MTGBRAIN_ART_SET=<setcode> matches the
     // MPCfill art against THAT printing's art_crop instead of the oldest one (the set
     // symbol still comes from the oldest printing). Used to pick a reprint's art.
-    if let Some(s) = std::env::var("MTGBRAIN_ART_SET").ok().filter(|s| !s.is_empty()) {
+    if let Some(s) = std::env::var("MTGBRAIN_ART_SET")
+        .ok()
+        .filter(|s| !s.is_empty())
+    {
         match scryfall_printing(name, &s, &art_dir) {
             Ok((p, a, y)) => {
                 ref_path = p;
@@ -715,7 +897,11 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
             Ok(Some(p)) => {
                 // Sidecar keeps the BASE art_ref; the returned art_ref carries the crop
                 // signature so the render cache key tracks the actual box (see crop_sig).
-                let art_ref = format!("{}#{}", p.art_ref, crop_sig(&p.proxy, &p.bx, p.aspect, false));
+                let art_ref = format!(
+                    "{}#{}",
+                    p.art_ref,
+                    crop_sig(&p.proxy, &p.bx, p.aspect, false)
+                );
                 let _ = fs::write(
                     &sidecar,
                     json!({
@@ -724,13 +910,23 @@ fn acquire_art(name: &str, cache_root: &Path, card_dir: &Path, backend: Option<&
                     })
                     .to_string(),
                 );
-                return Ok(Art { path: p.out, art_ref, artist, year });
+                return Ok(Art {
+                    path: p.out,
+                    art_ref,
+                    artist,
+                    year,
+                });
             }
             Ok(None) => eprintln!("  art: no MPCfill match for {name:?} — using Scryfall art_crop"),
             Err(e) => eprintln!("  art: MPCfill/Claude error ({e}) — using Scryfall art_crop"),
         }
     }
-    Ok(Art { path: ref_path, art_ref: format!("scryfall:{set}:{year}:art_crop"), artist, year })
+    Ok(Art {
+        path: ref_path,
+        art_ref: format!("scryfall:{set}:{year}:art_crop"),
+        artist,
+        year,
+    })
 }
 
 /// Oldest paper printing's art_crop (authentic pre-modern art) + artist/year/set.
@@ -752,7 +948,12 @@ fn scryfall_oldest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
         .and_then(|a| a.first())
         .with_context(|| format!("no Scryfall print found for {name}"))?;
     let artist = first["artist"].as_str().unwrap_or("").to_string();
-    let year = first["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+    let year = first["released_at"]
+        .as_str()
+        .unwrap_or("")
+        .chars()
+        .take(4)
+        .collect::<String>();
     let set = first["set"].as_str().unwrap_or("?").to_string();
     if !dst.exists() {
         let art_url = first["image_uris"]["art_crop"]
@@ -779,8 +980,14 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
         // Scryfall 404s a no-match exact search (a DFC FRONT name like "Value Town", or a
         // SPLIT combined name like "Bind // Liberate"); resolve via named?exact then ?fuzzy.
         if curl_to_file(&meta_url, &meta_file).is_err() {
-            let exact = format!("https://api.scryfall.com/cards/named?exact={}", percent(name));
-            let fuzzy = format!("https://api.scryfall.com/cards/named?fuzzy={}", percent(name));
+            let exact = format!(
+                "https://api.scryfall.com/cards/named?exact={}",
+                percent(name)
+            );
+            let fuzzy = format!(
+                "https://api.scryfall.com/cards/named?fuzzy={}",
+                percent(name)
+            );
             if curl_to_file(&exact, &meta_file).is_err() {
                 curl_to_file(&fuzzy, &meta_file)?;
             }
@@ -813,7 +1020,12 @@ fn scryfall_latest(name: &str, art_dir: &Path) -> Result<(PathBuf, String, Strin
         .or_else(|| prints.iter().find(|c| art_crop_of(c).is_some()))
         .with_context(|| format!("no printing with art for {name}"))?;
     let artist = pick["artist"].as_str().unwrap_or("").to_string();
-    let year = pick["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+    let year = pick["released_at"]
+        .as_str()
+        .unwrap_or("")
+        .chars()
+        .take(4)
+        .collect::<String>();
     let set = pick["set"].as_str().unwrap_or("?").to_string();
     if !dst.exists() {
         let art_url = art_crop_of(pick).with_context(|| format!("no art_crop for {name}"))?;
@@ -841,7 +1053,12 @@ fn scryfall_printing(name: &str, set: &str, art_dir: &Path) -> Result<(PathBuf, 
     let v: Value = serde_json::from_str(&fs::read_to_string(&meta_file)?)
         .with_context(|| format!("parsing Scryfall printing {name} [{set}]"))?;
     let artist = v["artist"].as_str().unwrap_or("").to_string();
-    let year = v["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+    let year = v["released_at"]
+        .as_str()
+        .unwrap_or("")
+        .chars()
+        .take(4)
+        .collect::<String>();
     if !dst.exists() {
         let art_url = v["image_uris"]["art_crop"]
             .as_str()
@@ -871,7 +1088,12 @@ fn mpcfill_sources(base: &str, cache_root: &Path) -> Result<String> {
     let v: Value = serde_json::from_str(&fs::read_to_string(&f)?)?;
     let pairs: Vec<String> = v["results"]
         .as_object()
-        .map(|o| o.values().filter_map(|s| s["pk"].as_i64()).map(|pk| format!("[{pk},true]")).collect())
+        .map(|o| {
+            o.values()
+                .filter_map(|s| s["pk"].as_i64())
+                .map(|pk| format!("[{pk},true]"))
+                .collect()
+        })
         .unwrap_or_default();
     Ok(format!("[{}]", pairs.join(",")))
 }
@@ -882,7 +1104,11 @@ fn mpcfill_sources(base: &str, cache_root: &Path) -> Result<String> {
 /// editor can label each proxy's resolution. Returns the candidates (already on disk); no
 /// CV/Claude pick happens here — the auto-pick and the editor's "Fetch all" both use this.
 fn mpcfill_search_download(
-    name: &str, base: &str, cache_root: &Path, card_dir: &Path, min_dpi: i64,
+    name: &str,
+    base: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+    min_dpi: i64,
 ) -> Result<Vec<McCand>> {
     let base = base.trim_end_matches('/');
     let sources = mpcfill_sources(base, cache_root)?;
@@ -895,7 +1121,11 @@ fn mpcfill_search_download(
         let v: Value = serde_json::from_str(&resp).context("editorSearch response")?;
         Ok(v["results"][name]["CARD"]
             .as_array()
-            .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|x| x.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default())
     };
     let mut ids = run(min_dpi)?;
@@ -939,7 +1169,12 @@ fn mpcfill_search_download(
         }
         record_bucket(&c.bucket, &c.ext_link)?;
         index.insert(
-            format!("mpcfill/{}/{}.{}", sanitize_bucket(&c.bucket), c.identifier, c.ext),
+            format!(
+                "mpcfill/{}/{}.{}",
+                sanitize_bucket(&c.bucket),
+                c.identifier,
+                c.ext
+            ),
             json!({"dpi": c.dpi, "bucket": c.bucket, "label": c.label, "ext": c.ext}),
         );
     }
@@ -969,7 +1204,15 @@ fn mpcfill_pick(
     }
 
     // Prefer plain prints (skip extended/full-art/showcase/etc), then highest DPI.
-    let banned = ["extended", "full art", "fullart", "textless", "showcase", "borderless", "alt"];
+    let banned = [
+        "extended",
+        "full art",
+        "fullart",
+        "textless",
+        "showcase",
+        "borderless",
+        "alt",
+    ];
     cands.sort_by(|a, b| {
         let pa = banned.iter().any(|w| a.label.to_lowercase().contains(w));
         let pb = banned.iter().any(|w| b.label.to_lowercase().contains(w));
@@ -978,7 +1221,10 @@ fn mpcfill_pick(
 
     if std::env::var("MTGBRAIN_DEBUG_PICK").is_ok() {
         for (i, c) in cands.iter().enumerate() {
-            eprintln!("  cand[{i}] dpi={} bucket={} label={:?}", c.dpi, c.bucket, c.label);
+            eprintln!(
+                "  cand[{i}] dpi={} bucket={} label={:?}",
+                c.dpi, c.bucket, c.label
+            );
         }
     }
 
@@ -987,7 +1233,10 @@ fn mpcfill_pick(
     // proxy's type line can't leak into our art window.
     let art_aspect = image_aspect(ref_path).unwrap_or(1.30);
     let path_of = |c: &McCand| {
-        card_dir.join("mpcfill").join(sanitize_bucket(&c.bucket)).join(format!("{}.{}", c.identifier, c.ext))
+        card_dir
+            .join("mpcfill")
+            .join(sanitize_bucket(&c.bucket))
+            .join(format!("{}.{}", c.identifier, c.ext))
     };
 
     // PRIMARY: deterministic computer-vision match (template-match the reference art
@@ -1063,7 +1312,10 @@ fn mpcfill_pick(
         crop_to(&proxy, bx, &out, art_aspect)?;
         return Ok(Some(Pick {
             out: out.clone(),
-            art_ref: format!("mpcfill:{}:dpi{}:cv{:.2}", cands[i].identifier, cands[i].dpi, score),
+            art_ref: format!(
+                "mpcfill:{}:dpi{}:cv{:.2}",
+                cands[i].identifier, cands[i].dpi, score
+            ),
             proxy,
             bx,
             aspect: art_aspect,
@@ -1074,7 +1326,10 @@ fn mpcfill_pick(
         crop_to(&proxy, bx, &out, art_aspect)?;
         return Ok(Some(Pick {
             out: out.clone(),
-            art_ref: format!("mpcfill:{}:dpi{}:unconfirmed", cands[i].identifier, cands[i].dpi),
+            art_ref: format!(
+                "mpcfill:{}:dpi{}:unconfirmed",
+                cands[i].identifier, cands[i].dpi
+            ),
             proxy,
             bx,
             aspect: art_aspect,
@@ -1110,9 +1365,19 @@ fn claude_match_and_box(key: &str, ref_path: &Path, cand: &Path) -> Result<(bool
     let body_file = std::env::temp_dir().join("mtgbrain-claude-req.json");
     fs::write(&body_file, body.to_string())?;
     let out = Command::new("curl")
-        .args(["-sS", "--max-time", "90", "https://api.anthropic.com/v1/messages",
-            "-H", &format!("x-api-key: {key}"), "-H", "anthropic-version: 2023-06-01",
-            "-H", "content-type: application/json", "--data"])
+        .args([
+            "-sS",
+            "--max-time",
+            "90",
+            "https://api.anthropic.com/v1/messages",
+            "-H",
+            &format!("x-api-key: {key}"),
+            "-H",
+            "anthropic-version: 2023-06-01",
+            "-H",
+            "content-type: application/json",
+            "--data",
+        ])
         .arg(format!("@{}", body_file.display()))
         .output()
         .context("curl claude")?;
@@ -1127,7 +1392,8 @@ fn claude_match_and_box(key: &str, ref_path: &Path, cand: &Path) -> Result<(bool
         .trim_start_matches("```")
         .trim_end_matches("```")
         .trim();
-    let parsed: Value = serde_json::from_str(json_str).with_context(|| format!("parsing vision JSON: {text}"))?;
+    let parsed: Value =
+        serde_json::from_str(json_str).with_context(|| format!("parsing vision JSON: {text}"))?;
     let same = parsed["same_artwork"].as_bool().unwrap_or(false);
     let b = &parsed["art_box"];
     let g = |k: &str| b[k].as_f64().unwrap_or(0.0);
@@ -1182,7 +1448,9 @@ fn crop_to(path: &Path, bx: [f64; 4], out: &Path, art_aspect: f64) -> Result<()>
     let y = by0.clamp(0.0, ih - 1.0) as u32;
     let w = bw.clamp(1.0, iw - f64::from(x)) as u32;
     let h = bh.clamp(1.0, ih - f64::from(y)) as u32;
-    img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
+    img.crop_imm(x, y, w, h)
+        .save(out)
+        .with_context(|| format!("saving {}", out.display()))?;
     Ok(())
 }
 
@@ -1199,7 +1467,9 @@ fn crop_exact(path: &Path, bx: [f64; 4], out: &Path) -> Result<()> {
     let y = (bx[1] * ih).clamp(0.0, ih - 1.0) as u32;
     let w = (bx[2] * iw).clamp(1.0, iw - f64::from(x)) as u32;
     let h = (bx[3] * ih).clamp(1.0, ih - f64::from(y)) as u32;
-    img.crop_imm(x, y, w, h).save(out).with_context(|| format!("saving {}", out.display()))?;
+    img.crop_imm(x, y, w, h)
+        .save(out)
+        .with_context(|| format!("saving {}", out.display()))?;
     Ok(())
 }
 
@@ -1338,7 +1608,15 @@ fn cv_art_box(ref_path: &Path, proxy_path: &Path) -> Option<([f64; 4], f64)> {
 }
 
 fn sanitize_bucket(b: &str) -> String {
-    b.chars().map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' }).collect()
+    b.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
 
 /// Maintain projects/odyssey2026/MPCFILLBUCKETS.md (bucket → drive link).
@@ -1348,13 +1626,20 @@ fn record_bucket(bucket: &str, link: &str) -> Result<()> {
         `render-cache/cards/<Card>/mpcfill/<bucket>/<id>.<ext>` (gitignored).\n\n\
         | Bucket | Drive / source |\n|---|---|\n";
     let existing = fs::read_to_string(md).unwrap_or_default();
-    if existing.lines().any(|l| l.starts_with(&format!("| {bucket} |"))) {
+    if existing
+        .lines()
+        .any(|l| l.starts_with(&format!("| {bucket} |")))
+    {
         return Ok(());
     }
     if let Some(parent) = md.parent() {
         fs::create_dir_all(parent)?;
     }
-    let base = if existing.is_empty() { header.to_string() } else { existing };
+    let base = if existing.is_empty() {
+        header.to_string()
+    } else {
+        existing
+    };
     let link = if link.is_empty() { "—" } else { link };
     fs::write(md, format!("{base}| {bucket} | {link} |\n"))?;
     Ok(())
@@ -1383,8 +1668,12 @@ fn read_sidecar(card_dir: &Path) -> Option<Value> {
 
 /// Look up a card's ORIGINAL name (the art/render addressing key) by editor-DB id.
 fn card_name(db: &Connection, id: i64) -> Result<String> {
-    db.query_row("SELECT name FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
-        .with_context(|| format!("no card id {id} in editor DB"))
+    db.query_row(
+        "SELECT name FROM cube_cards WHERE id=?1",
+        params![id],
+        |r| r.get(0),
+    )
+    .with_context(|| format!("no card id {id} in editor DB"))
 }
 
 /// The current crop box `[x,y,w,h]` (fractions of the source image), if the sidecar has one.
@@ -1458,7 +1747,10 @@ fn resolve_source(name: &str, cache_dir: &Path, card_dir: &Path, rel: &str) -> R
                     return Ok(p);
                 }
             }
-            bail!("no uploaded art for {name:?} (expected {}/upload.*)", card_dir.display())
+            bail!(
+                "no uploaded art for {name:?} (expected {}/upload.*)",
+                card_dir.display()
+            )
         }
         _ => bail!("unknown source token: {rel}"),
     }
@@ -1477,7 +1769,12 @@ fn printings_list(name: &str, art_dir: &Path) -> Vec<(String, String, String)> {
     for c in v["data"].as_array().into_iter().flatten() {
         let set = c["set"].as_str().unwrap_or("").to_uppercase();
         let artist = c["artist"].as_str().unwrap_or("").to_string();
-        let year = c["released_at"].as_str().unwrap_or("").chars().take(4).collect::<String>();
+        let year = c["released_at"]
+            .as_str()
+            .unwrap_or("")
+            .chars()
+            .take(4)
+            .collect::<String>();
         if set.is_empty() || !seen.insert(format!("{set}|{artist}")) {
             continue;
         }
@@ -1490,9 +1787,20 @@ fn printings_list(name: &str, art_dir: &Path) -> Vec<(String, String, String)> {
 /// runs at the TOP of every render so a hand-picked alternative art survives a cache wipe
 /// or an auto re-pick — the DB is the source of truth, the sidecar is just its view, so a
 /// chosen art can never be silently trampled back to the original.
-fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, card_dir: &Path, eighth: bool) -> Result<()> {
+fn materialize_override(
+    db: &Connection,
+    cache_dir: &Path,
+    id: i64,
+    name: &str,
+    card_dir: &Path,
+    eighth: bool,
+) -> Result<()> {
     let ov: String = db
-        .query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get(0))
+        .query_row(
+            "SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get(0),
+        )
         .unwrap_or_default();
     if ov.trim().is_empty() {
         return Ok(());
@@ -1500,7 +1808,11 @@ fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, 
     // Recompute the locked aspect the SAME way the editor's crop modal did (frame + layout aware),
     // so the re-materialised sidecar agrees with the hand-placed box's shape.
     let type_lc = db
-        .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+        .query_row(
+            "SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get::<_, String>(0),
+        )
         .map(|t| t.to_lowercase())
         .unwrap_or_default();
     let v: Value = serde_json::from_str(ov.trim()).unwrap_or_else(|_| json!({}));
@@ -1538,8 +1850,10 @@ fn materialize_override(db: &Connection, cache_dir: &Path, id: i64, name: &str, 
 /// art, MPCfill proxies and crops under `cards8/<name>`; the classic frame uses `cards/<name>`.
 /// The crop editor MUST read the same dir its render rips art from — otherwise the picker scans
 /// the empty `cards/` dir on the 8th server and shows no MPCfill sources (only Scryfall prints).
-fn frame_card_dir(cache_dir: &Path, name: &str, eighth: bool) -> PathBuf {
-    cache_dir.join(if eighth { "cards8" } else { "cards" }).join(sanitize(name))
+pub(crate) fn frame_card_dir(cache_dir: &Path, name: &str, eighth: bool) -> PathBuf {
+    cache_dir
+        .join(if eighth { "cards8" } else { "cards" })
+        .join(sanitize(name))
 }
 
 /// Screen-sized JPEG preview cached next to a full-res print PNG, for snappy editor
@@ -1562,7 +1876,11 @@ pub fn card_preview(full_png: &Path, max_w: u32) -> Result<PathBuf> {
             .with_context(|| format!("opening {} for preview", full_png.display()))?;
         // thumbnail() preserves aspect ratio inside the box; height bound is generous so width
         // is the constraint (cards are portrait). Skip upscaling tiny sources.
-        let scaled = if img.width() > max_w { img.thumbnail(max_w, max_w * 4) } else { img };
+        let scaled = if img.width() > max_w {
+            img.thumbnail(max_w, max_w * 4)
+        } else {
+            img
+        };
         scaled
             .to_rgb8()
             .save_with_format(&preview, image::ImageFormat::Jpeg)
@@ -1587,23 +1905,38 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
     // A Saga's art is the tall scroll on the right, a planeswalker's is the near-full-card portrait
     // window → each locks its hand-placed crop to its own aspect.
     let type_lc = db
-        .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+        .query_row(
+            "SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get::<_, String>(0),
+        )
         .map(|t| t.to_lowercase())
         .unwrap_or_default();
     let is_saga_card = type_lc.contains("saga");
     let is_pw_card = type_lc.contains("planeswalker");
     let side = read_sidecar(&card_dir);
-    let art_ref = side.as_ref().and_then(|v| v["art_ref"].as_str()).unwrap_or("");
-    let manual = side.as_ref().and_then(|v| v["manual"].as_bool()).unwrap_or(false);
+    let art_ref = side
+        .as_ref()
+        .and_then(|v| v["art_ref"].as_str())
+        .unwrap_or("");
+    let manual = side
+        .as_ref()
+        .and_then(|v| v["manual"].as_bool())
+        .unwrap_or(false);
     let is_genai = art_ref.starts_with("genai:") && !manual;
-    let proxy = side.as_ref().and_then(|v| v["proxy"].as_str()).map(PathBuf::from);
+    let proxy = side
+        .as_ref()
+        .and_then(|v| v["proxy"].as_str())
+        .map(PathBuf::from);
 
     // The DURABLE override (editor DB) is authoritative if present — its rel is the current
     // source and its box the current crop, regardless of the (materialised) sidecar.
     let ov: Value = db
-        .query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| {
-            r.get::<_, String>(0)
-        })
+        .query_row(
+            "SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get::<_, String>(0),
+        )
         .ok()
         .filter(|s| !s.trim().is_empty())
         .and_then(|s| serde_json::from_str(&s).ok())
@@ -1612,7 +1945,9 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
 
     // `rel` token for a source path under the card dir (forward slashes for the URL).
     let rel_of = |p: &Path| -> Option<String> {
-        p.strip_prefix(&card_dir).ok().map(|r| r.to_string_lossy().replace('\\', "/"))
+        p.strip_prefix(&card_dir)
+            .ok()
+            .map(|r| r.to_string_lossy().replace('\\', "/"))
     };
     let dpi_index = read_json(&mpc_dir.join("index.json")).unwrap_or_else(|| json!({}));
 
@@ -1628,10 +1963,8 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
             "blocked": false,
         }));
     } else {
-        let (a, y) = scryfall_oldest(&name, &art_dir).map_or_else(
-            |_| (String::new(), String::new()),
-            |(_, a, y, _)| (a, y),
-        );
+        let (a, y) = scryfall_oldest(&name, &art_dir)
+            .map_or_else(|_| (String::new(), String::new()), |(_, a, y, _)| (a, y));
         sources.push(json!({
             "rel": "@scryfall", "kind": "scryfall",
             "label": "Scryfall — original printing", "artist": a, "year": y,
@@ -1646,19 +1979,33 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
         }));
     }
     if let Ok(rd) = fs::read_dir(&mpc_dir) {
-        let mut buckets: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
+        let mut buckets: Vec<PathBuf> = rd
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.is_dir())
+            .collect();
         buckets.sort();
         for b in &buckets {
-            let bucket = b.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+            let bucket = b
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
             if let Ok(files) = fs::read_dir(b) {
-                let mut fl: Vec<PathBuf> = files.flatten().map(|e| e.path()).filter(|p| p.is_file()).collect();
+                let mut fl: Vec<PathBuf> = files
+                    .flatten()
+                    .map(|e| e.path())
+                    .filter(|p| p.is_file())
+                    .collect();
                 fl.sort();
                 for f in &fl {
                     if let Some(rel) = rel_of(f) {
                         // Prefer MPCfill's reported DPI (from the fetch index); else MEASURE
                         // it from the image dimensions — a proxy is a full card, so
                         // DPI ≈ long-edge px / 3.70in (MPC bleed height). No "? DPI".
-                        let dpi = dpi_index[&rel]["dpi"].as_i64().or_else(|| measure_proxy_dpi(f));
+                        let dpi = dpi_index[&rel]["dpi"]
+                            .as_i64()
+                            .or_else(|| measure_proxy_dpi(f));
                         sources.push(json!({
                             "rel": rel, "kind": "mpcfill", "label": bucket,
                             "dpi": dpi, "low_dpi": dpi.map(|d| d < 600),
@@ -1692,7 +2039,8 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
     } else {
         Vec::new()
     };
-    let artist = ov["artist"].as_str()
+    let artist = ov["artist"]
+        .as_str()
         .or_else(|| side.as_ref().and_then(|v| v["artist"].as_str()))
         .unwrap_or("");
 
@@ -1723,7 +2071,13 @@ pub fn art_meta(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> Re
 /// Resolve a source `rel` token to a real, existing image path (validated to stay
 /// inside the card's cache dir). `@scryfall` downloads the art_crop on demand;
 /// `@current` is the sidecar's current source; `mpcfill/<bucket>/<file>` is a cached proxy.
-pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str) -> Result<PathBuf> {
+pub fn art_image_path(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    eighth: bool,
+    rel: &str,
+) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let name = card_name(&db, id)?;
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
@@ -1733,15 +2087,24 @@ pub fn art_image_path(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool,
 /// The credit `(artist, year)` for a chosen source: a specific printing carries its OWN
 /// illustrator (e.g. Greed → 7ED → Peter Bollinger), `@scryfall` the oldest printing's,
 /// and a proxy keeps the prior credit (the proxy file doesn't say who painted it).
-fn source_credit(name: &str, cache_dir: &Path, rel: &str, prev: Option<&Value>) -> (String, String) {
+fn source_credit(
+    name: &str,
+    cache_dir: &Path,
+    rel: &str,
+    prev: Option<&Value>,
+) -> (String, String) {
     let art_dir = cache_dir.join("art");
     let oldest = || {
-        scryfall_oldest(name, &art_dir)
-            .map_or_else(|_| (String::new(), "2001".to_string()), |(_, a, y, _)| (a, y))
+        scryfall_oldest(name, &art_dir).map_or_else(
+            |_| (String::new(), "2001".to_string()),
+            |(_, a, y, _)| (a, y),
+        )
     };
     match rel {
-        r if r.starts_with("@set:") => scryfall_printing(name, r.trim_start_matches("@set:"), &art_dir)
-            .map_or_else(|_| oldest(), |(_, a, y)| (a, y)),
+        r if r.starts_with("@set:") => {
+            scryfall_printing(name, r.trim_start_matches("@set:"), &art_dir)
+                .map_or_else(|_| oldest(), |(_, a, y)| (a, y))
+        }
         "@scryfall" => oldest(),
         _ => match (
             prev.and_then(|v| v["artist"].as_str()).map(str::to_string),
@@ -1770,7 +2133,11 @@ fn window_fit_box(src_w: u32, src_h: u32, aspect: f64) -> [f64; 4] {
 /// On-card art-window size in inches at the 800-DPI face (FACE_W=2000px=2.5in). The 8ED hole is
 /// slightly wider/shorter than the classic one, so the DPI readout uses the matching window.
 fn art_window_inches(eighth: bool) -> (f64, f64) {
-    let f = if eighth { ART_WINDOW_FRAC_8TH } else { ART_WINDOW_FRAC };
+    let f = if eighth {
+        ART_WINDOW_FRAC_8TH
+    } else {
+        ART_WINDOW_FRAC
+    };
     (
         f[2] * f64::from(FACE_W) / 800.0,
         f[3] * f64::from(FACE_H) / 800.0,
@@ -1793,7 +2160,12 @@ fn effective_art_dpi(src_w: u32, src_h: u32, bx: [f64; 4], eighth: bool) -> i64 
 fn infer_artist(src: &Path) -> String {
     src.file_stem()
         .and_then(|s| s.to_str())
-        .map(|s| s.split(['_', '-']).filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" "))
+        .map(|s| {
+            s.split(['_', '-'])
+                .filter(|t| !t.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
         .unwrap_or_default()
 }
 
@@ -1827,7 +2199,11 @@ pub fn art_upload(
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let n = card_name(&db, id)?;
         let t = db
-            .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+            .query_row(
+                "SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1",
+                params![id],
+                |r| r.get::<_, String>(0),
+            )
             .map(|t| t.to_lowercase())
             .unwrap_or_default();
         (n, t)
@@ -1840,12 +2216,19 @@ pub fn art_upload(
 
     // Store under a fixed name the `@upload` token resolves to. Keep a loadable extension;
     // re-encode anything exotic to PNG. Clear any prior upload first (avoid stale matches).
-    let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let ext = src
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     let keep = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp");
     for e in ["png", "jpg", "jpeg", "webp"] {
         let _ = fs::remove_file(card_dir.join(format!("upload.{e}")));
     }
-    let stored = card_dir.join(format!("upload.{}", if keep { ext.as_str() } else { "png" }));
+    let stored = card_dir.join(format!(
+        "upload.{}",
+        if keep { ext.as_str() } else { "png" }
+    ));
     if keep {
         fs::copy(src, &stored).with_context(|| format!("copying art → {}", stored.display()))?;
     } else {
@@ -1918,13 +2301,23 @@ pub fn art_upload(
 /// in fractions of the source image and is expected to already carry the art-window
 /// aspect (the editor locks it). Bumps `updated_at` so the editor preview cache-busts.
 pub fn art_save_crop(
-    editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str, bx: [f64; 4], bx2: Option<[f64; 4]>,
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    eighth: bool,
+    rel: &str,
+    bx: [f64; 4],
+    bx2: Option<[f64; 4]>,
 ) -> Result<()> {
     let (name, type_lc) = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let n = card_name(&db, id)?;
         let t = db
-            .query_row("SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1", params![id], |r| r.get::<_, String>(0))
+            .query_row(
+                "SELECT COALESCE(type,'') FROM cube_cards WHERE id=?1",
+                params![id],
+                |r| r.get::<_, String>(0),
+            )
             .map(|t| t.to_lowercase())
             .unwrap_or_default();
         (n, t)
@@ -2003,8 +2396,14 @@ pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> R
     let card_dir = frame_card_dir(cache_dir, &name, eighth);
     let prev = read_sidecar(&card_dir);
     if let Some(auto) = prev.as_ref().and_then(|v| v.get("auto")).cloned() {
-        let artist = prev.as_ref().and_then(|v| v["artist"].as_str()).unwrap_or("");
-        let year = prev.as_ref().and_then(|v| v["year"].as_str()).unwrap_or("2001");
+        let artist = prev
+            .as_ref()
+            .and_then(|v| v["artist"].as_str())
+            .unwrap_or("");
+        let year = prev
+            .as_ref()
+            .and_then(|v| v["year"].as_str())
+            .unwrap_or("2001");
         let side = json!({
             "art_ref": auto["art_ref"], "artist": artist, "year": year,
             "proxy": auto["proxy"], "box": auto["box"], "art_aspect": auto["art_aspect"],
@@ -2035,7 +2434,13 @@ pub fn art_reset(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool) -> R
 /// fallback) and cache every alternative printing's art_crop, so the sidebar shows real
 /// thumbnails to choose from. Returns the refreshed `art_meta`. Proxies need the MPCfill
 /// backend URL; printings come from Scryfall and work even without it.
-pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, backend: Option<&str>) -> Result<Value> {
+pub fn art_fetch_all(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    eighth: bool,
+    backend: Option<&str>,
+) -> Result<Value> {
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         card_name(&db, id)?
@@ -2053,7 +2458,11 @@ pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, 
         }
     }
     if !failed.is_empty() {
-        eprintln!("  fetch-all {name:?}: {} printing(s) not fetched: {}", failed.len(), failed.join(", "));
+        eprintln!(
+            "  fetch-all {name:?}: {} printing(s) not fetched: {}",
+            failed.len(),
+            failed.join(", ")
+        );
     }
     // Download all MPCfill proxies, if a backend is configured.
     match backend {
@@ -2069,7 +2478,13 @@ pub fn art_fetch_all(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, 
 
 /// A small cached JPEG thumbnail (~420 px long edge) of a source image, for the picker
 /// sidebar — serving the full multi-MB proxies as thumbnails would be far too heavy.
-pub fn art_thumb(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel: &str) -> Result<PathBuf> {
+pub fn art_thumb(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    eighth: bool,
+    rel: &str,
+) -> Result<PathBuf> {
     let src = art_image_path(editor_db, cache_dir, id, eighth, rel)?;
     let name = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
@@ -2110,13 +2525,16 @@ pub fn art_thumb(editor_db: &Path, cache_dir: &Path, id: i64, eighth: bool, rel:
 /// never cringe, never mentioning AI — is what gets printed as the "Illus." credit and
 /// stored in the DB, so a machine-painted card never claims to be the master's own hand.
 pub const ARTISTS: &[(&str, &str, &str)] = &[
-    ("John Avon",
-     "luminous airbrushed skies and sweeping panoramic vistas; vast aerial scale, \
+    (
+        "John Avon",
+        "luminous airbrushed skies and sweeping panoramic vistas; vast aerial scale, \
       jewel-toned atmospheric gradients, dreamlike soft light, tiny figures dwarfed by \
       enormous serene landscapes — the master of the horizon and the glowing sky",
-     "John Thames"),
-    ("Christopher Rush",
-     "bold, iconic earliest-Magic fantasy, painted with brush not ink: form is defined by \
+        "John Thames",
+    ),
+    (
+        "Christopher Rush",
+        "bold, iconic earliest-Magic fantasy, painted with brush not ink: form is defined by \
       VALUE and COLOUR CONTRAST and confident painted edges — NOT by black outlines. Do NOT \
       put thick black ink lines, comic-style inking or a dark stroke around figures and \
       objects; almost no outlining at all, just paint. Flat-ish saturated primaries, heraldic \
@@ -2125,54 +2543,70 @@ pub const ARTISTS: &[(&str, &str, &str)] = &[
       from light vs shadow, not from outlines); the background is ALWAYS a plain, simple, \
       almost flat gradient fill — NEVER a detailed or busy background, never a rendered scene \
       behind the subject",
-     "Chris Pace"),
-    ("Brom",
-     "dark gothic oil-painting STYLE ONLY — this is a way of PAINTING, not a fixed subject. \
+        "Chris Pace",
+    ),
+    (
+        "Brom",
+        "dark gothic oil-painting STYLE ONLY — this is a way of PAINTING, not a fixed subject. \
       Rich low-key chiaroscuro, a single cold raking light out of deep shadow, a murky \
       earth-and-soot palette shot with sickly green and dull blood-red, sinewy texture on \
       leathery, weathered surfaces, a brooding fine-art horror atmosphere. CRITICAL: paint \
       THE CARD'S OWN SUBJECT (whatever the art direction describes) in this style — do NOT \
       default to a gaunt menacing humanoid; the recurring-dark-figure habit is banned. The \
       subject must match this specific card, only the rendering is Brom's",
-     "Brian Ohm"),
-    ("Rob Alexander",
-     "atmospheric naturalistic gouache STYLE ONLY — this is a way of PAINTING, not a fixed \
+        "Brian Ohm",
+    ),
+    (
+        "Rob Alexander",
+        "atmospheric naturalistic gouache STYLE ONLY — this is a way of PAINTING, not a fixed \
       subject. Deep aerial/atmospheric perspective, soft diffused daylight, layered misty \
       distance, masterful luminous skies, a meticulous painterly touch. CRITICAL: paint THE \
       CARD'S OWN SUBJECT (whatever the art direction describes) in this style — do NOT default \
       to a landscape, vista, ruins or building; if the card is about a creature, figure or \
       object, THAT is the subject, simply rendered with his atmospheric naturalism. The \
       landscape-with-a-building habit is banned",
-     "Rob Macedon"),
-    ("Greg Staples",
-     "muscular British-comic dynamism (2000 AD / Judge Dredd); heavy theatrical \
+        "Rob Macedon",
+    ),
+    (
+        "Greg Staples",
+        "muscular British-comic dynamism (2000 AD / Judge Dredd); heavy theatrical \
       chiaroscuro, gritty kinetic figures mid-action, bold confident paint strokes and \
       high-contrast spotlit drama",
-     "Greg Mainstay"),
-    ("Donato Giancola",
-     "classical museum-grade realism; photoreal oil rendering, Renaissance/Caravaggio \
+        "Greg Mainstay",
+    ),
+    (
+        "Donato Giancola",
+        "classical museum-grade realism; photoreal oil rendering, Renaissance/Caravaggio \
       chiaroscuro, dignified noble figures, rich warm glazed light and fine-art gravitas — \
       it should look like an Old Master canvas",
-     "Renato Colonna"),
-    ("Wayne Reynolds",
-     "kinetic ink-heavy action illustration; razor-sharp angular linework, extreme \
+        "Renato Colonna",
+    ),
+    (
+        "Wayne Reynolds",
+        "kinetic ink-heavy action illustration; razor-sharp angular linework, extreme \
       dramatic foreshortening and motion, snarling characters in elaborately detailed \
       armour and gear, comic-book punch and energy",
-     "Wane Danger"),
-    ("Rebecca Guay",
-     "art-nouveau Mucha-esque watercolour and gouache; flowing organic linework, elongated \
+        "Wane Danger",
+    ),
+    (
+        "Rebecca Guay",
+        "art-nouveau Mucha-esque watercolour and gouache; flowing organic linework, elongated \
       graceful figures, soft luminous translucent washes, botanical detail and dreamlike \
       romantic tenderness. CRITICAL: paint ONLY the actual subject(s) of the scene — \
       absolutely NO decorative frames, borders, filigree, gold trim, panels, cartouches, \
       art-deco/art-nouveau ornament or patterned edging anywhere in the finished image; \
       the painting fills the whole image with the subject, nothing framing it",
-     "Reverie Quay"),
+        "Reverie Quay",
+    ),
 ];
 
 /// The printed pseudonym for a real artist (falls back to the real name if unknown —
 /// only ever called with an ARTISTS entry, so the fallback is just defensive).
 fn pseudonym(real: &str) -> &str {
-    ARTISTS.iter().find(|(a, _, _)| *a == real).map_or(real, |(_, _, p)| *p)
+    ARTISTS
+        .iter()
+        .find(|(a, _, _)| *a == real)
+        .map_or(real, |(_, _, p)| *p)
 }
 
 fn short_hash(s: &str) -> String {
@@ -2190,9 +2624,19 @@ fn claude_text(key: &str, prompt: &str) -> Result<String> {
     let body_file = std::env::temp_dir().join("mtgbrain-claude-text.json");
     fs::write(&body_file, body.to_string())?;
     let out = Command::new("curl")
-        .args(["-sS", "--max-time", "90", "https://api.anthropic.com/v1/messages",
-            "-H", &format!("x-api-key: {key}"), "-H", "anthropic-version: 2023-06-01",
-            "-H", "content-type: application/json", "--data"])
+        .args([
+            "-sS",
+            "--max-time",
+            "90",
+            "https://api.anthropic.com/v1/messages",
+            "-H",
+            &format!("x-api-key: {key}"),
+            "-H",
+            "anthropic-version: 2023-06-01",
+            "-H",
+            "content-type: application/json",
+            "--data",
+        ])
         .arg(format!("@{}", body_file.display()))
         .output()
         .context("curl claude")?;
@@ -2200,7 +2644,12 @@ fn claude_text(key: &str, prompt: &str) -> Result<String> {
     resp["content"][0]["text"]
         .as_str()
         .map(|s| s.trim().to_string())
-        .with_context(|| format!("claude returned no text: {}", String::from_utf8_lossy(&out.stdout)))
+        .with_context(|| {
+            format!(
+                "claude returned no text: {}",
+                String::from_utf8_lossy(&out.stdout)
+            )
+        })
 }
 
 /// The original Scryfall flavor for a card (for the editor's flavor field to prefill).
@@ -2212,8 +2661,12 @@ pub fn base_flavor(name: &str, cache_dir: &Path) -> String {
 /// Flavor text of the oldest printing (from the cached Scryfall metadata).
 fn card_flavor(name: &str, art_dir: &Path) -> String {
     let meta = art_dir.join(format!("{}.json", sanitize(name)));
-    let Ok(txt) = fs::read_to_string(&meta) else { return String::new() };
-    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return String::new() };
+    let Ok(txt) = fs::read_to_string(&meta) else {
+        return String::new();
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&txt) else {
+        return String::new();
+    };
     v["data"][0]["flavor_text"]
         .as_str()
         .or_else(|| v["data"][0]["card_faces"][0]["flavor_text"].as_str())
@@ -2225,8 +2678,12 @@ fn card_flavor(name: &str, art_dir: &Path) -> String {
 /// set symbol matches the illustration.
 fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
     let meta = art_dir.join(format!("{}.json", sanitize(name)));
-    let Ok(txt) = fs::read_to_string(&meta) else { return (String::new(), String::new()) };
-    let Ok(v) = serde_json::from_str::<Value>(&txt) else { return (String::new(), String::new()) };
+    let Ok(txt) = fs::read_to_string(&meta) else {
+        return (String::new(), String::new());
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&txt) else {
+        return (String::new(), String::new());
+    };
     let d = &v["data"][0];
     (
         d["set"].as_str().unwrap_or("").to_string(),
@@ -2285,7 +2742,11 @@ fn set_symbol_ink(svg_bytes: &[u8]) -> Option<(Vec<u8>, f64)> {
     let pw = (size.width() * scale).ceil() as u32;
     let ph = (size.height() * scale).ceil() as u32;
     let mut pixmap = resvg::tiny_skia::Pixmap::new(pw, ph)?;
-    resvg::render(&tree, resvg::tiny_skia::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
     let data = pixmap.data();
     let (mut minx, mut miny, mut maxx, mut maxy) = (pw, ph, 0u32, 0u32);
     for y in 0..ph {
@@ -2348,8 +2809,14 @@ fn frame_swatch(frame_path: &Path, diam: u32) -> Option<image::RgbaImage> {
     let fx = |f: f32| (f * w as f32) as u32;
     let fy = |f: f32| (f * h as f32) as u32;
     let (x0, y0, x1, y1) = (fx(0.22), fy(0.040), fx(0.78), fy(0.075));
-    let patch =
-        crop_imm(&img, x0, y0, x1.saturating_sub(x0).max(1), y1.saturating_sub(y0).max(1)).to_image();
+    let patch = crop_imm(
+        &img,
+        x0,
+        y0,
+        x1.saturating_sub(x0).max(1),
+        y1.saturating_sub(y0).max(1),
+    )
+    .to_image();
     Some(resize(&patch, diam, diam, FilterType::Triangle))
 }
 
@@ -2490,7 +2957,9 @@ fn make_direction(card: &Card, flavor: &str, key: &str) -> Result<String> {
         if !mentions_card_mechanic(&d) {
             return Ok(d);
         }
-        eprintln!("    (direction depicted a card-game mechanic — re-prompting, attempt {attempt})");
+        eprintln!(
+            "    (direction depicted a card-game mechanic — re-prompting, attempt {attempt})"
+        );
         p = format!(
             "{prompt}\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: it referred to PLAYING CARDS, a \
              card-draw, looting, discarding or rummaging. Rewrite the five fields with ABSOLUTELY \
@@ -2514,21 +2983,35 @@ fn mentions_card_mechanic(d: &str) -> bool {
 /// Best-effort append to the GenAI event log (never fails a render).
 #[allow(clippy::too_many_arguments)]
 fn log_event(
-    cache_dir: &Path, card_id: i64, card_name: &str, action: &str,
-    artist: Option<&str>, art_hash: Option<&str>, prompt: Option<&str>, detail: Option<&str>,
+    cache_dir: &Path,
+    card_id: i64,
+    card_name: &str,
+    action: &str,
+    artist: Option<&str>,
+    art_hash: Option<&str>,
+    prompt: Option<&str>,
+    detail: Option<&str>,
 ) {
     if let Ok(db) = crate::events::open(cache_dir) {
-        let _ = crate::events::log(&db, card_id, card_name, action, artist, art_hash, prompt, detail);
+        let _ = crate::events::log(
+            &db, card_id, card_name, action, artist, art_hash, prompt, detail,
+        );
     }
 }
 
 /// Get (cached) or (re)generate the art direction for a card.
 pub fn genai_direction(
-    editor_db: &Path, cache_dir: &Path, id: i64, regenerate: bool,
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    regenerate: bool,
 ) -> Result<String> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
-    let genai_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai");
+    let genai_dir = cache_dir
+        .join("cards")
+        .join(sanitize(&card.name))
+        .join("genai");
     let f = genai_dir.join("direction.txt");
     if f.exists() && !regenerate {
         return Ok(fs::read_to_string(&f)?);
@@ -2543,7 +3026,16 @@ pub fn genai_direction(
     let d = make_direction(&card, &flavor, &key)?;
     fs::create_dir_all(&genai_dir)?;
     fs::write(&f, &d)?;
-    log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(&d), None);
+    log_event(
+        cache_dir,
+        id,
+        &card.name,
+        crate::events::DIRECTION_SET,
+        None,
+        None,
+        Some(&d),
+        None,
+    );
     Ok(d)
 }
 
@@ -2561,35 +3053,57 @@ fn gen_art_openai(prompt: &str, out: &Path, key: &str) -> Result<()> {
         fs::create_dir_all(p)?;
     }
     // quality:"high" — max fidelity (gpt-image-1 defaults to "auto", which picks low/cheap).
-    let body = json!({"model":"gpt-image-1","n":1,"size":"1536x1024","quality":"high","prompt":prompt});
+    let body =
+        json!({"model":"gpt-image-1","n":1,"size":"1536x1024","quality":"high","prompt":prompt});
     let body_file = std::env::temp_dir().join("mtgbrain-openai.json");
     fs::write(&body_file, body.to_string())?;
     let resp = Command::new("curl")
-        .args(["-sS", "--max-time", "240", "https://api.openai.com/v1/images/generations",
-            "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json",
-            "--data"])
+        .args([
+            "-sS",
+            "--max-time",
+            "240",
+            "https://api.openai.com/v1/images/generations",
+            "-H",
+            &format!("Authorization: Bearer {key}"),
+            "-H",
+            "Content-Type: application/json",
+            "--data",
+        ])
         .arg(format!("@{}", body_file.display()))
         .output()
         .context("curl openai")?;
     let v: Value = serde_json::from_slice(&resp.stdout).context("openai response")?;
     if let Some(b64) = v["data"][0]["b64_json"].as_str() {
-        let bytes = base64::engine::general_purpose::STANDARD.decode(b64).context("decode image")?;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(b64)
+            .context("decode image")?;
         fs::write(out, bytes)?;
         Ok(())
     } else {
-        bail!("openai: {}", v["error"]["message"].as_str().unwrap_or("no image returned"));
+        bail!(
+            "openai: {}",
+            v["error"]["message"]
+                .as_str()
+                .unwrap_or("no image returned")
+        );
     }
 }
 
 /// Generate (or reuse) a GenAI art option per artist + render each into a FULL card.
 /// Reads ANTHROPIC_API_KEY (art direction) and OPENAI_API_KEY (image gen) from env.
 pub fn genai_options(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64,
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    id: i64,
     direction_override: Option<&str>,
 ) -> Result<Value> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
-    let openai = std::env::var("OPENAI_API_KEY").ok().filter(|k| !k.is_empty());
+    let openai = std::env::var("OPENAI_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty());
     let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
     let genai_dir = card_dir.join("genai");
     let frame_rel = assets_dir.join(frame_file(&card));
@@ -2600,7 +3114,16 @@ pub fn genai_options(
     let direction = match direction_override {
         Some(d) if !d.trim().is_empty() => {
             save_direction(cache_dir, &card.name, d.trim())?;
-            log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(d.trim()), Some("edited"));
+            log_event(
+                cache_dir,
+                id,
+                &card.name,
+                crate::events::DIRECTION_SET,
+                None,
+                None,
+                Some(d.trim()),
+                Some("edited"),
+            );
             d.trim().to_string()
         }
         _ => genai_direction(editor_db, cache_dir, id, false)?,
@@ -2672,16 +3195,42 @@ pub fn genai_options(
             let res = gen_art_openai(&styled, &art_png, k);
             if let Err(e) = res {
                 let msg = e.to_string();
-                log_event(cache_dir, id, &card.name, crate::events::ART_FAILED, Some(artist), None, Some(&direction), Some(&msg));
+                log_event(
+                    cache_dir,
+                    id,
+                    &card.name,
+                    crate::events::ART_FAILED,
+                    Some(artist),
+                    None,
+                    Some(&direction),
+                    Some(&msg),
+                );
                 errors.push(format!("{artist}: {msg}"));
                 continue;
             }
-            log_event(cache_dir, id, &card.name, crate::events::ART_GENERATED, Some(artist), Some(&h), Some(&direction), None);
+            log_event(
+                cache_dir,
+                id,
+                &card.name,
+                crate::events::ART_GENERATED,
+                Some(artist),
+                Some(&h),
+                Some(&direction),
+                None,
+            );
         }
         let card_png = adir.join("card.png");
         // Folder/tag keep the REAL name; the printed credit is the pseudonym.
         if let Err(e) = compose(
-            &card, &art_png, pseudo, &year, assets_dir, &frame_rel, false, &card_png, chrome,
+            &card,
+            &art_png,
+            pseudo,
+            &year,
+            assets_dir,
+            &frame_rel,
+            false,
+            &card_png,
+            chrome,
             &format!("genai-{id}-{}", sanitize_bucket(artist)),
             set_symbol_svg(&card.set, cache_dir).as_deref(),
         ) {
@@ -2705,7 +3254,11 @@ pub fn genai_card_path(cache_dir: &Path, card_name: &str, artist: &str) -> PathB
 
 /// Choose a GenAI option: set it as the card's art (settles art.json/art.png).
 pub fn genai_choose(
-    editor_db: &Path, cache_dir: &Path, id: i64, artist: &str, hash: &str,
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    artist: &str,
+    hash: &str,
 ) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
@@ -2724,7 +3277,8 @@ pub fn genai_choose(
     fs::copy(&art, card_dir.join("art.png"))?;
     fs::write(
         card_dir.join("art.json"),
-        json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": pseudo, "year": year}).to_string(),
+        json!({"art_ref": format!("genai:{artist}:{hash}"), "artist": pseudo, "year": year})
+            .to_string(),
     )?;
     // Persist the chosen illustrator into the DB (a dedicated column, NOT the overrides
     // errata blob) so every render — preview and final — credits the pseudonym.
@@ -2735,7 +3289,16 @@ pub fn genai_choose(
             params![id, pseudo],
         );
     }
-    log_event(cache_dir, id, &card.name, crate::events::CHOSEN, Some(artist), Some(hash), None, None);
+    log_event(
+        cache_dir,
+        id,
+        &card.name,
+        crate::events::CHOSEN,
+        Some(artist),
+        Some(hash),
+        None,
+        None,
+    );
     Ok(())
 }
 
@@ -2754,7 +3317,16 @@ pub fn genai_unchoose(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<()>
             params![id],
         );
     }
-    log_event(cache_dir, id, &card.name, crate::events::UNCHOSEN, None, None, None, None);
+    log_event(
+        cache_dir,
+        id,
+        &card.name,
+        crate::events::UNCHOSEN,
+        None,
+        None,
+        None,
+        None,
+    );
     Ok(())
 }
 
@@ -2769,7 +3341,10 @@ pub fn genai_choose_original(editor_db: &Path, cache_dir: &Path, id: i64) -> Res
     // settle it as decided and the pass would skip it, so it'd never get a gallery to review.
     let store = crate::events::open(cache_dir)?;
     if !crate::events::has_generated(&store, id)? {
-        bail!("{}: generate the GenAI gallery before choosing Original art", card.name);
+        bail!(
+            "{}: generate the GenAI gallery before choosing Original art",
+            card.name
+        );
     }
     let card_dir = cache_dir.join("cards").join(sanitize(&card.name));
     let _ = fs::remove_file(card_dir.join("art.json")); // → render falls back to the real art
@@ -2781,8 +3356,16 @@ pub fn genai_choose_original(editor_db: &Path, cache_dir: &Path, id: i64) -> Res
             params![id],
         );
     }
-    log_event(cache_dir, id, &card.name, crate::events::CHOSEN,
-        Some("Original art"), Some(""), None, Some("original"));
+    log_event(
+        cache_dir,
+        id,
+        &card.name,
+        crate::events::CHOSEN,
+        Some("Original art"),
+        Some(""),
+        None,
+        Some("original"),
+    );
     Ok(())
 }
 
@@ -2798,15 +3381,28 @@ pub fn genai_history(cache_dir: &Path, id: i64) -> Result<Value> {
 
 /// Set an old event's prompt as the current direction (time-travel / reprompt),
 /// logged as a fresh direction edit.
-pub fn genai_reprompt(editor_db: &Path, cache_dir: &Path, id: i64, event_id: i64) -> Result<String> {
+pub fn genai_reprompt(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    event_id: i64,
+) -> Result<String> {
     let store = crate::events::open(cache_dir)?;
     let prompt = crate::events::prompt_of(&store, event_id)?
         .context("that event has no prompt to restore")?;
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
     save_direction(cache_dir, &card.name, &prompt)?;
-    log_event(cache_dir, id, &card.name, crate::events::DIRECTION_SET, None, None, Some(&prompt),
-        Some(&format!("reprompt from event {event_id}")));
+    log_event(
+        cache_dir,
+        id,
+        &card.name,
+        crate::events::DIRECTION_SET,
+        None,
+        None,
+        Some(&prompt),
+        Some(&format!("reprompt from event {event_id}")),
+    );
     Ok(prompt)
 }
 
@@ -2815,9 +3411,8 @@ pub fn genai_dashboard(editor_db: &Path, cache_dir: &Path) -> Result<Value> {
     let store = crate::events::open(cache_dir)?;
     let stat = crate::events::status(&store)?;
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let mut stmt = db.prepare(
-        "SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 ORDER BY id",
-    )?;
+    let mut stmt =
+        db.prepare("SELECT id, name FROM cube_cards WHERE genai_art=1 AND removed=0 ORDER BY id")?;
     let cards: Vec<Value> = stmt
         .query_map([], |r| {
             let id: i64 = r.get(0)?;
@@ -2838,13 +3433,20 @@ pub fn genai_dashboard(editor_db: &Path, cache_dir: &Path) -> Result<Value> {
 pub fn genai_existing(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Value> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let card = load_card(&db, id)?;
-    let genai_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai");
+    let genai_dir = cache_dir
+        .join("cards")
+        .join(sanitize(&card.name))
+        .join("genai");
     let direction = fs::read_to_string(genai_dir.join("direction.txt")).unwrap_or_default();
     let mut options = Vec::new();
     if !direction.is_empty() {
         for (artist, _, pseudo) in ARTISTS {
             let h = short_hash(&format!("{artist}:{direction}"));
-            if genai_dir.join(sanitize_bucket(artist)).join(format!("{h}.png")).exists() {
+            if genai_dir
+                .join(sanitize_bucket(artist))
+                .join(format!("{h}.png"))
+                .exists()
+            {
                 options.push(json!({"artist": artist, "pseudonym": pseudo, "hash": h}));
             }
         }
@@ -2861,7 +3463,12 @@ pub fn genai_existing(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Val
 /// Async full pass: generate the GenAI gallery for every genai-flagged card.
 /// Idempotent/resumable (cached arts are skipped); logs every action. Run it in
 /// the background, then review/choose in the editor's "Review GenAI" tab.
-pub fn genai_pass(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str) -> Result<()> {
+pub fn genai_pass(
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+) -> Result<()> {
     let ids: Vec<(i64, String)> = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         let mut stmt = db.prepare(
@@ -2905,26 +3512,48 @@ pub fn genai_pass(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome:
 // HTML (Seventh bounds; in-page auto-fit; reminder italics; white-star foil)
 // ---------------------------------------------------------------------------
 
-fn pc(f: f64) -> String { format!("{:.4}", f * 100.0) }
-fn px(f: f64) -> String { format!("{}", (f * f64::from(FACE_H)) as u32) }
+fn pc(f: f64) -> String {
+    format!("{:.4}", f * 100.0)
+}
+fn px(f: f64) -> String {
+    format!("{}", (f * f64::from(FACE_H)) as u32)
+}
 
 const TEMPLATE: &str = include_str!("card_template.html");
 
-fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, foil: bool, set_svg: Option<&Path>) -> String {
+fn build_html(
+    c: &Card,
+    frame_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    foil: bool,
+    set_svg: Option<&Path>,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
     // Any card with a printed P/T gets the box — creatures AND **Vehicles** (Artifact —
     // Vehicle: a P/T but is_creature=0, e.g. The Last Ride 13/13). Loyalty → planeswalkers.
     let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
-        format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
+        format!(
+            r#"<div class="box pt"><span>{}/{}</span></div>"#,
+            esc(&c.power),
+            esc(&c.toughness)
+        )
     } else if !c.loyalty.is_empty() {
-        format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&c.loyalty))
+        format!(
+            r#"<div class="box pt"><span>{}</span></div>"#,
+            esc(&c.loyalty)
+        )
     } else {
         String::new()
     };
@@ -2939,7 +3568,10 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
     // Coloured-artifact COLOUR INDICATOR: the frame stays fully brown; a big circular
     // swatch of the card's colour (a patch of the matching colour frame's marble
@@ -2947,8 +3579,8 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
     // (white keyline + inlaid black inner-border gradient via the svg filter). The type
     // text is indented (TYPAD) so it clears the indicator.
     let diam_px = (0.030 * f64::from(FACE_H)) as u32; // ≈84px — half size, same centre
-    // Indicator colour logic: 1 colour → solid that colour; 2 colours → vertical 50:50
-    // split of the two; 3+ colours → gold. Only on coloured (non-land) artifacts.
+                                                      // Indicator colour logic: 1 colour → solid that colour; 2 colours → vertical 50:50
+                                                      // split of the two; 3+ colours → gold. Only on coloured (non-land) artifacts.
     let ind_frames: Vec<PathBuf> = {
         let t = c.type_line.to_lowercase();
         let is_land = t.contains("land");
@@ -2962,7 +3594,11 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
             // A hand-declared identity gets the dot, EXCEPT a mono-colour land that already
             // conveys it through its tinted land frame (wl/ul/…). A multi-colour land has no
             // tinted frame, so it DOES get the dot (e.g. a W/U dual-identity land).
-            if is_land && ci.len() == 1 { vec![] } else { ci }
+            if is_land && ci.len() == 1 {
+                vec![]
+            } else {
+                ci
+            }
         } else if is_land {
             vec![]
         } else if is_artifact && !cost.is_empty() {
@@ -2977,7 +3613,10 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         } else if letters.len() >= 3 {
             vec![assets_dir.join("frames/m.png")]
         } else {
-            letters.iter().map(|ch| assets_dir.join(color_frame(*ch))).collect()
+            letters
+                .iter()
+                .map(|ch| assets_dir.join(color_frame(*ch)))
+                .collect()
         }
     };
     let ind_refs: Vec<&Path> = ind_frames.iter().map(PathBuf::as_path).collect();
@@ -3014,9 +3653,16 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
                 (svg, format!("{pad}px"))
             },
         );
-    let year = if art.year.is_empty() { "2001".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2001".to_string()
+    } else {
+        art.year.clone()
+    };
     let foil_layer = if foil {
-        format!(r#"<img class="foilstar" src="file://{}">"#, assets_dir.join("foil/star.svg").display())
+        format!(
+            r#"<img class="foilstar" src="file://{}">"#,
+            assets_dir.join("foil/star.svg").display()
+        )
     } else {
         String::new()
     };
@@ -3026,30 +3672,56 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         ("GOUDY", f("goudy-medieval.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()),
-        ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
         // All bounds/sizes are EXACT cardconjurer packSeventh.js values (fractions of the
         // FACE). Font px = fraction * FACE_H. Shadows match CC: sharp black, no blur,
         // offset (0.002*FACE_W, 0.0015*FACE_H).
-        ("AX", pc(ART_WINDOW_FRAC[0])), ("AY", pc(ART_WINDOW_FRAC[1])),
-        ("AW", pc(ART_WINDOW_FRAC[2])), ("AH", pc(ART_WINDOW_FRAC[3])),
-        ("TX", pc(0.1134)), ("TY", pc(0.0481)), ("TW", pc(0.7734)), ("TH", pc(0.041)),
+        ("AX", pc(ART_WINDOW_FRAC[0])),
+        ("AY", pc(ART_WINDOW_FRAC[1])),
+        ("AW", pc(ART_WINDOW_FRAC[2])),
+        ("AH", pc(ART_WINDOW_FRAC[3])),
+        ("TX", pc(0.1134)),
+        ("TY", pc(0.0481)),
+        ("TW", pc(0.7734)),
+        ("TH", pc(0.041)),
         // Pips share the TITLE's vertical band (MAY=TY, MAH=TH) and are centred in it,
         // so pip-centre == title-centre. (cardconjurer's literal mana y=0.0539 is offset
         // back up by its textSize*0.34 baseline math, which we don't replicate — using it
         // raw dropped the pips a full box too low.) MAY tuned with tools/cardgeom
         // `pip-align` (colour probe) so the pip TOPS line up with the title-text top.
-        ("MAX", pc(0.1067)), ("MAY", pc(0.0415)), ("MAW", pc(0.8174)), ("MAH", px(0.041)),
-        ("TSZ", px(0.041)), ("MSZ", px(72.0 / 1638.0)),
-        ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))), ("SHY", px(0.0015)),
+        ("MAX", pc(0.1067)),
+        ("MAY", pc(0.0415)),
+        ("MAW", pc(0.8174)),
+        ("MAH", px(0.041)),
+        ("TSZ", px(0.041)),
+        ("MSZ", px(72.0 / 1638.0)),
+        ("SHX", px(0.002 * f64::from(FACE_W) / f64::from(FACE_H))),
+        ("SHY", px(0.0015)),
         // Type width stops short of the set symbol (~0.858) so a long type line
         // auto-fits/shrinks instead of overlapping the symbol.
-        ("TYX", pc(0.1074)), ("TYY", pc(0.5486)), ("TYW", pc(0.70)), ("TYH", pc(0.0543)), ("TYSZ", px(0.032)),
-        ("RX", pc(0.128)), ("RY", pc(0.6067)), ("RW", pc(0.744)), ("RH", pc(0.2724)), ("RSZ", px(0.0358)),
-        ("PX", pc(0.8074)), ("PY", pc(0.9043)), ("PW", pc(0.1367)), ("PSZ", px(0.0429)),
-        ("IY", pc(1908.0 / 2100.0)), ("ISZ", px(0.0172)),
-        ("LY", pc(1940.0 / 2100.0)), ("LSZ", px(0.0143)),
+        ("TYX", pc(0.1074)),
+        ("TYY", pc(0.5486)),
+        ("TYW", pc(0.70)),
+        ("TYH", pc(0.0543)),
+        ("TYSZ", px(0.032)),
+        ("RX", pc(0.128)),
+        ("RY", pc(0.6067)),
+        ("RW", pc(0.744)),
+        ("RH", pc(0.2724)),
+        ("RSZ", px(0.0358)),
+        ("PX", pc(0.8074)),
+        ("PY", pc(0.9043)),
+        ("PW", pc(0.1367)),
+        ("PSZ", px(0.0429)),
+        ("IY", pc(1908.0 / 2100.0)),
+        ("ISZ", px(0.0172)),
+        ("LY", pc(1940.0 / 2100.0)),
+        ("LSZ", px(0.0143)),
         // Set symbol: square box at the right end of the type line, vertically centred
         // (centre ≈ 0.576). A touch smaller than the type height so big modern symbols
         // don't crowd the frame borders. Monocolour mask + dark inner border + white key.
@@ -3060,12 +3732,18 @@ fn build_html(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art
         // symbol binds on HEIGHT (fills the type bar); a WIDE symbol (Nemesis) binds
         // on WIDTH and so comes out SHORTER, right-aligned & vertically centred —
         // exactly like the printed card, instead of ballooning to full height.
-        ("SSR", pc(0.088)), ("SSY", pc(0.5566)), ("SSW", pc(0.062)), ("SSH", pc(0.0382)),
+        ("SSR", pc(0.088)),
+        ("SSY", pc(0.5566)),
+        ("SSW", pc(0.062)),
+        ("SSH", pc(0.0382)),
         // Errata scroll: a HORIZONTAL parchment banner wrapping around the LEFT edge of
         // the frame (left fold off the card edge, rolled end resting on the art). Left-
         // anchored (ESX=0); vertically centred at the GOLDEN-RATIO point of the art
         // window (0.618 down → 0.373), lower than centre, toward the type line.
-        ("ESX", pc(0.035)), ("ESY", pc(0.3728 - 0.052 / 2.0)), ("ESW", pc(0.10)), ("ESH", pc(0.052)),
+        ("ESX", pc(0.035)),
+        ("ESY", pc(0.3728 - 0.052 / 2.0)),
+        ("ESW", pc(0.10)),
+        ("ESH", pc(0.052)),
     ];
     // Set-symbol element: an inline <svg> that embeds the Scryfall silhouette as an
     // <image> and runs a single FILTER to paint, in order:
@@ -3254,7 +3932,11 @@ fn flav_emph(line: &str) -> String {
             if it.peek() == Some(&'*') {
                 it.next(); // treat ** (bold) the same as * — both invert to upright
             }
-            out.push_str(if emph { "</span>" } else { r#"<span class="up">"# });
+            out.push_str(if emph {
+                "</span>"
+            } else {
+                r#"<span class="up">"#
+            });
             emph = !emph;
         } else {
             out.push_str(&esc_char(c));
@@ -3329,7 +4011,9 @@ fn manaify(text: &str, mana_base: &str) -> String {
             if glued.is_empty() {
                 out.push_str(&icon);
             } else {
-                out.push_str(&format!(r#"<span style="white-space:nowrap">{icon}{glued}</span>"#));
+                out.push_str(&format!(
+                    r#"<span style="white-space:nowrap">{icon}{glued}</span>"#
+                ));
             }
         } else {
             out.push_str(&esc_char(ch));
@@ -3356,8 +4040,14 @@ fn mana_icon(sym: &str, mana_base: &str) -> String {
 
 #[allow(clippy::too_many_arguments)]
 pub fn render_one(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str,
-    id: i64, foil: bool, force: bool, backend: Option<&str>,
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    id: i64,
+    foil: bool,
+    force: bool,
+    backend: Option<&str>,
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
@@ -3365,7 +4055,10 @@ pub fn render_one(
 
     let frame_rel = assets_dir.join(frame_file(&card));
     if !frame_rel.exists() {
-        bail!("missing frame asset {} — run `mtgbrain render assets`", frame_rel.display());
+        bail!(
+            "missing frame asset {} — run `mtgbrain render assets`",
+            frame_rel.display()
+        );
     }
     let dir = cache_dir.join("cards").join(sanitize(&card.name));
     // Durable art override (editor DB) wins and is re-materialised every render so it can
@@ -3390,16 +4083,35 @@ pub fn render_one(
     }
     // Printed credit: the editor-chosen illustrator (GenAI pseudonym) wins; otherwise
     // the real historical illustrator from the oldest Scryfall printing.
-    let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let credit = if card.illustrator.is_empty() {
+        art.artist.clone()
+    } else {
+        card.illustrator.clone()
+    };
     let hash = card_hash(&card, &art.art_ref, &credit);
 
-    let out = if foil { dir.join("foil").join(format!("{hash}.png")) } else { dir.join(format!("{hash}.png")) };
+    let out = if foil {
+        dir.join("foil").join(format!("{hash}.png"))
+    } else {
+        dir.join(format!("{hash}.png"))
+    };
     if out.exists() && !force {
         return Ok(out);
     }
     let set_svg = set_symbol_svg(&card.set, cache_dir);
-    compose(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, foil, &out, chrome,
-        &format!("{id}{}", u8::from(foil)), set_svg.as_deref())?;
+    compose(
+        &card,
+        &art.path,
+        &credit,
+        &art.year,
+        assets_dir,
+        &frame_rel,
+        foil,
+        &out,
+        chrome,
+        &format!("{id}{}", u8::from(foil)),
+        set_svg.as_deref(),
+    )?;
     let _ = card_preview(&out, 760); // pre-warm the editor's nav-size preview
     Ok(out)
 }
@@ -3409,12 +4121,20 @@ pub fn render_one(
 /// into an isolated `genai/_base/` dir so it never touches a chosen-art sidecar; credits
 /// the real historical illustrator. Always re-rendered (cheap; cached art crop).
 pub fn genai_base_card(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64,
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    id: i64,
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let mut card = load_card(&db, id)?;
     let frame_rel = assets_dir.join(frame_file(&card));
-    let base_dir = cache_dir.join("cards").join(sanitize(&card.name)).join("genai").join("_base");
+    let base_dir = cache_dir
+        .join("cards")
+        .join(sanitize(&card.name))
+        .join("genai")
+        .join("_base");
     fs::create_dir_all(&base_dir)?;
     // Acquire the REAL art into the ISOLATED base dir (Scryfall, fast/free — same
     // illustration MPCfill would pick, just lower-res; enough to vote on).
@@ -3433,28 +4153,66 @@ pub fn genai_base_card(
     }
     let out = base_dir.join("card.png");
     let set_svg = set_symbol_svg(&card.set, cache_dir);
-    compose(&card, &art.path, &art.artist, &art.year, assets_dir, &frame_rel, false, &out, chrome,
-        &format!("base-{id}"), set_svg.as_deref())?;
+    compose(
+        &card,
+        &art.path,
+        &art.artist,
+        &art.year,
+        assets_dir,
+        &frame_rel,
+        false,
+        &out,
+        chrome,
+        &format!("base-{id}"),
+        set_svg.as_deref(),
+    )?;
     Ok(out)
 }
 
 /// Composite a full card: frame + given art + text, screenshot to `out`.
 #[allow(clippy::too_many_arguments)]
-fn compose(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, foil: bool, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+fn compose(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    frame_rel: &Path,
+    foil: bool,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html(card, &frame_abs, &art_abs, &assets_abs, &art, foil, set_abs.as_deref());
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html(
+        card,
+        &frame_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        foil,
+        set_abs.as_deref(),
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -3489,9 +4247,14 @@ fn screenshot_html(chrome: &str, html: &str, out: &Path, tag: &str) -> Result<()
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run", "--force-device-scale-factor=1",
-            "--run-all-compositor-stages-before-draw", "--virtual-time-budget=15000",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
             &format!("--window-size={W},{H}"),
             &format!("--screenshot={}", out.display()),
             &format!("file://{}", html_path.display()),
@@ -3512,23 +4275,46 @@ const DUCKS_SRC: &str = "/Users/sweater/Github/ducktales/work/cards-hires";
 /// as CSS colours. `"@"` means "same as the strip colour".
 fn ducks_palette(subcat: &str, cat: &str) -> (String, String, String, String) {
     // (strip, ink, num_bg, num_ink) — "@" resolves to the strip colour.
+    #[allow(clippy::type_complexity)]
     let table: &[(&str, (u8, u8, u8), &str, &str, &str)] = &[
-        ("TOWN HALL",               (115, 20, 110), "#fff", "#fff", "@"),
-        ("POLICE",                  (25, 30, 122),  "#fff", "#fff", "@"),
-        ("FIRE BRIGADE",            (130, 30, 40),  "#fff", "#fff", "@"),
-        ("HEALTH SERVICE",          (25, 122, 65),  "#fff", "#fff", "@"),
-        ("COMMERCE & SERVICES",     (255, 255, 50), "#05288c", "@", "#fff"),
-        ("CULTURE & ENTERTAINMENT", (250, 25, 105), "#fff", "#fff", "@"),
-        ("INDUSTRY & SCIENCE",      (130, 175, 55), "#fff", "#fff", "@"),
-        ("SPORT",                   (15, 140, 255), "#fff", "#fff", "@"),
-        ("TRANSPORT",               (255, 130, 50), "#fff", "#fff", "@"),
-        ("SPECIAL OBJECTS",         (250, 25, 18),  "#fff", "#fff", "@"),
+        ("TOWN HALL", (115, 20, 110), "#fff", "#fff", "@"),
+        ("POLICE", (25, 30, 122), "#fff", "#fff", "@"),
+        ("FIRE BRIGADE", (130, 30, 40), "#fff", "#fff", "@"),
+        ("HEALTH SERVICE", (25, 122, 65), "#fff", "#fff", "@"),
+        (
+            "COMMERCE & SERVICES",
+            (255, 255, 50),
+            "#05288c",
+            "@",
+            "#fff",
+        ),
+        (
+            "CULTURE & ENTERTAINMENT",
+            (250, 25, 105),
+            "#fff",
+            "#fff",
+            "@",
+        ),
+        ("INDUSTRY & SCIENCE", (130, 175, 55), "#fff", "#fff", "@"),
+        ("SPORT", (15, 140, 255), "#fff", "#fff", "@"),
+        ("TRANSPORT", (255, 130, 50), "#fff", "#fff", "@"),
+        ("SPECIAL OBJECTS", (250, 25, 18), "#fff", "#fff", "@"),
     ];
-    let hit = table.iter().find(|e| e.0 == subcat).or_else(|| table.iter().find(|e| e.0 == cat));
-    let (r, g, b, ink, numbg, numink) = hit.map_or((90, 90, 100, "#fff", "#fff", "@"),
-        |e| (e.1 .0, e.1 .1, e.1 .2, e.2, e.3, e.4));
+    let hit = table
+        .iter()
+        .find(|e| e.0 == subcat)
+        .or_else(|| table.iter().find(|e| e.0 == cat));
+    let (r, g, b, ink, numbg, numink) = hit.map_or((90, 90, 100, "#fff", "#fff", "@"), |e| {
+        (e.1 .0, e.1 .1, e.1 .2, e.2, e.3, e.4)
+    });
     let strip = format!("rgb({r},{g},{b})");
-    let resolve = |c: &str| if c == "@" { strip.clone() } else { c.to_string() };
+    let resolve = |c: &str| {
+        if c == "@" {
+            strip.clone()
+        } else {
+            c.to_string()
+        }
+    };
     (strip.clone(), resolve(ink), resolve(numbg), resolve(numink))
 }
 
@@ -3572,8 +4358,14 @@ const DUCKS_ART_ASPECT: f64 = (0.92 * FACE_W as f64) / (0.48 * FACE_H as f64);
 fn ducks_card_dir(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<(PathBuf, bool)> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let name = card_name(&db, id)?;
-    let event = db.query_row("SELECT COALESCE(is_creature,0) FROM cube_cards WHERE id=?1",
-        params![id], |r| r.get::<_, i64>(0)).unwrap_or(0) != 0;
+    let event = db
+        .query_row(
+            "SELECT COALESCE(is_creature,0) FROM cube_cards WHERE id=?1",
+            params![id],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap_or(0)
+        != 0;
     Ok((cache_dir.join("ducks").join(sanitize(&name)), event))
 }
 
@@ -3598,14 +4390,21 @@ pub fn ducks_art_meta(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<Val
 }
 
 /// The image the ducks crop editor shows (the original scan); `thumb` → a small cached JPEG.
-pub fn ducks_source_path(editor_db: &Path, cache_dir: &Path, id: i64, thumb: bool) -> Result<PathBuf> {
+pub fn ducks_source_path(
+    editor_db: &Path,
+    cache_dir: &Path,
+    id: i64,
+    thumb: bool,
+) -> Result<PathBuf> {
     let (card_dir, _) = ducks_card_dir(editor_db, cache_dir, id)?;
     let src = PathBuf::from(DUCKS_SRC).join(format!("card-{id:03}.png"));
     if thumb {
         fs::create_dir_all(&card_dir)?;
         let out = card_dir.join("src_thumb.jpg");
         if src.exists() && !out.exists() {
-            image::open(&src)?.thumbnail(420, 420).to_rgb8()
+            image::open(&src)?
+                .thumbnail(420, 420)
+                .to_rgb8()
                 .save_with_format(&out, image::ImageFormat::Jpeg)?;
         }
         return Ok(out);
@@ -3636,7 +4435,9 @@ pub fn ducks_reset_crop(editor_db: &Path, cache_dir: &Path, id: i64) -> Result<(
 /// (repurposed at seed) means the card has body text → the white event panel, else the coloured
 /// object strip. The number is the card id.
 fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
-    let (subcat, cat) = c.type_line.split_once(" — ")
+    let (subcat, cat) = c
+        .type_line
+        .split_once(" — ")
         .map_or((c.type_line.trim(), ""), |(s, cc)| (s.trim(), cc.trim()));
     let (strip, ink, _, _) = ducks_palette(subcat, cat);
     // Ducks cards get a WIDE black border (like a Magic card), not the near-full-bleed MPC face:
@@ -3647,18 +4448,29 @@ fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
     let dbx = (W - dfw) / 2;
     let dby = (H - dfh) / 2;
     // Fonts scale with the smaller face (× dfw/FACE_W ≈ 0.89 vs the old MPC-face sizes).
-    let fs = |px_at_2000: f64| px((px_at_2000 * f64::from(dfw) / f64::from(FACE_W)) / f64::from(FACE_H));
+    let fs =
+        |px_at_2000: f64| px((px_at_2000 * f64::from(dfw) / f64::from(FACE_W)) / f64::from(FACE_H));
     let pairs: Vec<(&str, String)> = vec![
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", dfw.to_string()), ("FH", dfh.to_string()),
-        ("BX", dbx.to_string()), ("BY", dby.to_string()),
-        ("NMSZ", fs(122.0)), ("TYSZ", fs(84.0)),
-        ("BODYSZ", fs(100.0)), ("NUMSZ", fs(58.0)),
-        ("NUML", (dbx + 12).to_string()), ("NUMB", (dby * 3 / 4).to_string()),
-        ("STRIP", strip), ("INK", ink),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", dfw.to_string()),
+        ("FH", dfh.to_string()),
+        ("BX", dbx.to_string()),
+        ("BY", dby.to_string()),
+        ("NMSZ", fs(122.0)),
+        ("TYSZ", fs(84.0)),
+        ("BODYSZ", fs(100.0)),
+        ("NUMSZ", fs(58.0)),
+        ("NUML", (dbx + 12).to_string()),
+        ("NUMB", (dby * 3 / 4).to_string()),
+        ("STRIP", strip),
+        ("INK", ink),
         ("ARTURL", format!("file://{}", art_abs.display())),
-        ("NAME", esc(&c.name)), ("TYPE", esc(&c.type_line)),
+        ("NAME", esc(&c.name)),
+        ("TYPE", esc(&c.type_line)),
         ("TEXT", esc(&c.oracle_text).replace('\n', "<br>")),
-        ("NUMBER", id.to_string()), ("TOTAL", total.to_string()),
+        ("NUMBER", id.to_string()),
+        ("TOTAL", total.to_string()),
     ];
     let mut html = TEMPLATE_DUCKS.to_string();
     for (k, v) in &pairs {
@@ -3670,20 +4482,33 @@ fn build_html_ducks(c: &Card, id: i64, total: i64, art_abs: &Path) -> String {
 /// Render one DuckTales card → MPC-size PNG. Reuses load_card / sanitize / the shared Chrome
 /// screenshot; art is the cropped original scan (or an editor override). Cached by content hash.
 pub fn render_card_ducks(
-    editor_db: &Path, _assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, _backend: Option<&str>,
+    editor_db: &Path,
+    _assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    id: i64,
+    force: bool,
+    _backend: Option<&str>,
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
     let card = load_card(&db, id)?;
-    let total: i64 = db.query_row(
-        "SELECT COUNT(*) FROM cube_cards WHERE in_db_found=1 AND removed=0", [], |r| r.get(0),
-    ).unwrap_or(0);
+    let total: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM cube_cards WHERE in_db_found=1 AND removed=0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
     let dir = cache_dir.join("ducks").join(sanitize(&card.name));
     let out = dir.join("card.png");
     let hash_file = dir.join("card.hash");
     let art = ducks_art(id, &dir, card.is_creature)?;
-    let art_sig = fs::metadata(&art).and_then(|m| m.modified()).ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs());
+    let art_sig = fs::metadata(&art)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_secs());
     let hash = {
         let canon = json!({
             "name": card.name, "type": card.type_line, "oracle": card.oracle_text,
@@ -3693,7 +4518,10 @@ pub fn render_card_ducks(
         h.update(canon.to_string().as_bytes());
         format!("{:x}", h.finalize())
     };
-    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
+    if !force
+        && out.exists()
+        && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str())
+    {
         return Ok(out);
     }
     let art_abs = fs::canonicalize(&art).unwrap_or(art);
@@ -3706,24 +4534,39 @@ pub fn render_card_ducks(
 
 fn color_frame_8th(ch: char) -> &'static str {
     match ch {
-        'W' => "frames8/w.png", 'U' => "frames8/u.png", 'B' => "frames8/b.png",
-        'R' => "frames8/r.png", _ => "frames8/g.png",
+        'W' => "frames8/w.png",
+        'U' => "frames8/u.png",
+        'B' => "frames8/b.png",
+        'R' => "frames8/r.png",
+        _ => "frames8/g.png",
     }
 }
 
 fn frame_file_8th(c: &Card) -> &'static str {
     let t = c.type_line.to_lowercase();
     if t.contains("land") {
-        let lc: Vec<char> = c.color_identity.chars().filter(|ch| "WUBRG".contains(*ch)).collect();
+        let lc: Vec<char> = c
+            .color_identity
+            .chars()
+            .filter(|ch| "WUBRG".contains(*ch))
+            .collect();
         return match lc.as_slice() {
-            ['W'] => "frames8/wl.png", ['U'] => "frames8/ul.png", ['B'] => "frames8/bl.png",
-            ['R'] => "frames8/rl.png", ['G'] => "frames8/gl.png", _ => "frames8/l.png",
+            ['W'] => "frames8/wl.png",
+            ['U'] => "frames8/ul.png",
+            ['B'] => "frames8/bl.png",
+            ['R'] => "frames8/rl.png",
+            ['G'] => "frames8/gl.png",
+            _ => "frames8/l.png",
         };
     }
     if t.contains("artifact") {
         return "frames8/a.png";
     }
-    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let cols = if c.ci_manual {
+        ci_letters(&c.color_identity)
+    } else {
+        card_colors(c)
+    };
     match cols.len() {
         // Colourless cards are handled by the devoid layout (is_devoid_8th) BEFORE this is
         // reached; `c.png` is only the fallback if that path is somehow skipped.
@@ -3751,7 +4594,11 @@ fn is_devoid_8th(c: &Card) -> bool {
     }
     // Otherwise: a genuinely colourless card that is an Eldrazi or has no identity — NOT a
     // coloured card whose mana cost is merely missing in the data (e.g. a blank-cost sorcery).
-    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let cols = if c.ci_manual {
+        ci_letters(&c.color_identity)
+    } else {
+        card_colors(c)
+    };
     if !cols.is_empty() {
         return false;
     }
@@ -3765,9 +4612,19 @@ fn devoid_frame_8th(c: &Card) -> String {
     // wins) — NOT the color_identity field. So Ghostfire Slice ({2}{R}) keeps the RED devoid
     // frame even when its colours are forced empty. The M15 devoid pack has no pure-colourless
     // variant, so a truly colourless card (Endless One) takes the neutral tan `a` frame.
-    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let cols = if c.ci_manual {
+        ci_letters(&c.color_identity)
+    } else {
+        card_colors(c)
+    };
     let key = match cols.as_slice() {
-        [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
+        [one] => match one {
+            'W' => "w",
+            'U' => "u",
+            'B' => "b",
+            'R' => "r",
+            _ => "g",
+        },
         _ => "a",
     };
     format!("frames8/devoid/{key}.png")
@@ -3839,7 +4696,10 @@ fn adv_frame_resolved(assets_dir: &Path, cache_dir: &Path, c: &Card, prepare: bo
     if !prepare {
         return base;
     }
-    let stem = Path::new(rel).file_stem().and_then(|s| s.to_str()).unwrap_or("a");
+    let stem = Path::new(rel)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("a");
     let out_dir = cache_dir.join("frames8_gen");
     let _ = fs::create_dir_all(&out_dir);
     let out = out_dir.join(format!("adv_{stem}_flip.png"));
@@ -3870,7 +4730,13 @@ struct Adventure {
 /// Parse the adventure / prepare sub-spell from the cached metadata. None for ordinary cards.
 fn adventure_parse(cache_dir: &Path, name: &str) -> Option<Adventure> {
     let (kind, title, mana, type_line, rules) = adventure_face(cache_dir, name, name)?;
-    Some(Adventure { prepare: kind == "prepare", title, mana, type_line, rules })
+    Some(Adventure {
+        prepare: kind == "prepare",
+        title,
+        mana,
+        type_line,
+        rules,
+    })
 }
 
 /// The WUBRG colours an 8ED frame should show: a manual identity wins, else the cost's
@@ -3902,7 +4768,9 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
     if out.exists() {
         return Some(out);
     }
-    let mut base = image::open(assets_dir.join("frames8/a.png")).ok()?.to_rgba8();
+    let mut base = image::open(assets_dir.join("frames8/a.png"))
+        .ok()?
+        .to_rgba8();
     let (w, h) = base.dimensions();
     let load_fit = |rel: String| -> Option<image::RgbaImage> {
         let img = image::open(assets_dir.join(rel)).ok()?.to_rgba8();
@@ -3918,7 +4786,9 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
     let frames: Vec<image::RgbaImage> = if cols.len() >= 3 {
         vec![load_fit("frames8/m.png".into())?]
     } else {
-        cols.iter().filter_map(|ch| load_fit(color_frame_8th(*ch).into())).collect()
+        cols.iter()
+            .filter_map(|ch| load_fit(color_frame_8th(*ch).into()))
+            .collect()
     };
     if frames.is_empty() {
         return None;
@@ -3927,7 +4797,9 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
     // treat a pixel as in-region if it's that opaque red — robust to either background.
     let inmask = |m: &image::RgbaImage, x: u32, y: u32| -> bool {
         let p = m.get_pixel(x, y).0;
-        p[3] > 64 && i32::from(p[0]) - i32::from(p[1]) > 60 && i32::from(p[0]) - i32::from(p[2]) > 60
+        p[3] > 64
+            && i32::from(p[0]) - i32::from(p[1]) > 60
+            && i32::from(p[0]) - i32::from(p[2]) > 60
     };
     // The m15 colour frames are deliberately muted, so stamping them raw leaves a colour-bearing
     // artifact's bars looking washed-out grey. Push each stamped pixel's saturation up (keep its
@@ -3945,7 +4817,11 @@ fn colored_artifact_frame(assets_dir: &Path, cache_dir: &Path, cols: &[char]) ->
         for x in 0..w {
             if inmask(&title, x, y) || inmask(&typ, x, y) {
                 let fr = if frames.len() == 2 {
-                    if x < half { &frames[0] } else { &frames[1] }
+                    if x < half {
+                        &frames[0]
+                    } else {
+                        &frames[1]
+                    }
                 } else {
                     &frames[0]
                 };
@@ -3972,8 +4848,11 @@ fn pt_box_8th(c: &Card) -> &'static str {
     match cols.as_slice() {
         [] => "frames8/pt/a.png",
         [one] => match one {
-            'W' => "frames8/pt/w.png", 'U' => "frames8/pt/u.png", 'B' => "frames8/pt/b.png",
-            'R' => "frames8/pt/r.png", _ => "frames8/pt/g.png",
+            'W' => "frames8/pt/w.png",
+            'U' => "frames8/pt/u.png",
+            'B' => "frames8/pt/b.png",
+            'R' => "frames8/pt/r.png",
+            _ => "frames8/pt/g.png",
         },
         _ => "frames8/pt/m.png",
     }
@@ -3994,7 +4873,12 @@ fn info_ink_8th(frame: &str) -> (&'static str, &'static str) {
 /// Build the set-symbol `<svg>` (white keyline + monocolour body + contour inner-border),
 /// right-anchored `right_pct`% in and vertically centred at face-fraction `center_frac`.
 /// Same filter construction as the Seventh frame; empty when no set svg.
-fn set_symbol_svg_html(set_svg: Option<&Path>, rarity: &str, center_frac: f64, right_pct: f64) -> String {
+fn set_symbol_svg_html(
+    set_svg: Option<&Path>,
+    rarity: &str,
+    center_frac: f64,
+    right_pct: f64,
+) -> String {
     set_svg
         .and_then(|p| fs::read(p).ok())
         .and_then(|bytes| set_symbol_ink(&bytes))
@@ -4045,7 +4929,10 @@ fn set_symbol_wfrac(set_svg: Option<&Path>) -> Option<f64> {
             let w_px = if aspect >= 1.45 {
                 let mut w = 250.0_f64;
                 let mut h = w / aspect;
-                if h > 92.0 { h = 92.0; w = h * aspect; }
+                if h > 92.0 {
+                    h = 92.0;
+                    w = h * aspect;
+                }
                 w
             } else {
                 100.0_f64 * aspect
@@ -4060,8 +4947,14 @@ fn set_symbol_wfrac(set_svg: Option<&Path>) -> Option<f64> {
 /// (kind, title, mana, type, rules). `kind` is "adventure" or "prepare" — the two share a
 /// sub-spell layout but sit on OPPOSITE halves: adventures on the LEFT, prepared spells on the
 /// RIGHT (mirroring how the real cards print them).
-fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(String, String, String, String, String)> {
-    let meta = cache_dir.join("art").join(format!("{}__latest.json", sanitize(card_name)));
+fn adventure_face(
+    cache_dir: &Path,
+    card_name: &str,
+    front: &str,
+) -> Option<(String, String, String, String, String)> {
+    let meta = cache_dir
+        .join("art")
+        .join(format!("{}__latest.json", sanitize(card_name)));
     let v: Value = serde_json::from_str(&fs::read_to_string(meta).ok()?).ok()?;
     let card = v["data"].as_array()?.first()?;
     let kind = match card["layout"].as_str().unwrap_or("") {
@@ -4078,7 +4971,10 @@ fn adventure_face(cache_dir: &Path, card_name: &str, front: &str) -> Option<(Str
         other["name"].as_str().unwrap_or_default().to_string(),
         other["mana_cost"].as_str().unwrap_or_default().to_string(),
         other["type_line"].as_str().unwrap_or_default().to_string(),
-        other["oracle_text"].as_str().unwrap_or_default().to_string(),
+        other["oracle_text"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string(),
     ))
 }
 
@@ -4104,7 +5000,11 @@ struct Leveler {
 /// The base P/T is the card's own printed power/toughness.
 fn leveler_parse(c: &Card) -> Option<Leveler> {
     let text = c.oracle_text.replace("\r\n", "\n");
-    let lines: Vec<String> = text.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
+    let lines: Vec<String> = text
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
     if lines.is_empty() || !lines[0].starts_with("Level up") {
         return None;
     }
@@ -4135,7 +5035,11 @@ fn leveler_parse(c: &Card) -> Option<Leveler> {
             abil.push(lines[idx].clone());
             idx += 1;
         }
-        tiers.push(LevelTier { range, pt, abilities: abil.join("\n") });
+        tiers.push(LevelTier {
+            range,
+            pt,
+            abilities: abil.join("\n"),
+        });
     }
     if tiers.is_empty() {
         return None;
@@ -4187,10 +5091,16 @@ fn saga_parse(c: &Card) -> Option<Saga> {
         if let Some(idx) = line.find('—') {
             let lhs = line[..idx].trim();
             let rhs = line[idx + '—'.len_utf8()..].trim();
-            let nums: Vec<String> =
-                lhs.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            let nums: Vec<String> = lhs
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
             if !nums.is_empty() && nums.iter().all(|n| is_roman(n)) {
-                chapters.push(SagaChapter { nums, text: rhs.to_string() });
+                chapters.push(SagaChapter {
+                    nums,
+                    text: rhs.to_string(),
+                });
                 continue;
             }
         }
@@ -4229,7 +5139,9 @@ fn is_loyalty_cost(tok: &str) -> bool {
     let first = ch.next().unwrap();
     let rest: String = ch.collect();
     match first {
-        '+' | '-' | '−' => !rest.is_empty() && (rest == "X" || rest.chars().all(|d| d.is_ascii_digit())),
+        '+' | '-' | '−' => {
+            !rest.is_empty() && (rest == "X" || rest.chars().all(|d| d.is_ascii_digit()))
+        }
         '0'..='9' => tok.chars().all(|d| d.is_ascii_digit()),
         _ => false,
     }
@@ -4251,15 +5163,24 @@ fn planeswalker_parse(c: &Card) -> Option<Planeswalker> {
             let rest = line[line.find(':').unwrap() + 1..].trim().to_string();
             // Print the proper MTG minus glyph for negative costs.
             let cost = head.replace('-', "−");
-            abilities.push(PwAbility { cost: Some(cost), text: rest });
+            abilities.push(PwAbility {
+                cost: Some(cost),
+                text: rest,
+            });
         } else {
-            abilities.push(PwAbility { cost: None, text: line.to_string() });
+            abilities.push(PwAbility {
+                cost: None,
+                text: line.to_string(),
+            });
         }
     }
     if abilities.is_empty() {
         return None;
     }
-    Some(Planeswalker { loyalty: c.loyalty.clone(), abilities })
+    Some(Planeswalker {
+        loyalty: c.loyalty.clone(),
+        abilities,
+    })
 }
 
 const TEMPLATE_8TH_SPLIT: &str = include_str!("card_template_8th_split.html");
@@ -4272,7 +5193,9 @@ const TEMPLATE_8TH_LEVELER_CC: &str = include_str!("card_template_8th_leveler_cc
 /// The two halves of a SPLIT card (e.g. Bind // Liberate), each (name, mana, type, rules),
 /// from the cached card_faces. None for non-split cards.
 fn split_faces(cache_dir: &Path, name: &str) -> Option<[(String, String, String, String); 2]> {
-    let meta = cache_dir.join("art").join(format!("{}__latest.json", sanitize(name)));
+    let meta = cache_dir
+        .join("art")
+        .join(format!("{}__latest.json", sanitize(name)));
     let v: Value = serde_json::from_str(&fs::read_to_string(meta).ok()?).ok()?;
     let card = v["data"].as_array()?.first()?;
     if card["layout"].as_str() != Some("split") {
@@ -4318,9 +5241,11 @@ fn split_window_aspect() -> f64 {
 
 /// Read the durable DB art-override JSON for a card (`{}` if none).
 fn art_override_json(db: &Connection, id: i64) -> Value {
-    db.query_row("SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1", params![id], |r| {
-        r.get::<_, String>(0)
-    })
+    db.query_row(
+        "SELECT COALESCE(art_override,'') FROM cube_cards WHERE id=?1",
+        params![id],
+        |r| r.get::<_, String>(0),
+    )
     .ok()
     .filter(|s| !s.trim().is_empty())
     .and_then(|s| serde_json::from_str(&s).ok())
@@ -4352,7 +5277,13 @@ fn split_boxes(db: &Connection, id: i64, card_dir: &Path) -> ([f64; 4], [f64; 4]
 
 /// The combined split-art source image: the durable override's chosen source if pinned, else
 /// the newest printing's art_crop (the two-half illustration the halves are sliced from).
-fn split_source(db: &Connection, id: i64, name: &str, cache_root: &Path, card_dir: &Path) -> Result<PathBuf> {
+fn split_source(
+    db: &Connection,
+    id: i64,
+    name: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+) -> Result<PathBuf> {
     if let Some(rel) = art_override_json(db, id)["rel"].as_str() {
         if let Ok(p) = resolve_source(name, cache_root, card_dir, rel) {
             if p.exists() {
@@ -4365,7 +5296,13 @@ fn split_source(db: &Connection, id: i64, name: &str, cache_root: &Path, card_di
 
 /// Crop the combined split art into the two half-window images `(left, right)` the rotated
 /// split layout shows — each an EXACT crop of its saved (or default left|right) box.
-fn split_half_arts(db: &Connection, id: i64, name: &str, cache_root: &Path, card_dir: &Path) -> Result<(PathBuf, PathBuf)> {
+fn split_half_arts(
+    db: &Connection,
+    id: i64,
+    name: &str,
+    cache_root: &Path,
+    card_dir: &Path,
+) -> Result<(PathBuf, PathBuf)> {
     fs::create_dir_all(card_dir)?;
     let source = split_source(db, id, name, cache_root, card_dir)?;
     let (b1, b2) = split_boxes(db, id, card_dir);
@@ -4376,28 +5313,52 @@ fn split_half_arts(db: &Connection, id: i64, name: &str, cache_root: &Path, card
     Ok((left, right))
 }
 
-fn build_split_html(halves: &[(String, String, String, String); 2], art1_abs: &Path, art2_abs: &Path, assets_dir: &Path) -> String {
+fn build_split_html(
+    halves: &[(String, String, String, String); 2],
+    art1_abs: &Path,
+    art2_abs: &Path,
+    assets_dir: &Path,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
-    let frame_uri = |cost: &str| format!("file://{}", assets_dir.join(frame_for_cost_8th(cost)).display());
+    let frame_uri = |cost: &str| {
+        format!(
+            "file://{}",
+            assets_dir.join(frame_for_cost_8th(cost)).display()
+        )
+    };
     let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
         ("ART1", format!("file://{}", art1_abs.display())),
         ("ART2", format!("file://{}", art2_abs.display())),
-        ("FRAME1", frame_uri(&halves[0].1)), ("FRAME2", frame_uri(&halves[1].1)),
-        ("N1", esc(&halves[0].0)), ("M1", manaify(&halves[0].1, &mana_base)),
-        ("T1", esc(&halves[0].2)), ("R1", rules_html(&halves[0].3, "", &mana_base)),
-        ("N2", esc(&halves[1].0)), ("M2", manaify(&halves[1].1, &mana_base)),
-        ("T2", esc(&halves[1].2)), ("R2", rules_html(&halves[1].3, "", &mana_base)),
+        ("FRAME1", frame_uri(&halves[0].1)),
+        ("FRAME2", frame_uri(&halves[1].1)),
+        ("N1", esc(&halves[0].0)),
+        ("M1", manaify(&halves[0].1, &mana_base)),
+        ("T1", esc(&halves[0].2)),
+        ("R1", rules_html(&halves[0].3, "", &mana_base)),
+        ("N2", esc(&halves[1].0)),
+        ("M2", manaify(&halves[1].1, &mana_base)),
+        ("T2", esc(&halves[1].2)),
+        ("R2", rules_html(&halves[1].3, "", &mana_base)),
     ];
     let mut html = TEMPLATE_8TH_SPLIT.to_string();
     for (k, v) in &pairs {
@@ -4406,7 +5367,15 @@ fn build_split_html(halves: &[(String, String, String, String); 2], art1_abs: &P
     html
 }
 
-fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: &Path, art2_path: &Path, assets_dir: &Path, out: &Path, chrome: &str, tag: &str) -> Result<()> {
+fn compose_split_8th(
+    halves: &[(String, String, String, String); 2],
+    art1_path: &Path,
+    art2_path: &Path,
+    assets_dir: &Path,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let art1_abs = fs::canonicalize(art1_path)?;
@@ -4416,10 +5385,16 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars", "--no-default-browser-check",
-            "--no-first-run", "--force-device-scale-factor=1",
-            "--run-all-compositor-stages-before-draw", "--virtual-time-budget=15000",
-            &format!("--window-size={W},{H}"), &format!("--screenshot={}", out.display()),
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
+            "--force-device-scale-factor=1",
+            "--run-all-compositor-stages-before-draw",
+            "--virtual-time-budget=15000",
+            &format!("--window-size={W},{H}"),
+            &format!("--screenshot={}", out.display()),
             &format!("file://{}", html_path.display()),
         ])
         .status()
@@ -4431,21 +5406,40 @@ fn compose_split_8th(halves: &[(String, String, String, String); 2], art1_path: 
 }
 
 #[allow(clippy::too_many_arguments)]
-fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, template: &str) -> String {
+fn build_html_8th(
+    c: &Card,
+    frame_abs: &Path,
+    ptbox_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    set_svg: Option<&Path>,
+    template: &str,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
     // Any card with a printed power/toughness gets the P/T box — creatures AND **Vehicles**
     // (which are Artifacts, not creatures, but still have a P/T). Loyalty → planeswalkers.
     let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
-        format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
+        format!(
+            r#"<div class="box pt"><span>{}/{}</span></div>"#,
+            esc(&c.power),
+            esc(&c.toughness)
+        )
     } else if !c.loyalty.is_empty() {
-        format!(r#"<div class="box pt"><span>{}</span></div>"#, esc(&c.loyalty))
+        format!(
+            r#"<div class="box pt"><span>{}</span></div>"#,
+            esc(&c.loyalty)
+        )
     } else {
         String::new()
     };
@@ -4454,15 +5448,29 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
     let ptboxdiv = if pt.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display())
+        format!(
+            r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#,
+            ptbox_abs.display()
+        )
     };
-    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
+    let credit = if c.illustrator.trim().is_empty() {
+        art.artist.trim()
+    } else {
+        c.illustrator.trim()
+    };
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
-    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2003".to_string()
+    } else {
+        art.year.clone()
+    };
     let (info_ink, info_shadow) = info_ink_8th(frame_file_8th(c));
     // ---- colour indicator: coloured artifacts / manual-identity cards show a colour dot
     // to the LEFT of the type line (same logic + filter as the old frame). ----
@@ -4483,7 +5491,11 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         } else if c.ci_manual && !ci.is_empty() {
             // A hand-declared identity the frame can't otherwise convey (e.g. a costless gold
             // card). A mono-colour land already shows it through its tinted land frame.
-            if is_land && ci.len() == 1 { vec![] } else { ci }
+            if is_land && ci.len() == 1 {
+                vec![]
+            } else {
+                ci
+            }
         } else {
             vec![]
         };
@@ -4492,7 +5504,10 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         } else if letters.len() >= 3 {
             vec![assets_dir.join("frames8/m.png")]
         } else {
-            letters.iter().map(|ch| assets_dir.join(color_frame_8th(*ch))).collect()
+            letters
+                .iter()
+                .map(|ch| assets_dir.join(color_frame_8th(*ch)))
+                .collect()
         }
     };
     let ind_refs: Vec<&Path> = ind_frames.iter().map(PathBuf::as_path).collect();
@@ -4531,25 +5546,31 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         None => "78%".to_string(),
     };
     let pairs: Vec<(&str, String)> = vec![
-        ("COLORIND", colorind), ("TYPAD", typad), ("TYW", tyw),
+        ("COLORIND", colorind),
+        ("TYPAD", typad),
+        ("TYW", tyw),
         ("MANA_CSS", f("mana.css")),
         ("MATRIX", f("matrix.ttf")),
         ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()),
-        ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
         // Font sizes as fractions of the FACE height (the Seventh frame's px() approach), so
         // 8ED typography scales with the canvas instead of baking in fixed pixels.
-        ("TSZ", px(120.0 / f64::from(FACE_H))),  // card name (matrix)
-        ("MSZ", px(111.0 / f64::from(FACE_H))),  // mana cost
+        ("TSZ", px(120.0 / f64::from(FACE_H))), // card name (matrix)
+        ("MSZ", px(111.0 / f64::from(FACE_H))), // mana cost
         ("TYSZ", px(100.0 / f64::from(FACE_H))), // type line (matrix)
-        ("RSZ", px(101.0 / f64::from(FACE_H))),  // rules / flavour (mplantin)
-        ("PSZ", px(131.0 / f64::from(FACE_H))),  // power / toughness (matrix)
+        ("RSZ", px(101.0 / f64::from(FACE_H))), // rules / flavour (mplantin)
+        ("PSZ", px(131.0 / f64::from(FACE_H))), // power / toughness (matrix)
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("PTBOXDIV", ptboxdiv),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
+        ("INFOINK", info_ink.to_string()),
+        ("INFOSHADOW", info_shadow.to_string()),
         ("NAME", esc(&c.name)),
         ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
@@ -4558,7 +5579,11 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
         // set symbol on the type bar. The M15 devoid frame seats it harder against the right
         // edge (right:2.5%) than the 8th frame (right:10%); its type bar sits a hair lower.
         ("SETSYM", {
-            let (center, right) = if is_devoid_8th(c) { (0.591, 7.0) } else { (0.589, 10.0) };
+            let (center, right) = if is_devoid_8th(c) {
+                (0.591, 7.0)
+            } else {
+                (0.589, 10.0)
+            };
             set_symbol_svg_html(set_svg, &c.rarity, center, right)
         }),
         ("ILLUS", illus),
@@ -4572,22 +5597,51 @@ fn build_html_8th(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, 
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>, template: &str) -> Result<()> {
+fn compose_8th(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    frame_rel: &Path,
+    ptbox_rel: &Path,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+    template: &str,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let ptbox_abs = fs::canonicalize(ptbox_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), template);
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html_8th(
+        card,
+        &frame_abs,
+        &ptbox_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        set_abs.as_deref(),
+        template,
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-render8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -4606,10 +5660,20 @@ fn compose_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_di
 /// The cardconjurer levelers/regular frame PNG for the card's colour (white Hedron-Field
 /// Purists → leveler/w.png). Same colour mapping as frame_file_8th's non-land cases.
 fn leveler_frame_8th(c: &Card) -> String {
-    let cols = if c.ci_manual { ci_letters(&c.color_identity) } else { card_colors(c) };
+    let cols = if c.ci_manual {
+        ci_letters(&c.color_identity)
+    } else {
+        card_colors(c)
+    };
     let key = match cols.as_slice() {
         [] => "a",
-        [one] => match one { 'W' => "w", 'U' => "u", 'B' => "b", 'R' => "r", _ => "g" },
+        [one] => match one {
+            'W' => "w",
+            'U' => "u",
+            'B' => "b",
+            'R' => "r",
+            _ => "g",
+        },
         _ => "m",
     };
     format!("frames8/leveler/{key}.png")
@@ -4618,22 +5682,44 @@ fn leveler_frame_8th(c: &Card) -> String {
 /// Build the LEVELER HTML on the real cardconjurer levelers frame: title/art/type/set-symbol,
 /// then the level-up cost band + two tier bands whose abilities + P/T text land on the frame's
 /// baked pill banners. The base P/T sits small at the right of the level-up band.
-fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, lvl: &Leveler) -> String {
+fn build_html_8th_leveler_cc(
+    c: &Card,
+    frame_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    set_svg: Option<&Path>,
+    lvl: &Leveler,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
-    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
+    let credit = if c.illustrator.trim().is_empty() {
+        art.artist.trim()
+    } else {
+        c.illustrator.trim()
+    };
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
-    let year = if art.year.is_empty() { "2003".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2003".to_string()
+    } else {
+        art.year.clone()
+    };
     // The leveler frame's credit sits in the bottom BLACK margin (the frame ends above it),
     // so always use light, shadowed ink — never the dark ink a light frame would otherwise pick.
     let (info_ink, info_shadow) = ("#f4f1e8", "1px 1px 0 rgba(0,0,0,0.85)");
@@ -4642,53 +5728,92 @@ fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_
         None => "78%".to_string(),
     };
     // Level-up cost band: "Level up {cost} (reminder)" + any base abilities.
-    let mut lvlup = format!(r#"<div class="lu"><b>Level up</b> {}"#, manaify(&lvl.cost, &mana_base));
+    let mut lvlup = format!(
+        r#"<div class="lu"><b>Level up</b> {}"#,
+        manaify(&lvl.cost, &mana_base)
+    );
     if !lvl.reminder.is_empty() {
-        lvlup.push_str(&format!(r#" <span class="lu-rem">{}</span>"#, manaify(&lvl.reminder, &mana_base)));
+        lvlup.push_str(&format!(
+            r#" <span class="lu-rem">{}</span>"#,
+            manaify(&lvl.reminder, &mana_base)
+        ));
     }
     lvlup.push_str("</div>");
     if !lvl.base_abilities.trim().is_empty() {
-        lvlup.push_str(&format!(r#"<div class="lu-base">{}</div>"#, rules_html(&lvl.base_abilities, "", &mana_base)));
+        lvlup.push_str(&format!(
+            r#"<div class="lu-base">{}</div>"#,
+            rules_html(&lvl.base_abilities, "", &mana_base)
+        ));
     }
     // Right-column P/T box PNG (the 8th P/T set, tinted to the card's colour).
     let ptbox_url = format!("file://{}", assets_dir.join(pt_box_8th(c)).display());
     let tier = |i: usize| lvl.tiers.get(i);
     // Left banner shows a small "LEVEL" label over the range number (e.g. "1-4"/"5+").
-    let range = |i: usize| tier(i).map_or(String::new(), |t| {
-        format!(r#"<span class="lr-lab">LEVEL</span><span class="lr-num">{}</span>"#, esc(&t.range))
-    });
-    let abil = |i: usize| tier(i).map_or(String::new(), |t| rules_html(&t.abilities, "", &mana_base));
+    let range = |i: usize| {
+        tier(i).map_or(String::new(), |t| {
+            format!(
+                r#"<span class="lr-lab">LEVEL</span><span class="lr-num">{}</span>"#,
+                esc(&t.range)
+            )
+        })
+    };
+    let abil =
+        |i: usize| tier(i).map_or(String::new(), |t| rules_html(&t.abilities, "", &mana_base));
     let tpt = |i: usize| tier(i).map_or(String::new(), |t| esc(&t.pt));
     // Each tier's right-hand P/T box only appears when that tier exists.
     let ptbox_div = |i: usize, cls: &str| {
         if tier(i).is_some() {
-            format!(r#"<div class="ptbox {cls}" style="background-image:url('{ptbox_url}')"></div>"#)
+            format!(
+                r#"<div class="ptbox {cls}" style="background-image:url('{ptbox_url}')"></div>"#
+            )
         } else {
             String::new()
         }
     };
     let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
-        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("RSZ", px(101.0 / f64::from(FACE_H))),
-        ("LBSZ", px(64.0 / f64::from(FACE_H))), ("LLSZ", px(42.0 / f64::from(FACE_H))),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))),
+        ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))),
+        ("RSZ", px(101.0 / f64::from(FACE_H))),
+        ("LBSZ", px(64.0 / f64::from(FACE_H))),
+        ("LLSZ", px(42.0 / f64::from(FACE_H))),
         ("PSZ", px(116.0 / f64::from(FACE_H))),
-        ("TYW", tyw), ("TYPAD", "0".to_string()),
+        ("TYW", tyw),
+        ("TYPAD", "0".to_string()),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
         ("PTBOX", ptbox_url.clone()),
-        ("PTBOX1DIV", ptbox_div(0, "pt1box")), ("PTBOX2DIV", ptbox_div(1, "pt2box")),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
-        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("PTBOX1DIV", ptbox_div(0, "pt1box")),
+        ("PTBOX2DIV", ptbox_div(1, "pt2box")),
+        ("INFOINK", info_ink.to_string()),
+        ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.587, 8.0)),
-        ("LVLUP", lvlup), ("BASEPT", esc(&lvl.base_pt)),
-        ("LVL1RANGE", range(0)), ("LVL1ABIL", abil(0)), ("LVL1PT", tpt(0)),
-        ("LVL2RANGE", range(1)), ("LVL2ABIL", abil(1)), ("LVL2PT", tpt(1)),
-        ("ILLUS", illus), ("YEAR", year),
+        (
+            "SETSYM",
+            set_symbol_svg_html(set_svg, &c.rarity, 0.587, 8.0),
+        ),
+        ("LVLUP", lvlup),
+        ("BASEPT", esc(&lvl.base_pt)),
+        ("LVL1RANGE", range(0)),
+        ("LVL1ABIL", abil(0)),
+        ("LVL1PT", tpt(0)),
+        ("LVL2RANGE", range(1)),
+        ("LVL2ABIL", abil(1)),
+        ("LVL2PT", tpt(1)),
+        ("ILLUS", illus),
+        ("YEAR", year),
     ];
     let mut html = TEMPLATE_8TH_LEVELER_CC.to_string();
     for (k, v) in &pairs {
@@ -4698,21 +5823,49 @@ fn build_html_8th_leveler_cc(c: &Card, frame_abs: &Path, art_abs: &Path, assets_
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    _frame_rel: &Path, _ptbox_rel: &Path, lvl: &Leveler, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+fn compose_level_8th(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    _frame_rel: &Path,
+    _ptbox_rel: &Path,
+    lvl: &Leveler,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(assets_dir.join(leveler_frame_8th(card)))?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_leveler_cc(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), lvl);
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html_8th_leveler_cc(
+        card,
+        &frame_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        set_abs.as_deref(),
+        lvl,
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-level8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -4728,22 +5881,44 @@ fn compose_level_8th(card: &Card, art_path: &Path, artist: &str, year: &str, ass
     Ok(())
 }
 
-fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, saga: &Saga) -> String {
+fn build_html_8th_saga(
+    c: &Card,
+    frame_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    set_svg: Option<&Path>,
+    saga: &Saga,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
-    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
+    let credit = if c.illustrator.trim().is_empty() {
+        art.artist.trim()
+    } else {
+        c.illustrator.trim()
+    };
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
-    let year = if art.year.is_empty() { "2018".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2018".to_string()
+    } else {
+        art.year.clone()
+    };
     // Credit line sits on the card's bottom marble border (below the type pill). The cardconjurer
     // Saga borders are more saturated than the m15 set, so a flat ink would vanish on the darker
     // colours. Dark ink + a cream halo stays legible on EVERY border (light cream → dark colour).
@@ -4765,7 +5940,10 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
     // fires on several chapters. Dividers separate the bands.
     let mut rows = String::new();
     if !saga.reminder.is_empty() {
-        rows.push_str(&format!(r#"<div class="saga-reminder">{}</div>"#, manaify(&saga.reminder, &mana_base)));
+        rows.push_str(&format!(
+            r#"<div class="saga-reminder">{}</div>"#,
+            manaify(&saga.reminder, &mana_base)
+        ));
     }
     let n = saga.chapters.len().max(1) as f64;
     let region_top = 0.2896_f64;
@@ -4777,13 +5955,18 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
         let top = region_top + band_h * i as f64;
         let cy = top + band_h / 2.0;
         if i > 0 {
-            rows.push_str(&format!(r#"<div class="saga-div" style="top:{:.3}%"></div>"#, top * 100.0));
+            rows.push_str(&format!(
+                r#"<div class="saga-div" style="top:{:.3}%"></div>"#,
+                top * 100.0
+            ));
         }
         let body_top = top + 0.008;
         let body_h = (band_h - 0.016).max(0.02);
         rows.push_str(&format!(
             r#"<div class="saga-body" style="top:{:.3}%;height:{:.3}%">{}</div>"#,
-            body_top * 100.0, body_h * 100.0, rules_html(&ch.text, "", &mana_base),
+            body_top * 100.0,
+            body_h * 100.0,
+            rules_html(&ch.text, "", &mana_base),
         ));
         // stone(s): one per lore-counter in this group, vertically spread around the band centre.
         let offsets: Vec<f64> = match ch.nums.len() {
@@ -4796,31 +5979,47 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
             let chip_top = cy + off - chip_h / 2.0;
             rows.push_str(&format!(
                 r#"<div class="saga-chip" style="top:{:.3}%">{}</div>"#,
-                chip_top * 100.0, esc(num),
+                chip_top * 100.0,
+                esc(num),
             ));
         }
     }
     let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))),
+        ("MSZ", px(111.0 / f64::from(FACE_H))),
         ("TYSZ", px(100.0 / f64::from(FACE_H))),
-        ("SBSZ", px(84.0 / f64::from(FACE_H))), ("SRSZ", px(56.0 / f64::from(FACE_H))),
+        ("SBSZ", px(84.0 / f64::from(FACE_H))),
+        ("SRSZ", px(56.0 / f64::from(FACE_H))),
         ("CHSZ", px(62.0 / f64::from(FACE_H))),
         ("TYW", tyw),
-        ("DIVIMG", div_img), ("CHIPIMG", chip_img),
+        ("DIVIMG", div_img),
+        ("CHIPIMG", chip_img),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
-        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("INFOINK", info_ink.to_string()),
+        ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
         // Set symbol rides the BOTTOM type bar (cardconjurer setSymbol y:0.8739), right-aligned —
         // same level as a normal card's type-line mark, NOT floating in the middle of the art.
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.874, 6.5)),
+        (
+            "SETSYM",
+            set_symbol_svg_html(set_svg, &c.rarity, 0.874, 6.5),
+        ),
         ("SAGAROWS", rows),
-        ("ILLUS", illus), ("YEAR", year),
+        ("ILLUS", illus),
+        ("YEAR", year),
     ];
     let mut html = TEMPLATE_8TH_SAGA.to_string();
     for (k, v) in &pairs {
@@ -4830,21 +6029,48 @@ fn build_html_8th_saga(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compose_saga_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, saga: &Saga, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+fn compose_saga_8th(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    frame_rel: &Path,
+    saga: &Saga,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_saga(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), saga);
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html_8th_saga(
+        card,
+        &frame_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        set_abs.as_deref(),
+        saga,
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-saga8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -4860,22 +6086,44 @@ fn compose_saga_8th(card: &Card, art_path: &Path, artist: &str, year: &str, asse
     Ok(())
 }
 
-fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, pw: &Planeswalker) -> String {
+fn build_html_8th_pw(
+    c: &Card,
+    frame_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    set_svg: Option<&Path>,
+    pw: &Planeswalker,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
-    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
+    let credit = if c.illustrator.trim().is_empty() {
+        art.artist.trim()
+    } else {
+        c.illustrator.trim()
+    };
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
-    let year = if art.year.is_empty() { "2015".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2015".to_string()
+    } else {
+        art.year.clone()
+    };
     // Credit line sits on the card's coloured bottom marble border. The PW borders are saturated
     // colour, so (as for Sagas) dark ink + a cream halo stays legible on EVERY colour.
     let (info_ink, info_shadow) = (
@@ -4900,8 +6148,8 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
     const PANEL_X: f64 = 0.1167;
     const PANEL_W: f64 = 0.8094;
     const TEXT_RIGHT: f64 = PANEL_X + PANEL_W; // 0.9261 — abilities run to the panel's right edge
-    // Panels extend past the visible region (up under the type pill, down under the bottom border);
-    // the opaque frame caps the excess, guaranteeing no art shows between a panel and a border.
+                                               // Panels extend past the visible region (up under the type pill, down under the bottom border);
+                                               // the opaque frame caps the excess, guaranteeing no art shows between a panel and a border.
     const PANEL_TOP_EXT: f64 = 0.5950;
     const PANEL_BOT_EXT: f64 = 0.9550;
 
@@ -4921,7 +6169,10 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
     let band_h: Vec<f64> = if extra <= 0.0 {
         vec![region_h / n as f64; n]
     } else {
-        weights.iter().map(|w| MIN_BAND + extra * w / total_w).collect()
+        weights
+            .iter()
+            .map(|w| MIN_BAND + extra * w / total_w)
+            .collect()
     };
     // Band boundaries: bounds[0]=REGION_TOP, …, bounds[n]=REGION_BOT.
     let mut bounds: Vec<f64> = vec![REGION_TOP];
@@ -4944,10 +6195,17 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
         let p_bot = if i == n - 1 { PANEL_BOT_EXT } else { band_bot };
         let bg = if i % 2 == 0 { light } else { dark };
         // A thin dark keyline separates panels (the torn edge of a printed walker, in the 8ED idiom).
-        let border = if i > 0 { "border-top:3px solid rgba(8,8,8,0.34);" } else { "" };
+        let border = if i > 0 {
+            "border-top:3px solid rgba(8,8,8,0.34);"
+        } else {
+            ""
+        };
         panels.push_str(&format!(
             r#"<div class="pw-panel" style="top:{:.3}%;height:{:.3}%;background:{};{}"></div>"#,
-            p_top * 100.0, (p_bot - p_top) * 100.0, bg, border,
+            p_top * 100.0,
+            (p_bot - p_top) * 100.0,
+            bg,
+            border,
         ));
         let has_cost = ab.cost.is_some();
         let text_left = if has_cost { 0.18 } else { 0.136 };
@@ -4977,23 +6235,40 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
     }
 
     let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
-        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("ABSZ", px(90.0 / f64::from(FACE_H))),
-        ("BADGESZ", px(80.0 / f64::from(FACE_H))), ("LOYSZ", px(104.0 / f64::from(FACE_H))),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))),
+        ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))),
+        ("ABSZ", px(90.0 / f64::from(FACE_H))),
+        ("BADGESZ", px(80.0 / f64::from(FACE_H))),
+        ("LOYSZ", px(104.0 / f64::from(FACE_H))),
         ("TYW", tyw),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
-        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("INFOINK", info_ink.to_string()),
+        ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.600, 6.5)),
-        ("PWPANELS", panels), ("PWABILITIES", abilities), ("PWBADGES", badges),
+        (
+            "SETSYM",
+            set_symbol_svg_html(set_svg, &c.rarity, 0.600, 6.5),
+        ),
+        ("PWPANELS", panels),
+        ("PWABILITIES", abilities),
+        ("PWBADGES", badges),
         ("LOYALTY", esc(&pw.loyalty)),
-        ("ILLUS", illus), ("YEAR", year),
+        ("ILLUS", illus),
+        ("YEAR", year),
     ];
     let mut html = TEMPLATE_8TH_PW.to_string();
     for (k, v) in &pairs {
@@ -5003,21 +6278,48 @@ fn build_html_8th_pw(c: &Card, frame_abs: &Path, art_abs: &Path, assets_dir: &Pa
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compose_pw_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, pw: &Planeswalker, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+fn compose_pw_8th(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    frame_rel: &Path,
+    pw: &Planeswalker,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_pw(card, &frame_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), pw);
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html_8th_pw(
+        card,
+        &frame_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        set_abs.as_deref(),
+        pw,
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-pw8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -5038,22 +6340,45 @@ fn compose_pw_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets
 /// the creature's own rules on the other. An adventure puts the sub-spell on the LEFT page; a
 /// prepared spell on the RIGHT (the frame is flipped for it, so the columns swap to match).
 #[allow(clippy::too_many_arguments)]
-fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Path, assets_dir: &Path, art: &Art, set_svg: Option<&Path>, adv: &Adventure) -> String {
+fn build_html_8th_adv(
+    c: &Card,
+    frame_abs: &Path,
+    ptbox_abs: &Path,
+    art_abs: &Path,
+    assets_dir: &Path,
+    art: &Art,
+    set_svg: Option<&Path>,
+    adv: &Adventure,
+) -> String {
     let fonts = assets_dir.join("fonts");
     let f = |p: &str| format!("file://{}", fonts.join(p).display());
     let mana_base = format!("file://{}", assets_dir.join("mana").display());
     let italic_face = if fonts.join("mplantin-italic.ttf").exists() {
-        format!("@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}", f("mplantin-italic.ttf"))
+        format!(
+            "@font-face {{ font-family:'mplantin'; font-style:italic; src:url('{}'); }}",
+            f("mplantin-italic.ttf")
+        )
     } else {
         String::new()
     };
-    let credit = if c.illustrator.trim().is_empty() { art.artist.trim() } else { c.illustrator.trim() };
+    let credit = if c.illustrator.trim().is_empty() {
+        art.artist.trim()
+    } else {
+        c.illustrator.trim()
+    };
     let illus = if credit.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="info illus"><span>Illus. {}</span></div>"#, esc(credit))
+        format!(
+            r#"<div class="info illus"><span>Illus. {}</span></div>"#,
+            esc(credit)
+        )
     };
-    let year = if art.year.is_empty() { "2019".to_string() } else { art.year.clone() };
+    let year = if art.year.is_empty() {
+        "2019".to_string()
+    } else {
+        art.year.clone()
+    };
     // Credit rides the cardconjurer adventure border (more saturated than 8ED) — dark ink + a cream
     // halo stays legible on every colour, exactly as on the Sagas.
     let (info_ink, info_shadow) = (
@@ -5065,14 +6390,21 @@ fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Pa
         None => "82%".to_string(),
     };
     let pt = if !c.power.is_empty() || !c.toughness.is_empty() {
-        format!(r#"<div class="box pt"><span>{}/{}</span></div>"#, esc(&c.power), esc(&c.toughness))
+        format!(
+            r#"<div class="box pt"><span>{}/{}</span></div>"#,
+            esc(&c.power),
+            esc(&c.toughness)
+        )
     } else {
         String::new()
     };
     let ptboxdiv = if pt.is_empty() {
         String::new()
     } else {
-        format!(r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#, ptbox_abs.display())
+        format!(
+            r#"<div class="ptbox" style="background-image:url('file://{}')"></div>"#,
+            ptbox_abs.display()
+        )
     };
     // Page geometry. ADVENTURE: sub-spell on the LEFT, creature rules on the RIGHT. PREPARE: the
     // frame is flipped, so mirror every column (x' = 100 - x - width) — the colour page is now right.
@@ -5082,31 +6414,55 @@ fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Pa
         ("8.14%", "8.54%", "52.67%")
     };
     let pairs: Vec<(&str, String)> = vec![
-        ("MANA_CSS", f("mana.css")), ("MATRIX", f("matrix.ttf")), ("MPLANTIN", f("mplantin.ttf")),
+        ("MANA_CSS", f("mana.css")),
+        ("MATRIX", f("matrix.ttf")),
+        ("MPLANTIN", f("mplantin.ttf")),
         ("ITALIC_FACE", italic_face),
-        ("W", W.to_string()), ("H", H.to_string()), ("FW", FACE_W.to_string()), ("FH", FACE_H.to_string()),
-        ("BX", ((W - FACE_W) / 2).to_string()), ("BY", ((H - FACE_H) / 2).to_string()),
-        ("TSZ", px(120.0 / f64::from(FACE_H))), ("MSZ", px(111.0 / f64::from(FACE_H))),
-        ("TYSZ", px(100.0 / f64::from(FACE_H))), ("PSZ", px(131.0 / f64::from(FACE_H))),
-        ("SUBTSZ", px(82.0 / f64::from(FACE_H))), ("SUBMSZ", px(78.0 / f64::from(FACE_H))),
+        ("W", W.to_string()),
+        ("H", H.to_string()),
+        ("FW", FACE_W.to_string()),
+        ("FH", FACE_H.to_string()),
+        ("BX", ((W - FACE_W) / 2).to_string()),
+        ("BY", ((H - FACE_H) / 2).to_string()),
+        ("TSZ", px(120.0 / f64::from(FACE_H))),
+        ("MSZ", px(111.0 / f64::from(FACE_H))),
+        ("TYSZ", px(100.0 / f64::from(FACE_H))),
+        ("PSZ", px(131.0 / f64::from(FACE_H))),
+        ("SUBTSZ", px(82.0 / f64::from(FACE_H))),
+        ("SUBMSZ", px(78.0 / f64::from(FACE_H))),
         ("SUBTYSZ", px(80.0 / f64::from(FACE_H))),
-        ("SBSZ", px(72.0 / f64::from(FACE_H))), ("CRSZ", px(78.0 / f64::from(FACE_H))),
+        ("SBSZ", px(72.0 / f64::from(FACE_H))),
+        ("CRSZ", px(78.0 / f64::from(FACE_H))),
         ("TYW", tyw),
-        ("SUBHX", subhx.to_string()), ("SUBHW", "40%".to_string()),
-        ("SUBRX", subrx.to_string()), ("SUBRW", "39.47%".to_string()),
-        ("CRX", crx.to_string()), ("CRW", "38.67%".to_string()),
+        ("SUBHX", subhx.to_string()),
+        ("SUBHW", "40%".to_string()),
+        ("SUBRX", subrx.to_string()),
+        ("SUBRW", "39.47%".to_string()),
+        ("CRX", crx.to_string()),
+        ("CRW", "38.67%".to_string()),
         ("ART", format!("file://{}", art_abs.display())),
         ("FRAME", format!("file://{}", frame_abs.display())),
-        ("PTBOXDIV", ptboxdiv), ("PT", pt),
-        ("INFOINK", info_ink.to_string()), ("INFOSHADOW", info_shadow.to_string()),
-        ("NAME", esc(&c.name)), ("MANA", manaify(&c.mana_cost, &mana_base)),
+        ("PTBOXDIV", ptboxdiv),
+        ("PT", pt),
+        ("INFOINK", info_ink.to_string()),
+        ("INFOSHADOW", info_shadow.to_string()),
+        ("NAME", esc(&c.name)),
+        ("MANA", manaify(&c.mana_cost, &mana_base)),
         ("TYPE", esc(&c.type_line)),
-        ("SETSYM", set_symbol_svg_html(set_svg, &c.rarity, 0.591, 7.5)),
-        ("SUBTITLE", esc(&adv.title)), ("SUBMANA", manaify(&adv.mana, &mana_base)),
+        (
+            "SETSYM",
+            set_symbol_svg_html(set_svg, &c.rarity, 0.591, 7.5),
+        ),
+        ("SUBTITLE", esc(&adv.title)),
+        ("SUBMANA", manaify(&adv.mana, &mana_base)),
         ("SUBTYPE", esc(&adv.type_line)),
         ("SUBRULES", rules_html(&adv.rules, "", &mana_base)),
-        ("CRERULES", rules_html(&c.oracle_text, &c.flavor, &mana_base)),
-        ("ILLUS", illus), ("YEAR", year),
+        (
+            "CRERULES",
+            rules_html(&c.oracle_text, &c.flavor, &mana_base),
+        ),
+        ("ILLUS", illus),
+        ("YEAR", year),
     ];
     let mut html = TEMPLATE_8TH_ADV.to_string();
     for (k, v) in &pairs {
@@ -5116,22 +6472,51 @@ fn build_html_8th_adv(c: &Card, frame_abs: &Path, ptbox_abs: &Path, art_abs: &Pa
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compose_adv_8th(card: &Card, art_path: &Path, artist: &str, year: &str, assets_dir: &Path,
-    frame_rel: &Path, ptbox_rel: &Path, adv: &Adventure, out: &Path, chrome: &str, tag: &str, set_svg: Option<&Path>) -> Result<()> {
+fn compose_adv_8th(
+    card: &Card,
+    art_path: &Path,
+    artist: &str,
+    year: &str,
+    assets_dir: &Path,
+    frame_rel: &Path,
+    ptbox_rel: &Path,
+    adv: &Adventure,
+    out: &Path,
+    chrome: &str,
+    tag: &str,
+    set_svg: Option<&Path>,
+) -> Result<()> {
     fs::create_dir_all(out.parent().unwrap())?;
     let assets_abs = fs::canonicalize(assets_dir)?;
     let frame_abs = fs::canonicalize(frame_rel)?;
     let ptbox_abs = fs::canonicalize(ptbox_rel)?;
     let art_abs = fs::canonicalize(art_path)?;
     let set_abs = set_svg.and_then(|p| fs::canonicalize(p).ok());
-    let art = Art { path: art_abs.clone(), art_ref: String::new(), artist: artist.to_string(), year: year.to_string() };
-    let html = build_html_8th_adv(card, &frame_abs, &ptbox_abs, &art_abs, &assets_abs, &art, set_abs.as_deref(), adv);
+    let art = Art {
+        path: art_abs.clone(),
+        art_ref: String::new(),
+        artist: artist.to_string(),
+        year: year.to_string(),
+    };
+    let html = build_html_8th_adv(
+        card,
+        &frame_abs,
+        &ptbox_abs,
+        &art_abs,
+        &assets_abs,
+        &art,
+        set_abs.as_deref(),
+        adv,
+    );
     let html_path = std::env::temp_dir().join(format!("mtgbrain-adv8-{tag}.html"));
     fs::write(&html_path, html)?;
     let status = Command::new(chrome)
         .args([
-            "--headless", "--disable-gpu", "--hide-scrollbars",
-            "--no-default-browser-check", "--no-first-run",
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--no-default-browser-check",
+            "--no-first-run",
             "--force-device-scale-factor=1",
             "--run-all-compositor-stages-before-draw",
             "--virtual-time-budget=15000",
@@ -5163,7 +6548,10 @@ fn compose_adv_8th(card: &Card, art_path: &Path, artist: &str, year: &str, asset
 /// different, unlike `cube_cards.updated_at` (which only moves on an explicit field/art edit
 /// and misses template/asset/code-level rendering changes).
 fn eighth_cache_key(
-    db: &Connection, assets_dir: &Path, cache_dir: &Path, id: i64,
+    db: &Connection,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    id: i64,
 ) -> Result<(Card, PathBuf, PathBuf, String)> {
     let card = load_card(db, id)?;
     // Colour-bearing artifacts get a composited TWIN frame (artifact metal + the card's
@@ -5190,7 +6578,10 @@ fn eighth_cache_key(
         assets_dir.join(pt_box_8th(&card))
     };
     if !frame_rel.exists() {
-        bail!("missing 8th frame asset {} — run `mtgbrain render assets`", frame_rel.display());
+        bail!(
+            "missing 8th frame asset {} — run `mtgbrain render assets`",
+            frame_rel.display()
+        );
     }
     let hash = {
         let canon = json!({
@@ -5214,7 +6605,12 @@ fn eighth_cache_key(
 /// The cache-busting token for the editor UI: an `/api/render/{id}` URL that embeds this
 /// value is guaranteed to always mean the same bytes (see [`eighth_cache_key`]), so the
 /// browser can safely cache the response forever instead of re-validating on every view.
-pub fn render_cache_key_8th(editor_db: &Path, assets_dir: &Path, cache_dir: &Path, id: i64) -> Result<String> {
+pub fn render_cache_key_8th(
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    id: i64,
+) -> Result<String> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
     Ok(eighth_cache_key(&db, assets_dir, cache_dir, id)?.3)
@@ -5222,7 +6618,13 @@ pub fn render_cache_key_8th(editor_db: &Path, assets_dir: &Path, cache_dir: &Pat
 
 /// Render one card from `editor_db` in the EIGHTH-EDITION (modern) frame.
 pub fn render_card_8th(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str, id: i64, force: bool, backend: Option<&str>,
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    id: i64,
+    force: bool,
+    backend: Option<&str>,
 ) -> Result<PathBuf> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening editor DB {} (read-only)", editor_db.display()))?;
@@ -5230,7 +6632,10 @@ pub fn render_card_8th(
     let dir = cache_dir.join("cards8").join(sanitize(&card.name));
     let out = dir.join("card8.png");
     let hash_file = dir.join("card8.hash");
-    if !force && out.exists() && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str()) {
+    if !force
+        && out.exists()
+        && fs::read_to_string(&hash_file).ok().as_deref() == Some(hash.as_str())
+    {
         return Ok(out);
     }
 
@@ -5254,34 +6659,133 @@ pub fn render_card_8th(
             card.rarity = rarity;
         }
     }
-    let credit = if card.illustrator.is_empty() { art.artist.clone() } else { card.illustrator.clone() };
+    let credit = if card.illustrator.is_empty() {
+        art.artist.clone()
+    } else {
+        card.illustrator.clone()
+    };
     // Three special single-face layouts, mutually exclusive: SPLIT (rotated two halves, each its
     // own crop), LEVELER (Level-up creature → tiered level bands), and ADVENTURE/PREPARE (spell
     // sub-frame). Everything else is the ordinary 8ED layout. Set-symbol/adventure only single-face.
     let split = split_faces(cache_dir, &card.name);
-    let leveler = if split.is_some() { None } else { leveler_parse(&card) };
-    let saga = if split.is_some() || leveler.is_some() { None } else { saga_parse(&card) };
-    let pw = if split.is_some() || leveler.is_some() || saga.is_some() { None } else { planeswalker_parse(&card) };
-    let set_svg = if split.is_some() { None } else { set_symbol_svg(&card.set, cache_dir) };
-    let adv = if split.is_some() || leveler.is_some() || saga.is_some() || pw.is_some() { None } else { adventure_parse(cache_dir, &card.name) };
+    let leveler = if split.is_some() {
+        None
+    } else {
+        leveler_parse(&card)
+    };
+    let saga = if split.is_some() || leveler.is_some() {
+        None
+    } else {
+        saga_parse(&card)
+    };
+    let pw = if split.is_some() || leveler.is_some() || saga.is_some() {
+        None
+    } else {
+        planeswalker_parse(&card)
+    };
+    let set_svg = if split.is_some() {
+        None
+    } else {
+        set_symbol_svg(&card.set, cache_dir)
+    };
+    let adv = if split.is_some() || leveler.is_some() || saga.is_some() || pw.is_some() {
+        None
+    } else {
+        adventure_parse(cache_dir, &card.name)
+    };
     if let Some(halves) = split {
         let (left, right) = split_half_arts(&db, id, &card.name, cache_dir, &dir)?;
-        compose_split_8th(&halves, &left, &right, assets_dir, &out, chrome, &format!("8-{id}"))?;
+        compose_split_8th(
+            &halves,
+            &left,
+            &right,
+            assets_dir,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+        )?;
     } else if let Some(lvl) = leveler {
-        compose_level_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &lvl, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        compose_level_8th(
+            &card,
+            &art.path,
+            &credit,
+            &art.year,
+            assets_dir,
+            &frame_rel,
+            &ptbox_rel,
+            &lvl,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+            set_svg.as_deref(),
+        )?;
     } else if let Some(sg) = saga {
         let saga_frame = assets_dir.join(saga_frame_8th(&card));
-        compose_saga_8th(&card, &art.path, &credit, &art.year, assets_dir, &saga_frame, &sg, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        compose_saga_8th(
+            &card,
+            &art.path,
+            &credit,
+            &art.year,
+            assets_dir,
+            &saga_frame,
+            &sg,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+            set_svg.as_deref(),
+        )?;
     } else if let Some(walker) = pw {
         // frame_rel is already the PW frame (set above); compose the loyalty layout over it.
-        compose_pw_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &walker, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        compose_pw_8th(
+            &card,
+            &art.path,
+            &credit,
+            &art.year,
+            assets_dir,
+            &frame_rel,
+            &walker,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+            set_svg.as_deref(),
+        )?;
     } else if let Some(adventure) = &adv {
         // cardconjurer's open-book frame (flipped for a PREPARED spell so the colour page is right).
         let adv_frame = adv_frame_resolved(assets_dir, cache_dir, &card, adventure.prepare);
-        compose_adv_8th(&card, &art.path, &credit, &art.year, assets_dir, &adv_frame, &ptbox_rel, adventure, &out, chrome, &format!("8-{id}"), set_svg.as_deref())?;
+        compose_adv_8th(
+            &card,
+            &art.path,
+            &credit,
+            &art.year,
+            assets_dir,
+            &adv_frame,
+            &ptbox_rel,
+            adventure,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+            set_svg.as_deref(),
+        )?;
     } else {
-        let tmpl = if is_devoid_8th(&card) { TEMPLATE_8TH_DEVOID } else { TEMPLATE_8TH };
-        compose_8th(&card, &art.path, &credit, &art.year, assets_dir, &frame_rel, &ptbox_rel, &out, chrome, &format!("8-{id}"), set_svg.as_deref(), tmpl)?;
+        let tmpl = if is_devoid_8th(&card) {
+            TEMPLATE_8TH_DEVOID
+        } else {
+            TEMPLATE_8TH
+        };
+        compose_8th(
+            &card,
+            &art.path,
+            &credit,
+            &art.year,
+            assets_dir,
+            &frame_rel,
+            &ptbox_rel,
+            &out,
+            chrome,
+            &format!("8-{id}"),
+            set_svg.as_deref(),
+            tmpl,
+        )?;
     }
     let _ = fs::write(&hash_file, &hash);
     let _ = card_preview(&out, 760); // pre-warm the editor's nav-size preview
@@ -5290,14 +6794,21 @@ pub fn render_card_8th(
 
 #[allow(clippy::too_many_arguments)]
 pub fn render_all(
-    editor_db: &Path, assets_dir: &Path, cache_dir: &Path, chrome: &str,
-    frame: &str, foil: bool, force: bool, backend: Option<&str>,
+    editor_db: &Path,
+    assets_dir: &Path,
+    cache_dir: &Path,
+    chrome: &str,
+    frame: &str,
+    foil: bool,
+    force: bool,
+    backend: Option<&str>,
 ) -> Result<()> {
     let eighth = matches!(frame, "8th" | "8ed" | "8ED" | "eighth");
     let ducks = matches!(frame, "ducks" | "ducktales");
     let ids: Vec<i64> = {
         let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-        let mut stmt = db.prepare("SELECT id FROM cube_cards WHERE in_db_found=1 AND removed=0 ORDER BY id")?;
+        let mut stmt =
+            db.prepare("SELECT id FROM cube_cards WHERE in_db_found=1 AND removed=0 ORDER BY id")?;
         let mut v = Vec::new();
         let mut rows = stmt.query([])?;
         while let Some(r) = rows.next()? {
@@ -5309,22 +6820,36 @@ pub fn render_all(
     for (i, id) in ids.iter().enumerate() {
         // The modern (8th) and DuckTales frames have their own pipelines; else render_one.
         let res = if ducks {
-            render_card_ducks(editor_db, assets_dir, cache_dir, chrome, *id, force, backend)
+            render_card_ducks(
+                editor_db, assets_dir, cache_dir, chrome, *id, force, backend,
+            )
         } else if eighth {
-            render_card_8th(editor_db, assets_dir, cache_dir, chrome, *id, force, backend)
+            render_card_8th(
+                editor_db, assets_dir, cache_dir, chrome, *id, force, backend,
+            )
         } else {
-            render_one(editor_db, assets_dir, cache_dir, chrome, *id, false, force, backend)
+            render_one(
+                editor_db, assets_dir, cache_dir, chrome, *id, false, force, backend,
+            )
         };
         match res {
             Ok(_) => print!("\r[{}/{total}] id {id}        ", i + 1),
             Err(e) => eprintln!("\n  id {id}: {e}"),
         }
         if foil && !eighth && !ducks {
-            let _ = render_one(editor_db, assets_dir, cache_dir, chrome, *id, true, force, backend);
+            let _ = render_one(
+                editor_db, assets_dir, cache_dir, chrome, *id, true, force, backend,
+            );
         }
         std::io::stdout().flush().ok();
     }
-    let sub = if ducks { "ducks" } else if eighth { "cards8" } else { "cards" };
+    let sub = if ducks {
+        "ducks"
+    } else if eighth {
+        "cards8"
+    } else {
+        "cards"
+    };
     println!("\ndone: {total} cards -> {}", cache_dir.join(sub).display());
     Ok(())
 }
@@ -5334,8 +6859,17 @@ pub fn render_all(
 // ---------------------------------------------------------------------------
 
 pub fn sanitize(name: &str) -> String {
-    name.chars().map(|c| if c.is_alphanumeric() || c == '-' { c } else { '_' })
-        .collect::<String>().trim_matches('_').to_string()
+    name.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('_')
+        .to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -5353,7 +6887,7 @@ const CORNER_FRAC: f64 = 0.0397;
 
 /// The forefront (latest) MPC render in a card dir: the most-recently-written
 /// top-level `<hash>.png`, excluding the art crop and any prior selfhost output.
-fn forefront_render(card_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn forefront_render(card_dir: &Path) -> Option<PathBuf> {
     let mut best: Option<(std::time::SystemTime, PathBuf)> = None;
     for entry in fs::read_dir(card_dir).ok()?.flatten() {
         let p = entry.path();
@@ -5364,7 +6898,9 @@ fn forefront_render(card_dir: &Path) -> Option<PathBuf> {
             Some("art.png" | "selfhost.png") | None => continue,
             _ => {}
         }
-        let Ok(m) = entry.metadata().and_then(|md| md.modified()) else { continue };
+        let Ok(m) = entry.metadata().and_then(|md| md.modified()) else {
+            continue;
+        };
         if best.as_ref().is_none_or(|(bm, _)| m > *bm) {
             best = Some((m, p));
         }
@@ -5384,8 +6920,20 @@ fn round_corners(img: &mut image::RgbaImage, frac: f64) {
         for x in 0..w as i32 {
             // Snap to the nearest corner-arc center; if either axis is in the
             // straight middle, that axis contributes 0 (edges stay square).
-            let cx = if x < r { r } else if x >= w as i32 - r { w as i32 - 1 - r } else { x };
-            let cy = if y < r { r } else if y >= h as i32 - r { h as i32 - 1 - r } else { y };
+            let cx = if x < r {
+                r
+            } else if x >= w as i32 - r {
+                w as i32 - 1 - r
+            } else {
+                x
+            };
+            let cy = if y < r {
+                r
+            } else if y >= h as i32 - r {
+                h as i32 - 1 - r
+            } else {
+                y
+            };
             if cx == x || cy == y {
                 continue; // on a straight edge/interior, not a corner arc
             }
@@ -5413,28 +6961,44 @@ pub fn selfhost_one(card_dir: &Path) -> Result<Option<PathBuf>> {
     let cx = (f64::from(w) * BLEED_FRAC_X).round() as u32;
     let cy = (f64::from(h) * BLEED_FRAC_Y).round() as u32;
     let face = img.crop_imm(cx, cy, w.saturating_sub(2 * cx), h.saturating_sub(2 * cy));
-    let resized = face.resize_exact(SELFHOST_W, SELFHOST_H, image::imageops::FilterType::Lanczos3);
+    let resized = face.resize_exact(
+        SELFHOST_W,
+        SELFHOST_H,
+        image::imageops::FilterType::Lanczos3,
+    );
     let mut rgba = resized.to_rgba8();
     round_corners(&mut rgba, CORNER_FRAC);
     let out = card_dir.join("selfhost.png");
-    rgba.save(&out).with_context(|| format!("saving {}", out.display()))?;
+    rgba.save(&out)
+        .with_context(|| format!("saving {}", out.display()))?;
     Ok(Some(out))
 }
 
 /// Generate the selfhost image for every active card in the editor DB. Reports
 /// how many were written and which cards still lack a render.
-pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>, eighth: bool) -> Result<()> {
+pub fn render_selfhost(
+    editor_db: &Path,
+    cache_dir: &Path,
+    only: Option<i64>,
+    eighth: bool,
+) -> Result<()> {
     let db = Connection::open_with_flags(editor_db, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .with_context(|| format!("opening {}", editor_db.display()))?;
     let names: Vec<String> = if let Some(id) = only {
         // Just one card by editor-DB id (e.g. after updating only that card).
         let name: String = db
-            .query_row("SELECT name FROM cube_cards WHERE id=?1 AND removed=0", params![id], |r| r.get(0))
+            .query_row(
+                "SELECT name FROM cube_cards WHERE id=?1 AND removed=0",
+                params![id],
+                |r| r.get(0),
+            )
             .with_context(|| format!("no active card with id {id}"))?;
         vec![name]
     } else {
         let mut stmt = db.prepare("SELECT name FROM cube_cards WHERE removed=0 ORDER BY id")?;
-        let v = stmt.query_map([], |r| r.get(0))?.collect::<std::result::Result<_, _>>()?;
+        let v = stmt
+            .query_map([], |r| r.get(0))?
+            .collect::<std::result::Result<_, _>>()?;
         v
     };
     let (mut done, mut missing) = (0usize, Vec::new());
@@ -5445,18 +7009,23 @@ pub fn render_selfhost(editor_db: &Path, cache_dir: &Path, only: Option<i64>, ei
             None => missing.push(name.clone()),
         }
     }
-    println!("selfhost: {done} written, {} missing a render", missing.len());
+    println!(
+        "selfhost: {done} written, {} missing a render",
+        missing.len()
+    );
     for m in &missing {
         println!("  (no render) {m}");
     }
     Ok(())
 }
 
-fn percent(s: &str) -> String {
+pub(crate) fn percent(s: &str) -> String {
     let mut o = String::new();
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => o.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                o.push(b as char)
+            }
             _ => o.push_str(&format!("%{b:02X}")),
         }
     }

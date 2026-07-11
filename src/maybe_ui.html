@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>maybeboards · cube</title>
+<style>
+  :root {
+    --bg:#16130f; --panel:#1f1b15; --panel2:#2a241b; --ink:#efe7d6; --dim:#a99e86;
+    --line:#3a3228; --accent:#c8a24a; --green:#6fae5a; --amber:#d68a3a; --red:#cc5b4a;
+    --blue:#5a8fb0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI",sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:14px; padding:10px 16px;
+           background:var(--panel); border-bottom:1px solid var(--line);
+           position:sticky; top:0; z-index:10; }
+  header h1 { font-size:15px; margin:0; color:var(--accent); letter-spacing:.5px; font-weight:600; }
+  .navlink { color:var(--blue); text-decoration:none; font-size:12px; border:1px solid var(--line);
+             border-radius:6px; padding:5px 10px; background:var(--panel2); }
+  .navlink:hover { border-color:var(--blue); }
+  .navlink.on { color:var(--accent); border-color:var(--accent); }
+  #headinfo { margin-left:auto; color:var(--dim); font-size:12px; }
+  main { padding:18px 22px 60px; }
+  h2 { font-size:17px; color:var(--accent); margin:6px 0 12px; }
+  button { font:inherit; }
+  .btn { background:var(--panel2); color:var(--ink); border:1px solid var(--line);
+         border-radius:6px; padding:6px 12px; cursor:pointer; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn.green { background:#2c3c22; color:var(--green); border-color:#3c5230; }
+  .btn.red   { background:#3a1f1c; color:var(--red); border-color:#5a2a24; }
+  .btn.amber { background:#3a2c16; color:var(--amber); border-color:#5a4222; }
+  .btn.blue  { background:#1f2c3a; color:var(--blue); border-color:#2a4257; }
+  .btn.on    { border-color:var(--accent); color:var(--accent); }
+  input, textarea { background:var(--panel2); color:var(--ink); border:1px solid var(--line);
+                    border-radius:6px; padding:7px 9px; font:13px/1.4 ui-monospace,monospace; }
+  input:focus, textarea:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+  code { background:var(--panel2); border:1px solid var(--line); border-radius:4px;
+         padding:1px 6px; font-size:12px; color:var(--ink); word-break:break-all; }
+  .err { color:var(--red); }
+
+  /* ── the sticky stats overlay every grid gets ─────────────────────────── */
+  .statbar { position:sticky; top:49px; z-index:9; display:flex; flex-wrap:wrap; gap:8px 18px;
+             align-items:center; background:rgba(31,27,21,.97); border:1px solid var(--line);
+             border-radius:10px; padding:10px 14px; margin:0 0 16px;
+             box-shadow:0 6px 18px rgba(0,0,0,.45); font-size:12.5px; }
+  .statbar b { color:var(--accent); font-size:14px; }
+  .statbar .grp { display:flex; gap:6px; align-items:baseline; white-space:nowrap; }
+  .statbar .lbl { color:var(--dim); }
+  .statbar .sep { color:var(--line); }
+  .cbadge { display:inline-block; padding:0 7px; border-radius:9px; border:1px solid var(--line);
+            font-size:11px; line-height:17px; }
+  .cbadge.W { color:#e8dfb8; } .cbadge.U { color:#7fb3d5; } .cbadge.B { color:#9b8ea4; }
+  .cbadge.R { color:#d98b73; } .cbadge.G { color:#8fbb8a; } .cbadge.M { color:var(--accent); }
+  .cbadge.C { color:var(--dim); } .cbadge.L { color:#c7a97e; }
+  .statmsg { width:100%; color:var(--dim); font-size:12px; }
+  .statmsg b { font-size:12px; }
+
+  /* ── card grids ───────────────────────────────────────────────────────── */
+  .sechead { display:flex; align-items:baseline; gap:12px; margin:22px 0 8px;
+             border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .sechead h3 { margin:0; font-size:14px; color:var(--ink); letter-spacing:.4px; }
+  .sechead .n { color:var(--dim); font-size:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:12px; }
+  .tile { position:relative; margin:0; cursor:pointer; }
+  .tile img, .tile .ph { width:100%; aspect-ratio:488/680; object-fit:contain; display:block;
+              background:#0c0a08; border-radius:9px; border:1px solid var(--line); }
+  .tile .ph { padding:14px 10px; font-size:12px; color:var(--ink); overflow:hidden; }
+  .tile .ph .t { color:var(--dim); font-size:11px; margin-top:4px; }
+  .tile .ph .o { font-size:10px; color:var(--dim); margin-top:8px; white-space:pre-wrap; }
+  .tile figcaption { font-size:11px; color:var(--dim); padding:3px 2px 0; line-height:1.35; }
+  .tile figcaption .nm { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+                         color:var(--ink); font-weight:600; }
+  .tile .mark { position:absolute; top:6px; right:6px; font-size:20px;
+                filter:drop-shadow(0 1px 3px #000); pointer-events:none; }
+  .tile.want img { outline:3px solid var(--green); outline-offset:-2px; }
+  .tile.added img { outline:3px solid var(--blue); outline-offset:-2px; }
+  .tile.rejected img, .tile.rejected .ph { opacity:.32; filter:grayscale(.75); }
+  .tile.cut img, .tile.cut .ph { outline:3px solid var(--red); outline-offset:-2px; opacity:.55; }
+  .tile.sug img, .tile.sug .ph { outline:3px dashed var(--amber); outline-offset:-2px; }
+  .tile.dim { opacity:.25; pointer-events:none; }
+  .qtybadge { position:absolute; top:6px; left:6px; background:rgba(0,0,0,.7); color:var(--accent);
+              font-weight:700; font-size:12px; border-radius:6px; padding:1px 6px; }
+
+  /* ── modules home ─────────────────────────────────────────────────────── */
+  .launchbox { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+               padding:16px; max-width:980px; margin-bottom:26px; }
+  .launchbox .row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .launchbox input[type=text] { flex:1; min-width:220px; }
+  #q { width:100%; font-size:14px; }
+  #preview { font-size:12.5px; color:var(--dim); min-height:34px; line-height:1.7; }
+  #preview b { color:var(--accent); }
+  .modrow { display:flex; align-items:center; gap:14px; background:var(--panel);
+            border:1px solid var(--line); border-radius:10px; padding:12px 16px;
+            margin-bottom:10px; max-width:980px; }
+  .modrow .meta { flex:1; min-width:0; }
+  .modrow .meta .nm { font-weight:600; font-size:14px; }
+  .modrow .meta .q { margin-top:3px; }
+  .modrow .meta .dt { color:var(--dim); font-size:11px; margin-top:3px; }
+  .vbadge { font-size:11px; padding:1px 8px; border-radius:9px; border:1px solid var(--line);
+            color:var(--dim); white-space:nowrap; }
+  .vbadge.want { color:var(--green); border-color:#3c5230; }
+  .vbadge.rejected { color:var(--red); border-color:#5a2a24; }
+  .vbadge.added { color:var(--blue); border-color:#2a4257; }
+  .vbadge.pending { color:var(--amber); border-color:#5a4222; }
+  details.removedpile { margin-top:34px; }
+  details.removedpile summary { cursor:pointer; color:var(--dim); }
+  .spin { display:inline-block; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">🧩 maybeboards</h1>
+  <a class="navlink" href="/">← editor</a>
+  <a class="navlink" href="/maybe" id="nav-maybe">🧩 maybeboards</a>
+  <a class="navlink" href="/trim" id="nav-trim">✂️ trim</a>
+  <span id="headinfo"></span>
+</header>
+<main id="app"><p style="color:var(--dim)">Loading…</p></main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => (s??"").toString().replace(/[&<>"]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const IS_TRIM = location.pathname === "/trim";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scryfall-style query engine — same dialect as the editor sidebar search,
+   extended with pool flags: is:oldframe, is:tokengen, is:creatureish, is:incube.
+   compileQuery(str) -> (card)=>bool | null; throws on unparseable input.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const COLOR_LETTERS = new Set(["w","u","b","r","g"]);
+const COLOR_NAMES = { white:"w", blue:"u", black:"b", red:"r", green:"g" };
+const COLOR_COMBOS = {
+  azorius:"wu", dimir:"ub", rakdos:"br", golgari:"bg", orzhov:"wb",
+  izzet:"ur", simic:"ug", boros:"rw", gruul:"rg", selesnya:"gw",
+  bant:"gwu", esper:"wub", grixis:"ubr", jund:"brg", naya:"rgw",
+  abzan:"wbg", jeskai:"urw", sultai:"bgu", mardu:"rwb", temur:"gur",
+};
+function colorSet(s) {
+  const set = new Set();
+  for (const ch of (s || "").toLowerCase()) if (COLOR_LETTERS.has(ch)) set.add(ch);
+  return set;
+}
+function parseColorSpec(v) {
+  v = v.toLowerCase();
+  if (v in COLOR_NAMES) return new Set([COLOR_NAMES[v]]);
+  if (v in COLOR_COMBOS) v = COLOR_COMBOS[v];
+  const set = new Set();
+  for (const ch of v) if (COLOR_LETTERS.has(ch)) set.add(ch);
+  return set;
+}
+function statNum(s) {
+  if (s == null) return NaN;
+  s = String(s).trim();
+  if (s === "" || s === "*" || /x/i.test(s)) return NaN;
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : n;
+}
+function cmpNum(a, op, b) {
+  if (isNaN(a) || isNaN(b)) return false;
+  switch (op) {
+    case ":": case "=": return a === b;
+    case "!=": return a !== b;
+    case "<": return a < b;  case "<=": return a <= b;
+    case ">": return a > b;  case ">=": return a >= b;
+    default: return a === b;
+  }
+}
+function setRelation(card, op, spec) {
+  const subset = (a, b) => [...a].every(x => b.has(x));
+  const equal = (a, b) => a.size === b.size && subset(a, b);
+  switch (op) {
+    case ":": case ">=": return subset(spec, card);
+    case "=":  return equal(card, spec);
+    case "!=": return !equal(card, spec);
+    case "<=": return subset(card, spec);
+    case "<":  return subset(card, spec) && !equal(card, spec);
+    case ">":  return subset(spec, card) && !equal(card, spec);
+    default:   return subset(spec, card);
+  }
+}
+function makeColorFilter(getSet, op, raw) {
+  const v = raw.toLowerCase();
+  if (/^\d+$/.test(v)) { const n = +v, o = op === ":" ? "=" : op; return c => cmpNum(getSet(c).size, o, n); }
+  if (v === "c" || v === "colorless") return c => getSet(c).size === 0;
+  if (v === "m" || v === "multi" || v === "multicolor" || v === "multicolored") return c => getSet(c).size >= 2;
+  const spec = parseColorSpec(v);
+  return c => setRelation(getSet(c), op, spec);
+}
+const STAT_GETTERS = {
+  mv: c => statNum(c.mana_value), cmc: c => statNum(c.mana_value),
+  pow: c => statNum(c.power), power: c => statNum(c.power),
+  tou: c => statNum(c.toughness), toughness: c => statNum(c.toughness),
+  loy: c => statNum(c.loyalty), loyalty: c => statNum(c.loyalty),
+  elo: c => (c.cube_elo == null ? NaN : c.cube_elo),
+  edhrec: c => (c.edhrec_rank == null ? NaN : c.edhrec_rank),
+  rank: c => (c.edhrec_rank == null ? NaN : c.edhrec_rank),
+};
+function makeNumFilter(get, op, raw) {
+  const rhsStat = STAT_GETTERS[raw.toLowerCase()];
+  if (rhsStat) return c => cmpNum(get(c), op, rhsStat(c));
+  const b = parseFloat(raw);
+  if (isNaN(b)) throw new Error("bad number: " + raw);
+  return c => cmpNum(get(c), op, b);
+}
+function makeRegexOrSub(raw) {
+  if (raw.length >= 2 && raw[0] === "/" && raw[raw.length - 1] === "/") {
+    const re = new RegExp(raw.slice(1, -1), "i");
+    return s => re.test(s || "");
+  }
+  const needle = raw.toLowerCase();
+  return s => (s || "").toLowerCase().includes(needle);
+}
+function makeTextFilter(get, raw) { const m = makeRegexOrSub(raw); return c => m(get(c)); }
+function makeOracleFilter(raw) {
+  if (raw.includes("~")) {
+    const tmpl = raw.toLowerCase();
+    return c => (c.oracle_text || "").toLowerCase().includes(tmpl.split("~").join((c.name || "").toLowerCase()));
+  }
+  return makeTextFilter(c => c.oracle_text, raw);
+}
+const isTokenGen = c => c.is_token_gen != null ? !!c.is_token_gen : /creature token/i.test(c.oracle_text || "");
+const isCreature = c => !!c.is_creature || /\bCreature\b/.test(c.type || "");
+const isBody = c => isCreature(c) || isTokenGen(c);
+function makeIsFilter(raw) {
+  const isLand = c => /\bland\b/i.test(c.type || "");
+  switch (raw.toLowerCase()) {
+    case "creature": return isCreature;
+    case "land": return isLand;
+    case "permanent": return c => /(creature|artifact|enchantment|land|planeswalker|battle)/i.test(c.type || "");
+    case "spell": return c => !isLand(c);
+    case "vanilla": return c => !(c.oracle_text || "").trim();
+    case "gold": case "multicolor": case "multicolored": return c => colorSet(c.colors).size >= 2;
+    case "colorless": return c => colorSet(c.colors).size === 0;
+    case "mono": case "monocolored": return c => colorSet(c.colors).size === 1;
+    case "hybrid": return c => /\{[wubrg2]\/[wubrgp]\}/i.test(c.mana_cost || "");
+    // pool / maybeboard flags
+    case "oldframe": case "old": return c => !!c.oldframe;
+    case "modern": case "newframe": return c => !c.oldframe;
+    case "tokengen": case "token": case "tokens": return isTokenGen;
+    case "creatureish": case "body": case "bodies": return isBody;
+    case "incube": case "cube": return c => !!c.in_cube;
+    case "rated": return c => c.cube_elo != null;
+    default: throw new Error("unknown is: " + raw);
+  }
+}
+function dispatch(key, op, val) {
+  switch (key.toLowerCase()) {
+    case "name": case "n": return makeTextFilter(c => c.name, val);
+    case "type": case "t": return makeTextFilter(c => c.type, val);
+    case "oracle": case "o": case "text": return makeOracleFilter(val);
+    case "color": case "c": case "colors": return makeColorFilter(c => colorSet(c.colors), op, val);
+    case "identity": case "id": case "ci": case "commander":
+      return makeColorFilter(c => colorSet(c.color_identity), op, val);
+    case "produces": case "produced": case "produce":
+      return makeColorFilter(c => colorSet(c.produced_mana), op, val);
+    case "mana": case "mc": case "m": return makeTextFilter(c => (c.mana_cost || "").replace(/[{}]/g, ""), val);
+    case "mv": case "cmc": return makeNumFilter(STAT_GETTERS.mv, op, val);
+    case "pow": case "power": return makeNumFilter(STAT_GETTERS.pow, op, val);
+    case "tou": case "toughness": return makeNumFilter(STAT_GETTERS.tou, op, val);
+    case "loy": case "loyalty": return makeNumFilter(STAT_GETTERS.loy, op, val);
+    case "elo": return makeNumFilter(STAT_GETTERS.elo, op, val);
+    case "edhrec": case "rank": return makeNumFilter(STAT_GETTERS.edhrec, op, val);
+    case "kw": case "keyword": return makeTextFilter(c => c.keywords, val);
+    case "set": case "s": case "e": case "edition": case "in":
+      return makeTextFilter(c => c.printings, val);
+    case "is": return makeIsFilter(val);
+    default: return null;
+  }
+}
+function buildTerm(str) {
+  const m = str.match(/^([a-z]+)(>=|<=|!=|[:=<>])([\s\S]*)$/i);
+  if (m) {
+    const f = dispatch(m[1], m[2], m[3]);
+    if (f) return f;
+  }
+  return makeTextFilter(c => c.name, str);
+}
+function tokenize(input) {
+  const toks = [];
+  let i = 0;
+  const n = input.length;
+  while (i < n) {
+    const c = input[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "(") { toks.push({ type: "lparen" }); i++; continue; }
+    if (c === ")") { toks.push({ type: "rparen" }); i++; continue; }
+    if (c === "-") { toks.push({ type: "not" }); i++; continue; }
+    let buf = "", inQ = false;
+    while (i < n) {
+      const ch = input[i];
+      if (ch === '"') { inQ = !inQ; i++; continue; }
+      if (!inQ && (/\s/.test(ch) || ch === "(" || ch === ")")) break;
+      buf += ch; i++;
+    }
+    if (!buf) continue;
+    if (buf.toLowerCase() === "or") { toks.push({ type: "or" }); continue; }
+    if (buf.toLowerCase() === "and") continue;
+    toks.push({ type: "term", pred: buildTerm(buf) });
+  }
+  return toks;
+}
+function compileQuery(input) {
+  const toks = tokenize((input || "").trim());
+  if (!toks.length) return null;
+  let i = 0;
+  const peek = () => toks[i];
+  const parseOr = () => {
+    let left = parseAnd();
+    while (peek() && peek().type === "or") { i++; const r = parseAnd(), l = left; left = c => l(c) || r(c); }
+    return left;
+  };
+  const parseAnd = () => {
+    let left = null;
+    while (peek() && peek().type !== "or" && peek().type !== "rparen") {
+      let neg = false;
+      while (peek() && peek().type === "not") { neg = !neg; i++; }
+      const t = peek();
+      if (!t) break;
+      let f;
+      if (t.type === "lparen") { i++; f = parseOr(); if (peek() && peek().type === "rparen") i++; }
+      else if (t.type === "term") { f = t.pred; i++; }
+      else break;
+      if (neg) { const g = f; f = c => !g(c); }
+      if (left) { const a = left, b = f; left = c => a(c) && b(c); } else left = f;
+    }
+    return left || (() => true);
+  };
+  const fn = parseOr();
+  if (i < toks.length) throw new Error("unbalanced query");
+  return fn;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Shared grid machinery: colour sections → type → mana value ordering,
+   and the stats overlay every grid is annotated with.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SECTIONS = ["White","Blue","Black","Red","Green","Multicolor","Colorless","Land"];
+const SEC_KEY = { White:"W", Blue:"U", Black:"B", Red:"R", Green:"G", Multicolor:"M", Colorless:"C", Land:"L" };
+function sectionOf(c) {
+  if (/\bLand\b/i.test(c.type || "")) return "Land";
+  const cs = colorSet(c.colors);
+  if (cs.size === 0) return "Colorless";
+  if (cs.size >= 2) return "Multicolor";
+  return { w:"White", u:"Blue", b:"Black", r:"Red", g:"Green" }[[...cs][0]];
+}
+const TYPE_ORDER = ["Creature","Planeswalker","Instant","Sorcery","Artifact","Enchantment","Battle"];
+function typeRank(c) {
+  const t = c.type || "";
+  for (let i = 0; i < TYPE_ORDER.length; i++) if (t.includes(TYPE_ORDER[i])) return i;
+  return TYPE_ORDER.length;
+}
+const mvOf = c => (c.mana_value == null ? 0 : c.mana_value);
+function cardSort(a, b) {
+  return typeRank(a) - typeRank(b) || mvOf(a) - mvOf(b) || (a.name || "").localeCompare(b.name || "");
+}
+function groupBySection(cards) {
+  const g = new Map(SECTIONS.map(s => [s, []]));
+  for (const c of cards) g.get(sectionOf(c)).push(c);
+  for (const arr of g.values()) arr.sort(cardSort);
+  return g;
+}
+// Stats over a card list; qtyOf lets the trim view weight by print quantity.
+function calcStats(cards, qtyOf = () => 1) {
+  const st = { total:0, creatures:0, tokengens:0, bodies:0, lands:0, nonbodies:0,
+               mvSum:0, mvN:0, bySec:{} };
+  for (const s of SECTIONS) st.bySec[SEC_KEY[s]] = 0;
+  for (const c of cards) {
+    const q = qtyOf(c);
+    st.total += q;
+    st.bySec[SEC_KEY[sectionOf(c)]] += q;
+    const land = sectionOf(c) === "Land";
+    if (land) { st.lands += q; continue; }
+    st.mvSum += mvOf(c) * q; st.mvN += q;
+    if (isCreature(c)) st.creatures += q;
+    else if (isTokenGen(c)) st.tokengens += q;
+    if (isBody(c)) st.bodies += q; else st.nonbodies += q;
+  }
+  st.nonland = st.total - st.lands;
+  st.avgMV = st.mvN ? st.mvSum / st.mvN : 0;
+  st.bodyPct = st.nonland ? Math.round(100 * st.bodies / st.nonland) : 0;
+  return st;
+}
+function statsHTML(st) {
+  const secs = SECTIONS.map(s => {
+    const k = SEC_KEY[s];
+    return st.bySec[k] ? `<span class="cbadge ${k}">${k} ${st.bySec[k]}</span>` : "";
+  }).join(" ");
+  return `
+    <span class="grp"><b>${st.total}</b><span class="lbl">cards</span></span>
+    <span class="sep">│</span>
+    <span class="grp"><b>${st.creatures}</b><span class="lbl">creatures</span>
+      <span class="lbl">+</span><b>${st.tokengens}</b><span class="lbl">token-makers</span>
+      <span class="lbl">= ${st.bodies} bodies (${st.bodyPct}% of nonland)</span></span>
+    <span class="sep">│</span>
+    <span class="grp"><b>${st.nonbodies}</b><span class="lbl">non-creature spells</span></span>
+    <span class="grp"><b>${st.lands}</b><span class="lbl">lands</span></span>
+    <span class="sep">│</span>
+    <span class="grp"><span class="lbl">avg MV</span><b>${st.avgMV.toFixed(2)}</b></span>
+    <span class="grp">${secs}</span>`;
+}
+// One grid tile. imgSrc=null renders the text placeholder outright.
+function tileHTML(c, cls, mark, imgSrc, extra = "") {
+  const cap = `${c.mana_cost ? esc(c.mana_cost) + " · " : ""}${esc(c.type || "")}` +
+              `${c.cube_elo != null ? " · elo " + Math.round(c.cube_elo) : ""}`;
+  const body = imgSrc
+    ? `<img loading="lazy" src="${imgSrc}" alt="" onerror="tilePh(this)">`
+    : phHTML(c);
+  return `<figure class="tile ${cls}" data-name="${esc(c.name)}" title="${esc(c.oracle_text || "")}">
+    ${body}${extra}
+    <div class="mark">${mark}</div>
+    <figcaption><span class="nm">${esc(c.name)}</span><span>${cap}</span></figcaption>
+  </figure>`;
+}
+function phHTML(c) {
+  return `<div class="ph"><div><b>${esc(c.name)}</b> ${esc(c.mana_cost || "")}</div>
+    <div class="t">${esc(c.type || "")}</div><div class="o">${esc(c.oracle_text || "")}</div></div>`;
+}
+// <img onerror> → swap the broken image for the text placeholder.
+function tilePh(img) {
+  const fig = img.closest(".tile");
+  const c = CARD_BY_NAME.get(fig?.dataset.name);
+  if (fig && c) img.outerHTML = phHTML(c);
+}
+let CARD_BY_NAME = new Map();
+// Background image warm-up: walk the module's cards one by one so the server's
+// Scryfall fetches queue politely; tiles pop in as the disk cache fills. Strictly
+// sequential — firing these in parallel is exactly what earns a 429 storm.
+const PREFETCHED = new Set();
+let prefetchRun = 0;
+async function prefetchImages(names) {
+  const run = ++prefetchRun;
+  for (const n of names) {
+    if (run !== prefetchRun) return;            // a newer view took over
+    if (PREFETCHED.has(n)) continue;
+    try { await fetch("/api/maybe/img?name=" + encodeURIComponent(n)); PREFETCHED.add(n); }
+    catch { return; }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Views
+   ═══════════════════════════════════════════════════════════════════════════ */
+const app = $("#app");
+let POOL = null;          // /api/pool cards (lazy, cached for the session)
+let MODULE = null;        // current review module {module, cards}
+let CUBE = null;          // /api/cards payload (trim view)
+let revFilter = "all";
+let cuts = new Set(), sugs = new Set();
+
+async function getJSON(url, opts) {
+  const r = await fetch(url, opts);
+  const d = await r.json();
+  if (d && d.error) throw new Error(d.error);
+  return d;
+}
+
+async function loadPool(statusEl) {
+  if (POOL) return POOL;
+  if (statusEl) statusEl.innerHTML = `<span class="spin">◐</span> loading the card pool (~15 MB, once per visit)…`;
+  const d = await getJSON("/api/pool");
+  POOL = d.cards;
+  return POOL;
+}
+
+/* ── modules home ─────────────────────────────────────────────────────────── */
+async function viewHome() {
+  $("#title").textContent = "🧩 maybeboards";
+  document.title = "maybeboards · cube";
+  let mods;
+  try { mods = (await getJSON("/api/maybe/modules")).modules; }
+  catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  const rows = mods.map(m => `
+    <div class="modrow">
+      <div class="meta">
+        <div class="nm">${esc(m.name)}</div>
+        <div class="q"><code>${esc(m.query || "—")}</code></div>
+        <div class="dt">${esc(m.created_at || "")}${m.notes ? " · " + esc(m.notes) : ""}</div>
+      </div>
+      <span class="vbadge">${m.total} cards</span>
+      <span class="vbadge pending">${m.pending} pending</span>
+      <span class="vbadge want">${m.want} want</span>
+      <span class="vbadge rejected">${m.rejected} rejected</span>
+      <span class="vbadge added">${m.added} added</span>
+      <button class="btn blue" onclick="location.hash='#m/${m.id}'">review ▸</button>
+      <button class="btn red" data-del="${m.id}">✕</button>
+    </div>`).join("");
+  app.innerHTML = `
+    <div class="launchbox">
+      <h2>Launch a maybeboard module research</h2>
+      <div class="row"><input type="text" id="mname" placeholder="module name — e.g. threshold-matters"></div>
+      <div class="row"><input type="text" id="q" placeholder='query — e.g.  o:threshold or o:delirium or o:"among cards in your" or o:"among cards in all"'
+        title='Scryfall-style: o: t: c: id: mv≷ pow≷ kw: set: is:…  OR, -negate, (parens), "quoted phrases".
+Pool extras: is:oldframe (pre-8ED printing exists) · is:tokengen · is:creatureish · is:incube.
+Cards already in the cube are excluded from the launch automatically.'></div>
+      <div class="row"><input type="text" id="mnotes" placeholder="notes (optional) — what is this research after?"></div>
+      <div id="preview">Type a query to preview matches against the whole card pool.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn green" id="launch" disabled>🚀 Launch module</button>
+        <span id="launchmsg" style="color:var(--dim);font-size:12px"></span>
+      </div>
+    </div>
+    <h2>Modules</h2>
+    ${rows || `<p style="color:var(--dim)">No modules yet — launch one above, or from the CLI:<br>
+      <code>mtgbrain edit maybe-launch --editor-db … --name X --query '…' --sql "SELECT display_name FROM cards WHERE …"</code></p>`}`;
+
+  let candidates = [];
+  const qEl = $("#q"), pv = $("#preview"), btn = $("#launch");
+  let t = null;
+  qEl.oninput = () => { clearTimeout(t); t = setTimeout(preview, 350); };
+  async function preview() {
+    const q = qEl.value.trim();
+    candidates = []; btn.disabled = true;
+    if (!q) { pv.textContent = "Type a query to preview matches against the whole card pool."; return; }
+    let fn;
+    try { fn = compileQuery(q); } catch (e) { pv.innerHTML = `<span class="err">bad query: ${esc(e.message)}</span>`; return; }
+    if (!fn) return;
+    try { await loadPool(pv); } catch (e) { pv.innerHTML = `<span class="err">pool: ${esc(e.message)}</span>`; return; }
+    const hits = POOL.filter(fn);
+    const inCube = hits.filter(c => c.in_cube).length;
+    candidates = hits.filter(c => !c.in_cube);
+    const st = calcStats(candidates);
+    pv.innerHTML = `<b>${hits.length}</b> cards match · <b>${inCube}</b> already in the cube →
+      <b>${candidates.length}</b> candidates
+      (${st.creatures} creatures + ${st.tokengens} token-makers, ${st.nonbodies} non-creature, ${st.lands} lands ·
+      ${SECTIONS.map(s => st.bySec[SEC_KEY[s]] ? `${SEC_KEY[s]}&hairsp;${st.bySec[SEC_KEY[s]]}` : "").filter(Boolean).join(" ")})`;
+    btn.disabled = candidates.length === 0;
+  }
+  btn.onclick = async () => {
+    const name = $("#mname").value.trim();
+    if (!name) { $("#launchmsg").innerHTML = `<span class="err">give the module a name first</span>`; return; }
+    btn.disabled = true;
+    $("#launchmsg").innerHTML = `<span class="spin">◐</span> snapshotting ${candidates.length} cards…`;
+    try {
+      const res = await getJSON("/api/maybe/launch", { method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ name, query: qEl.value.trim(), notes: $("#mnotes").value.trim(),
+                               names: candidates.map(c => c.name) }) });
+      location.hash = "#m/" + res.id;
+    } catch (e) { $("#launchmsg").innerHTML = `<span class="err">${esc(e.message)}</span>`; btn.disabled = false; }
+  };
+  for (const b of document.querySelectorAll("[data-del]")) {
+    b.onclick = async () => {
+      if (b.textContent !== "sure?") { b.textContent = "sure?"; setTimeout(() => b.textContent = "✕", 2500); return; }
+      try { await getJSON("/api/maybe/delete/" + b.dataset.del, { method:"POST" }); viewHome(); }
+      catch (e) { b.textContent = "✕"; alert(e.message); }
+    };
+  }
+}
+
+/* ── module review grid ───────────────────────────────────────────────────── */
+const VCYCLE = { pending:"want", want:"rejected", rejected:"pending" };
+const VMARK = { pending:"", want:"✅", rejected:"❌", added:"📦" };
+async function viewModule(id) {
+  try { MODULE = await getJSON("/api/maybe/module/" + id); }
+  catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  const m = MODULE.module;
+  $("#title").textContent = "🧩 " + m.name;
+  document.title = m.name + " · maybeboard";
+  CARD_BY_NAME = new Map(MODULE.cards.map(c => [c.name, c]));
+  renderModule();
+  prefetchImages(MODULE.cards.map(c => c.name));   // fire-and-forget cache warm-up
+}
+function renderModule() {
+  const m = MODULE.module, cards = MODULE.cards;
+  const vc = v => cards.filter(c => c.verdict === v).length;
+  const shown = revFilter === "all" ? cards : cards.filter(c => c.verdict === revFilter);
+  const st = calcStats(shown);
+  const wantSt = calcStats(cards.filter(c => c.verdict === "want" || c.verdict === "added"));
+  const groups = groupBySection(shown);
+  let grids = "";
+  for (const s of SECTIONS) {
+    const arr = groups.get(s);
+    if (!arr.length) continue;
+    const gs = calcStats(arr);
+    grids += `<div class="sechead"><h3>${s}</h3>
+        <span class="n">${gs.total} cards · ${gs.bodies} bodies / ${gs.nonbodies + gs.lands} non</span></div>
+      <div class="grid">` +
+      arr.map(c => tileHTML(c, c.verdict, VMARK[c.verdict],
+        "/api/maybe/img?name=" + encodeURIComponent(c.name))).join("") +
+      `</div>`;
+  }
+  app.innerHTML = `
+    <div class="statbar">
+      <button class="btn" onclick="location.hash=''">‹ modules</button>
+      ${statsHTML(st)}
+      <span class="sep">│</span>
+      <span class="grp">
+        <button class="btn ${revFilter==='all'?'on':''}" data-rf="all">all ${cards.length}</button>
+        <button class="btn ${revFilter==='pending'?'on':''}" data-rf="pending">pending ${vc("pending")}</button>
+        <button class="btn ${revFilter==='want'?'on':''}" data-rf="want">want ${vc("want")}</button>
+        <button class="btn ${revFilter==='rejected'?'on':''}" data-rf="rejected">rejected ${vc("rejected")}</button>
+        <button class="btn ${revFilter==='added'?'on':''}" data-rf="added">added ${vc("added")}</button>
+      </span>
+      <button class="btn green" id="promote" ${vc("want") ? "" : "disabled"}>📦 Promote ${vc("want")} wants → cube</button>
+      <div class="statmsg">query <code>${esc(m.query || "—")}</code> · click a card to cycle
+        <b style="color:var(--green)">want</b> → <b style="color:var(--red)">rejected</b> → pending ·
+        wants so far: <span id="wantsofar"><b>${wantSt.total}</b> (${wantSt.bodies} bodies / ${wantSt.nonbodies + wantSt.lands} non)</span>
+        <span id="modmsg"></span></div>
+    </div>
+    ${grids || `<p style="color:var(--dim)">Nothing under this filter.</p>`}`;
+  for (const b of app.querySelectorAll("[data-rf]"))
+    b.onclick = () => { revFilter = b.dataset.rf; renderModule(); };
+  for (const f of app.querySelectorAll(".tile")) f.onclick = () => cycleVerdict(f.dataset.name);
+  $("#promote").onclick = promoteModule;
+}
+// Verdict changes patch the DOM in place (full re-render flashes every lazy image
+// black again); only a non-"all" filter — where the card must vanish — re-renders.
+function patchVerdict(name, v) {
+  if (revFilter !== "all") { renderModule(); return; }
+  const f = [...app.querySelectorAll(".tile")].find(t => t.dataset.name === name);
+  if (f) { f.className = "tile " + v; f.querySelector(".mark").textContent = VMARK[v]; }
+  const cards = MODULE.cards;
+  const vc = x => cards.filter(c => c.verdict === x).length;
+  for (const b of app.querySelectorAll("[data-rf]"))
+    if (b.dataset.rf !== "all") b.textContent = `${b.dataset.rf} ${vc(b.dataset.rf)}`;
+  const p = $("#promote");
+  if (p) { p.disabled = !vc("want"); p.textContent = `📦 Promote ${vc("want")} wants → cube`; }
+  const w = calcStats(cards.filter(c => c.verdict === "want" || c.verdict === "added"));
+  const ws = $("#wantsofar");
+  if (ws) ws.innerHTML = `<b>${w.total}</b> (${w.bodies} bodies / ${w.nonbodies + w.lands} non)`;
+}
+async function cycleVerdict(name) {
+  const c = MODULE.cards.find(x => x.name === name);
+  if (!c || c.verdict === "added") return;
+  const next = VCYCLE[c.verdict] || "want";
+  const prev = c.verdict;
+  c.verdict = next;
+  patchVerdict(name, next);
+  try {
+    await getJSON("/api/maybe/verdict/" + MODULE.module.id, { method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ name, verdict: next }) });
+  } catch (e) { c.verdict = prev; patchVerdict(name, prev); $("#modmsg").innerHTML = ` <span class="err">${esc(e.message)}</span>`; }
+}
+async function promoteModule() {
+  const btn = $("#promote");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin">◐</span> promoting…`;
+  try {
+    const res = await getJSON("/api/maybe/promote/" + MODULE.module.id, { method:"POST" });
+    await viewModule(MODULE.module.id);
+    const bits = [`<b style="color:var(--green)">${res.added.length} added to the cube</b>`];
+    if (res.skipped_already_in_cube.length) bits.push(`${res.skipped_already_in_cube.length} already there`);
+    if (res.failed.length) bits.push(`<span class="err">${res.failed.length} failed: ${esc(res.failed.map(f=>f.name).join(", "))}</span>`);
+    $("#modmsg").innerHTML = " → " + bits.join(" · ") +
+      ` — now <a class="navlink" href="/trim">✂️ trim the cube back to target</a>`;
+  } catch (e) { $("#modmsg").innerHTML = ` <span class="err">${esc(e.message)}</span>`; btn.disabled = false; }
+}
+
+/* ── trim / rebalance grid ───────────────────────────────────────────────── */
+const qtyOf = c => Math.max(1, c.qty || 1);
+async function viewTrim() {
+  $("#title").textContent = "✂️ trim / rebalance";
+  document.title = "trim · cube";
+  $("#nav-trim").classList.add("on");
+  try { CUBE = await getJSON("/api/cards"); }
+  catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  CARD_BY_NAME = new Map(CUBE.cards.map(c => [c.name, c]));
+  cuts = new Set(); sugs = new Set();
+  renderTrim();
+}
+const activeCards = () => CUBE.cards.filter(c => !c.removed);
+function renderTrim() {
+  const act = activeCards();
+  const st = calcStats(act, qtyOf);
+  const target = +(sessionStorage.trimTarget || 612);
+  const ratio = sessionStorage.trimRatio != null ? +sessionStorage.trimRatio : st.bodyPct;
+  const cutCards = act.filter(c => cuts.has(c.id));
+  const cutN = cutCards.reduce((n, c) => n + qtyOf(c), 0);
+  const post = calcStats(act.filter(c => !cuts.has(c.id)), qtyOf);
+  const over = st.total - target;
+  const removed = CUBE.cards.filter(c => c.removed);
+  const groups = groupBySection(act);
+  let grids = "";
+  for (const s of SECTIONS) {
+    const arr = groups.get(s);
+    if (!arr.length) continue;
+    const gs = calcStats(arr, qtyOf);
+    const gcut = arr.filter(c => cuts.has(c.id)).reduce((n, c) => n + qtyOf(c), 0);
+    grids += `<div class="sechead"><h3>${s}</h3>
+        <span class="n">${gs.total} cards · ${gs.bodies} bodies / ${gs.nonbodies + gs.lands} non${gcut ? ` · <span style="color:var(--red)">cutting ${gcut}</span>` : ""}</span></div>
+      <div class="grid">` +
+      arr.map(c => {
+        const cls = (cuts.has(c.id) ? "cut " : "") + (sugs.has(c.id) && !cuts.has(c.id) ? "sug " : "");
+        const qty = qtyOf(c) > 1 ? `<span class="qtybadge">×${qtyOf(c)}</span>` : "";
+        return tileHTML(c, cls, cuts.has(c.id) ? "✂️" : "", "/api/thumb/" + c.id, qty)
+          .replace('<figure class="tile', `<figure data-id="${c.id}" class="tile`);
+      }).join("") +
+      `</div>`;
+  }
+  app.innerHTML = `
+    <div class="statbar">
+      ${statsHTML(st)}
+      <span class="sep">│</span>
+      <span class="grp"><span class="lbl">target</span>
+        <input type="number" id="target" value="${target}" style="width:70px"></span>
+      <span class="grp">${over > 0
+        ? `<b style="color:var(--red)">${over} over</b>`
+        : `<b style="color:var(--green)">${-over} under</b>`}</span>
+      <span class="grp"><span class="lbl">target bodies %</span>
+        <input type="number" id="ratio" value="${ratio}" min="0" max="100" style="width:60px"></span>
+      <button class="btn amber" id="suggest">✨ Suggest cuts</button>
+      <button class="btn" id="clearcuts" ${cuts.size ? "" : "disabled"}>clear</button>
+      <button class="btn red" id="apply" ${cuts.size ? "" : "disabled"}>✂️ Apply ${cutN} cuts</button>
+      <div class="statmsg">
+        post-trim: <b>${post.total}</b> cards · <b>${post.bodies}</b> bodies (${post.bodyPct}% of nonland) ·
+        ${post.nonbodies} non · ${post.lands} lands
+        — click a card to toggle ✂️; suggestions keep the bodies ratio at your target and spread cuts
+        across colours by lowest cube-Elo first. Lands are never auto-suggested. <span id="trimmsg"></span>
+      </div>
+    </div>
+    ${grids}
+    <details class="removedpile" ${removed.length ? "" : "style='display:none'"}>
+      <summary>🗑 removed pile (${removed.length}) — click a card to restore</summary>
+      <div class="grid" style="margin-top:12px">` +
+        removed.map(c => tileHTML(c, "rejected", "🗑", "/api/thumb/" + c.id)
+          .replace('<figure class="tile', `<figure data-rid="${c.id}" class="tile`)).join("") +
+      `</div>
+    </details>`;
+  $("#target").onchange = e => { sessionStorage.trimTarget = e.target.value; renderTrim(); };
+  $("#ratio").onchange = e => { sessionStorage.trimRatio = e.target.value; renderTrim(); };
+  $("#suggest").onclick = suggestCuts;
+  $("#clearcuts").onclick = () => { cuts.clear(); sugs.clear(); renderTrim(); };
+  $("#apply").onclick = applyCuts;
+  for (const f of app.querySelectorAll(".tile[data-id]"))
+    f.onclick = () => { const id = +f.dataset.id; if (cuts.has(id)) cuts.delete(id); else cuts.add(id); renderTrim(); };
+  for (const f of app.querySelectorAll(".tile[data-rid]"))
+    f.onclick = async () => { await fetch("/api/restore/" + f.dataset.rid, { method:"POST" }); viewTrim(); };
+}
+// Greedy suggestion: cut K = total − target, split between bodies and non-bodies
+// so the post-trim bodies ratio lands on the user's target, colour-capped so no
+// section takes more than its proportional share (+1), lowest Elo → first out.
+// Lands are protected; the manual click always overrides.
+function suggestCuts() {
+  const act = activeCards();
+  const st = calcStats(act, qtyOf);
+  const target = +$("#target").value || 612;
+  const ratio = Math.min(100, Math.max(0, +$("#ratio").value || 0)) / 100;
+  const K = st.total - target;
+  cuts.clear(); sugs.clear();
+  if (K <= 0) { renderTrim(); $("#trimmsg").innerHTML = `<b style="color:var(--green)">already at/under target — nothing to cut.</b>`; return; }
+  const nonlands = act.filter(c => sectionOf(c) !== "Land");
+  const bodiesNow = st.bodies;
+  const wantBodies = Math.round(ratio * (st.nonland - K));   // nonland shrinks by K (lands protected)
+  let kB = Math.min(Math.max(bodiesNow - wantBodies, 0), K);
+  let kN = K - kB;
+  // Badness: lowest cube-Elo first (unrated ≈ 1145 — below the ~1200 mean, mildly cuttable),
+  // then least Commander-played, then newest additions (highest id) first.
+  const badness = c => (c.cube_elo == null ? 1145 : c.cube_elo) + (c.edhrec_rank == null ? 0 : -c.edhrec_rank / 1e6);
+  const share = {};
+  for (const s of SECTIONS) share[s] = st.bySec[SEC_KEY[s]] / Math.max(1, st.total);
+  const capOf = s => Math.ceil(K * share[s]) + 1;
+  const cutBySec = {};
+  const pick = (pool, k) => {
+    let need = k;
+    const sorted = pool.filter(c => !cuts.has(c.id)).sort((a, b) => badness(a) - badness(b) || b.id - a.id);
+    for (const relaxCap of [false, true]) {
+      for (const c of sorted) {
+        if (need <= 0) break;
+        if (cuts.has(c.id) || qtyOf(c) > need) continue;
+        const s = sectionOf(c);
+        if (!relaxCap && (cutBySec[s] || 0) + qtyOf(c) > capOf(s)) continue;
+        cuts.add(c.id); sugs.add(c.id);
+        cutBySec[s] = (cutBySec[s] || 0) + qtyOf(c);
+        need -= qtyOf(c);
+      }
+      if (need <= 0) break;
+    }
+    return need;
+  };
+  const leftB = pick(nonlands.filter(isBody), kB);
+  const leftN = pick(nonlands.filter(c => !isBody(c)), kN + leftB);
+  if (leftN > 0) pick(nonlands.filter(isBody), leftN);   // non-body pool ran dry — overflow back
+  renderTrim();
+  $("#trimmsg").innerHTML = `<b style="color:var(--amber)">suggested ${cuts.size} cuts</b> (${kB} bodies / ${kN} non target split) — review, toggle, then Apply.`;
+}
+async function applyCuts() {
+  const btn = $("#apply");
+  btn.disabled = true;
+  const ids = [...cuts];
+  let done = 0;
+  for (const id of ids) {
+    btn.textContent = `✂️ removing ${++done}/${ids.length}…`;
+    try { await fetch("/api/remove/" + id, { method:"POST" }); }
+    catch (e) { /* keep going; the reload shows the truth */ }
+  }
+  await viewTrim();
+  $("#trimmsg").innerHTML = `<b style="color:var(--green)">removed ${done} cards</b> — they're in the 🗑 pile below if you regret one.`;
+}
+
+/* ── router ──────────────────────────────────────────────────────────────── */
+function route() {
+  revFilter = "all";
+  if (IS_TRIM) { viewTrim(); return; }
+  $("#nav-maybe").classList.add("on");
+  const m = location.hash.match(/^#m\/(\d+)/);
+  if (m) viewModule(+m[1]); else viewHome();
+}
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

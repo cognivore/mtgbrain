@@ -133,8 +133,11 @@
   .keys kbd { background:var(--panel2); border:1px solid var(--line); border-radius:4px;
               padding:0 5px; font-family:ui-monospace,monospace; }
   .missing { color:var(--red); font-size:12px; }
-  .modetoggle { margin-left:auto; background:#2a2440; color:#b9a6e8; border:1px solid #463a6b;
+  .modetoggle { background:#2a2440; color:#b9a6e8; border:1px solid #463a6b;
                 border-radius:6px; padding:6px 12px; cursor:pointer; }
+  .navlink { color:var(--blue); text-decoration:none; font-size:12px; border:1px solid var(--line);
+             border-radius:6px; padding:6px 10px; background:var(--panel2); }
+  .navlink:hover { border-color:var(--blue); }
   #reviewview { display:flex; height:calc(100vh - 49px); }
   .rev-list { width:300px; border-right:1px solid var(--line); overflow:auto; background:var(--panel); }
   .rev-list .rcard { padding:8px 12px; border-bottom:1px solid #241f18; cursor:pointer;
@@ -225,6 +228,8 @@
 <header>
   <h1>oddysey2026 · cube editor</h1>
   <div class="counts" id="counts"></div>
+  <a class="navlink" href="/maybe" style="margin-left:auto">🧩 maybeboards</a>
+  <a class="navlink" href="/trim">✂️ trim</a>
   <button id="modetoggle" class="modetoggle">🎨 Review GenAI</button>
 </header>
 <main id="editorview">

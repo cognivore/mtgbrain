@@ -5,6 +5,24 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
+## ☑ 9. Maybeboard modules — launch / grid review / promote + cube trim
+**Asked:** 2026-07-11. Three modes of operation for growing and shrinking a cube list:
+(1) **Launch** a maybeboard module research from a Scryfall-ish query — `/maybe` UI with a
+live preview over the whole card pool (`/api/pool`, in-cube cards auto-excluded), or
+agent-driven via `mtgbrain edit maybe-launch --sql "SELECT name FROM cards WHERE …"`.
+(2) **Review** it as a visual spoiler grid — colour sections → type → mana value, every grid
+annotated with a sticky stats overlay (cards, creatures + token-makers = bodies vs
+non-creature, per-colour counts, avg MV); click a card to cycle want → rejected → pending;
+**Promote** adds every want to the cube (tagged `maybe:<module>`, appended to the source
+list, decision `pending` so it enters the normal review pipeline).
+(3) **Trim** (`/trim`) — the live cube in the same annotated grid, target 612 (MPC order),
+✨ suggested cuts keep the bodies ratio at a chosen target, spread cuts across colours
+(proportional cap), lowest cube-Elo first, lands never auto-suggested; Apply = soft-remove
+(restorable from the 🗑 pile). Grid images: the card's own render preview when one exists,
+else Scryfall `normal` cached on disk — fetches are serialised process-wide (a grid of
+concurrent misses used to earn a 429 storm). Both editor instances (old-frame + 8ED) get
+all three modes; modules live in each editor DB (`maybe_modules` / `maybe_cards`).
+
 ## ☑ 8. Import the real cardconjurer Level Up frame (replace synthesized leveler)
 **Asked:** 2026-07-01. Replace our CSS-band leveler with the authentic levelers/regular frame,
 custom-geometry approach (like devoid). Done: `card_template_8th_leveler_cc.html` with geometry

@@ -56,7 +56,8 @@ The build is fully reproducible: re-run `mtgbrain setup` to refresh to the lates
 | `mtgbrain search "<fts>"` | ranked full-text search over name/type/oracle text |
 | `mtgbrain card "<name>"` | show every face + rulings for one card |
 | `mtgbrain edit seed` | build a cube-editor DB from a card-name list, snapshotting all fields |
-| `mtgbrain edit serve` | serve a local card-by-card review/errata UI |
+| `mtgbrain edit serve` | serve a local card-by-card review/errata UI — plus `/maybe` (maybeboard research grids) and `/trim` (cut the cube back to its print target) |
+| `mtgbrain edit maybe-launch` | snapshot a batch of candidate cards (from `--sql` / a list / stdin) into a **maybeboard module** for spoiler-grid review at `/maybe` |
 
 Output: `-f table` (default), `--json`, `--md`, `--csv`. Plus `--limit N`, `--full` (don't
 truncate text), `--width N`, `--cols a,b,c`. The DB is opened **read-only**, and `sql`
