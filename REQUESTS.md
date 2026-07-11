@@ -5,6 +5,17 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
+## ☑ 10. Promo-first cards rendered with NO set symbol (Shadow of Mortality)
+**Asked:** 2026-07-11. The set symbol comes from the card's OLDEST printing; for six cube
+cards that oldest printing is a promo variant (`psnc`/`ptor`/`jgp`/`pm15`/`pm10`/`pmmq`) and
+Scryfall publishes no symbol SVG under promo set codes → 404 → `set_symbol_svg` returned
+`None` → the symbol slot rendered empty, silently. **Fix:** `card_set_rarity` now takes the
+oldest **non-promo** printing (`promo: true` entries yeeted; falls back to `data[0]` if every
+printing is a promo), and `set_symbol_svg` retries with the leading `p` stripped on a miss
+(promo sub-sets share the parent's icon; real p-sets like `pcy`/`pls` hit the first fetch).
+All six — Shadow of Mortality, Laquatus's Champion, Stroke of Genius, Reclamation Sage,
+Ant Queen, Overtaker — re-rendered with their real symbols (snc/tor/usg/m15/m10/mmq).
+
 ## ☑ 9. Maybeboard modules — launch / grid review / promote + cube trim
 **Asked:** 2026-07-11. Three modes of operation for growing and shrinking a cube list:
 (1) **Launch** a maybeboard module research from a Scryfall-ish query — `/maybe` UI with a

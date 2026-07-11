@@ -2674,8 +2674,11 @@ fn card_flavor(name: &str, art_dir: &Path) -> String {
         .to_string()
 }
 
-/// (set code, rarity) of the oldest printing — the print whose art we use, so the
-/// set symbol matches the illustration.
+/// (set code, rarity) of the oldest NON-PROMO printing — the print whose art we use, so
+/// the set symbol matches the illustration. Promo variants (prerelease datestamps, judge
+/// foils, promo packs) often sort first but live under `p…` set codes that Scryfall has
+/// no symbol SVG for (Shadow of Mortality → `psnc`), so they're yeeted; if every printing
+/// is a promo, fall back to the first anyway.
 fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
     let meta = art_dir.join(format!("{}.json", sanitize(name)));
     let Ok(txt) = fs::read_to_string(&meta) else {
@@ -2684,7 +2687,10 @@ fn card_set_rarity(name: &str, art_dir: &Path) -> (String, String) {
     let Ok(v) = serde_json::from_str::<Value>(&txt) else {
         return (String::new(), String::new());
     };
-    let d = &v["data"][0];
+    let d = v["data"]
+        .as_array()
+        .and_then(|a| a.iter().find(|c| !c["promo"].as_bool().unwrap_or(false)))
+        .unwrap_or(&v["data"][0]);
     (
         d["set"].as_str().unwrap_or("").to_string(),
         d["rarity"].as_str().unwrap_or("").to_string(),
@@ -2723,6 +2729,14 @@ fn set_symbol_svg(set: &str, cache_dir: &Path) -> Option<PathBuf> {
     let big_enough = |p: &Path| fs::metadata(p).is_ok_and(|m| m.len() >= 64);
     if !big_enough(&dst) {
         let _ = curl_to_file(&format!("https://svgs.scryfall.io/sets/{set}.svg"), &dst);
+    }
+    // Promo sub-sets (psnc, pm10, ptor …) publish no SVG of their own — they share the
+    // parent set's icon. On a miss, retry with the leading 'p' stripped. Real p-sets
+    // (pcy, pls, por …) always hit the first fetch, so the fallback never fires for them.
+    if !big_enough(&dst) {
+        if let Some(parent) = set.strip_prefix('p').filter(|s| s.len() >= 2) {
+            let _ = curl_to_file(&format!("https://svgs.scryfall.io/sets/{parent}.svg"), &dst);
+        }
     }
     big_enough(&dst).then_some(dst)
 }
