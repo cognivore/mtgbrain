@@ -5,6 +5,18 @@ Status: ☐ todo · ◐ in progress · ☑ done
 
 ---
 
+## ☑ 11. Wire the main-cube S3 publish (was a TODO no-op) + full reupload
+**Asked:** 2026-07-13. "Reupload everything" after hand-fixing cards (Cocoon, etc.). The main
+odyssey cube's `publish-selfhost` was a TODO no-op, so S3 crops were stuck at the 2026-06-30
+publish (the 5 set-symbol fixes + Mystic Penitent's un-bugged render never went live). Done:
+re-rendered the one stale edited card (Trygon Predator), rebuilt all 587 selfhost crops, and
+`aws s3 sync`ed them to `s3://social-doma-dev-media/odyssey2026/` (verified fixes live, dated
+today). Wired `publish-selfhost` for real (stage active-card crops as `<sanitized>.png` →
+`aws s3 sync`, mirroring `publish-8ed`) plus a `publish-main` convenience target
+(`render selfhost` + `publish-selfhost`). Note: sync is additive (no `--delete`), so ~92
+orphan crops of trimmed/renamed cards linger on S3 — harmless (the CSV references only the 587
+active). B-side untouched (its S3 is current at 2026-07-01).
+
 ## ☑ 10. Promo-first cards rendered with NO set symbol (Shadow of Mortality)
 **Asked:** 2026-07-11. The set symbol comes from the card's OLDEST printing; for six cube
 cards that oldest printing is a promo variant (`psnc`/`ptor`/`jgp`/`pm15`/`pm10`/`pmmq`) and

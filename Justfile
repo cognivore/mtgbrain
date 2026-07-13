@@ -187,12 +187,32 @@ render-publish *FLAGS:
     cargo run --release -- render selfhost
     just publish-selfhost
 
-# Upload selfhost.png files to the bucket. TODO(jm): fill in once the mechanism is
-# confirmed — rclone remote vs aws s3 sync (see `cubecobra-csv --base`). Until then
-# this is a no-op that prints what it WOULD sync so nothing silently breaks.
+# Main odyssey (old-frame) cube S3 target — the prefix the CubeCobra CSV's image URLs point at.
+odyssey_bucket := "s3://social-doma-dev-media/odyssey2026"
+
+# Upload the main cube's selfhost crops to S3. Stages every ACTIVE card's selfhost.png as
+# <sanitized-name>.png (render::sanitize parity — the CSV's Image URL key) into a clean dir,
+# then `aws s3 sync` (additive; no --delete, so trimmed cards' crops linger harmlessly). Run
+# `render selfhost` first so the crops reflect the current renders. Outward-facing.
 publish-selfhost:
-    @echo "TODO: upload render-cache/cards/*/selfhost.png -> s3://social-doma-dev-media/odyssey2026/"
-    @echo "  ($(find render-cache/cards -name selfhost.png | wc -l | tr -d ' ') images ready)"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stage=render-cache/selfhost-upload; rm -rf "$stage"; mkdir -p "$stage"; n=0; miss=0
+    while IFS= read -r name; do
+      [ -n "$name" ] || continue
+      dir=$(python3 -c "import sys; s=''.join(c if (c.isalnum() or c=='-') else '_' for c in sys.argv[1]); print(s.strip('_'))" "$name")
+      src="render-cache/cards/$dir/selfhost.png"
+      if [ -e "$src" ]; then ln -f "$src" "$stage/$dir.png"; n=$((n+1)); else echo "  (no crop) $name"; miss=$((miss+1)); fi
+    done < <(sqlite3 data/cube_editor.sqlite "SELECT name FROM cube_cards WHERE removed=0 ORDER BY name;")
+    echo "staged $n active-card crops ($miss missing) -> {{odyssey_bucket}}"
+    nix-shell -p awscli2 --run "aws s3 sync '$stage' '{{odyssey_bucket}}/' --only-show-errors"
+    echo "published $n crops -> {{odyssey_bucket}}"
+
+# FULL main-cube publish: rebuild every selfhost crop from the current renders, then push to S3.
+# (Does NOT re-render — run `just render-cube` / `render-publish` first if renders are stale.)
+publish-main:
+    cargo run --release -- render selfhost
+    just publish-selfhost
 
 fmt:
     cargo fmt
